@@ -49,7 +49,7 @@ harnesses:
     name: jr-starter
     description: Orquestador de la fase de fundación (openspec init → KB → roadmap → skills → AGENTS.md).
     type: skill
-    source: { repo: JuanCruzRobledo/jr-starter, ref: latest, method: clone } # TBD confirmar repo
+    source: { repo: JuanCruzRobledo/jr-starter, ref: latest, method: clone } # privado
     install_modes: [lite, full]
     depends_on: [openspec]
 
