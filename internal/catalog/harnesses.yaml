@@ -79,7 +79,7 @@ harnesses:
     name: skill-registry
     description: Crea/actualiza el registro de skills del proyecto.
     type: skill
-    source: { repo: JuanCruzRobledo/skill-registry, ref: latest, method: clone } # TBD confirmar repo
+    source: { repo: JuanCruzRobledo/skill-registry, ref: latest, method: clone }
     install_modes: [full]
 
   # ── Skills de terceros (se descargan con el stack) ────────────────────────
