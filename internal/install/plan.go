@@ -73,12 +73,16 @@ func BuildPlan(cat Catalog, intent Intent, opts Options) (Plan, error) {
 
 	// 6. Collect all paths that Apply steps will write; build the snapshot step.
 	snapshotDir := filepath.Join(opts.HomeDir, ".jr-stack", "backups", "install")
+	writePaths := collectWritePaths(adapters, opts.HomeDir, resolved.OrderedIDs, cat)
+	dirHints := writePaths.DirHints
 	prepareSteps := []pipeline.Step{
 		&snapshotStep{
-			id:         "snapshot",
-			paths:      collectWritePaths(adapters, opts.HomeDir, resolved.OrderedIDs, cat),
-			snapDir:    snapshotDir,
-			snapCreate: snapshotCreate,
+			id:      "snapshot",
+			paths:   writePaths.Paths,
+			snapDir: snapshotDir,
+			snapCreate: func(dir string, paths []string) (backup.Manifest, error) {
+				return snapshotCreateWithHints(dir, paths, dirHints)
+			},
 		},
 	}
 
@@ -147,20 +151,44 @@ func filterByAgents(harnesses []model.Harness, agents []model.Agent) []model.Har
 	return out
 }
 
+// writePathsResult holds the paths and directory hints collected by collectWritePaths.
+type writePathsResult struct {
+	// Paths is the ordered, deduplicated list of filesystem paths the Apply
+	// steps will write (both files and directories).
+	Paths []string
+	// DirHints is the set of paths known to be directories (even if they may
+	// not exist on disk yet). Used by the snapshotter to record IsDir=true so
+	// the restore can call RemoveAll instead of Remove on rollback.
+	DirHints map[string]bool
+}
+
 // collectWritePaths enumerates the filesystem paths that the Apply steps will
 // write, so the snapshot in Prepare captures exactly those paths.
-func collectWritePaths(adapters []AgentAdapter, homeDir string, orderedIDs []string, cat Catalog) []string {
+// It also records which paths are directories (DirHints) so the snapshotter
+// can distinguish them from files even when they don't exist on disk yet.
+func collectWritePaths(adapters []AgentAdapter, homeDir string, orderedIDs []string, cat Catalog) writePathsResult {
 	seen := make(map[string]struct{})
-	var paths []string
+	result := writePathsResult{DirHints: make(map[string]bool)}
 
-	add := func(p string) {
+	addFile := func(p string) {
 		if p == "" {
 			return
 		}
 		if _, ok := seen[p]; !ok {
 			seen[p] = struct{}{}
-			paths = append(paths, p)
+			result.Paths = append(result.Paths, p)
 		}
+	}
+
+	addDir := func(p string) {
+		if p == "" {
+			return
+		}
+		if _, ok := seen[p]; !ok {
+			seen[p] = struct{}{}
+			result.Paths = append(result.Paths, p)
+		}
+		result.DirHints[filepath.Clean(p)] = true
 	}
 
 	for _, id := range orderedIDs {
@@ -171,34 +199,43 @@ func collectWritePaths(adapters []AgentAdapter, homeDir string, orderedIDs []str
 		switch h.Type {
 		case model.HarnessConfig:
 			for _, a := range adapters {
-				add(a.InstructionsPath(homeDir))
+				addFile(a.InstructionsPath(homeDir))
 			}
 		case model.HarnessSkill:
 			for _, a := range adapters {
-				add(a.SkillsDir(homeDir))
+				// SkillsDir is a directory path — must be tracked as a dir hint.
+				addDir(a.SkillsDir(homeDir))
 			}
 		case model.HarnessExternal:
 			for _, a := range adapters {
 				if h.External != nil && h.External.Method == "mcp" {
-					add(a.MCPConfigPath(homeDir, h.ID))
+					addFile(a.MCPConfigPath(homeDir, h.ID))
 				}
 			}
 		}
 		// permissions harness (id == "permissions") — settings paths.
 		if id == "permissions" {
 			for _, a := range adapters {
-				add(a.SettingsPath(homeDir))
+				addFile(a.SettingsPath(homeDir))
 			}
 		}
 	}
 
-	return paths
+	return result
 }
 
 // snapshotCreate is the backing function for creating snapshots. It is a
 // package-level variable so tests can inject a fake without reopening backup.
 var snapshotCreate = func(snapshotDir string, paths []string) (backup.Manifest, error) {
 	return backup.NewSnapshotter().Create(snapshotDir, paths)
+}
+
+// snapshotCreateWithHints is the full-featured backing function used by BuildPlan.
+// It passes directory hints to the snapshotter so it can record IsDir=true for
+// skill-dir entries, enabling safe RemoveAll rollback for dirs created by the install.
+// Tests that inject snapshotCreate via SetSnapshotCreate automatically override this too.
+var snapshotCreateWithHints = func(snapshotDir string, paths []string, dirHints map[string]bool) (backup.Manifest, error) {
+	return backup.NewSnapshotter().CreateWithDirHints(snapshotDir, paths, dirHints)
 }
 
 // restoreFn is the backing function for restoring from a snapshot.

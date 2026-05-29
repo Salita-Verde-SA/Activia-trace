@@ -28,6 +28,18 @@ func NewSnapshotter() Snapshotter {
 }
 
 func (s Snapshotter) Create(snapshotDir string, paths []string) (Manifest, error) {
+	return s.CreateWithDirHints(snapshotDir, paths, nil)
+}
+
+// CreateWithDirHints is like Create but accepts a set of paths known to be
+// directories (even if they do not exist on disk yet). This allows the snapshot
+// to record IsDir=true for directories that will be created by the install,
+// so the restore can use RemoveAll instead of Remove when rolling back.
+//
+// dirHints is a set of absolute paths (keys are the path strings, value is
+// unused). Paths listed in dirHints that do not exist on disk are recorded as
+// Existed=false, IsDir=true in the manifest.
+func (s Snapshotter) CreateWithDirHints(snapshotDir string, paths []string, dirHints map[string]bool) (Manifest, error) {
 	if err := os.MkdirAll(snapshotDir, 0o755); err != nil {
 		return Manifest{}, fmt.Errorf("create snapshot directory %q: %w", snapshotDir, err)
 	}
@@ -45,12 +57,13 @@ func (s Snapshotter) Create(snapshotDir string, paths []string) (Manifest, error
 	var existingPaths []string
 
 	for _, path := range paths {
-		entry, archiveEntry, err := s.buildEntry(path)
+		isDirHint := dirHints[filepath.Clean(path)]
+		entry, archiveEntry, err := s.buildEntry(path, isDirHint)
 		if err != nil {
 			return Manifest{}, err
 		}
 		manifest.Entries = append(manifest.Entries, entry)
-		if entry.Existed {
+		if entry.Existed && !entry.IsDir {
 			manifest.FileCount++
 			archiveEntries = append(archiveEntries, archiveEntry)
 			existingPaths = append(existingPaths, archiveEntry.SourcePath)
@@ -94,25 +107,37 @@ func (s Snapshotter) Create(snapshotDir string, paths []string) (Manifest, error
 }
 
 // buildEntry inspects a single source path and returns the ManifestEntry and
-// (when the file exists) the ArchiveEntry to include in the archive.
-func (s Snapshotter) buildEntry(sourcePath string) (ManifestEntry, ArchiveEntry, error) {
+// (when the file exists and is not a directory) the ArchiveEntry to include in
+// the archive.
+//
+// isDirHint must be true when the caller knows the path is intended to be a
+// directory even if it does not exist on disk yet (e.g. a SkillsDir that will
+// be created by the install step). When the path exists on disk the actual
+// os.Stat result takes precedence over isDirHint.
+func (s Snapshotter) buildEntry(sourcePath string, isDirHint bool) (ManifestEntry, ArchiveEntry, error) {
 	cleanSource := filepath.Clean(sourcePath)
 	entry := ManifestEntry{OriginalPath: cleanSource}
 
 	info, err := os.Stat(cleanSource)
 	if err != nil {
 		if os.IsNotExist(err) {
+			// Path does not exist yet. Record IsDir from the hint so the restore
+			// can choose RemoveAll (dir) vs Remove (file) when rolling back.
+			entry.IsDir = isDirHint
 			return entry, ArchiveEntry{}, nil
 		}
 		return ManifestEntry{}, ArchiveEntry{}, fmt.Errorf("stat source path %q: %w", cleanSource, err)
 	}
 
 	if info.IsDir() {
-		// Skip directories — callers should enumerate files first.
+		// Directory exists on disk. Record Existed=true, IsDir=true so the
+		// restore takes the NO-OP branch (SAFETY: never wipe preexisting dirs).
+		entry.Existed = true
+		entry.IsDir = true
 		return entry, ArchiveEntry{}, nil
 	}
 
-	// Build the relative path inside the archive, mirroring the old files/ layout.
+	// Regular file: build the relative path inside the archive.
 	relative := strings.TrimPrefix(cleanSource, filepath.VolumeName(cleanSource))
 	relative = strings.TrimPrefix(relative, string(filepath.Separator))
 	if relative == "" {

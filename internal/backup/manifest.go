@@ -93,7 +93,11 @@ type ManifestEntry struct {
 	OriginalPath string `json:"original_path"`
 	SnapshotPath string `json:"snapshot_path"`
 	Existed      bool   `json:"existed"`
-	Mode         uint32 `json:"mode,omitempty"`
+	// IsDir records whether the path was a directory at snapshot time.
+	// omitempty ensures backward-compatibility: old manifests without this field
+	// deserialize as IsDir=false, which is correct for file entries.
+	IsDir bool   `json:"is_dir,omitempty"`
+	Mode  uint32 `json:"mode,omitempty"`
 }
 
 func WriteManifest(path string, manifest Manifest) error {

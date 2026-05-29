@@ -14,10 +14,19 @@ import (
 )
 
 // SetSnapshotCreate replaces the snapshotCreate function for testing.
+// It also overrides snapshotCreateWithHints (used by BuildPlan) so that
+// injected fakes apply uniformly, regardless of whether dir hints are passed.
 func SetSnapshotCreate(fn func(dir string, paths []string) (backup.Manifest, error)) (restore func()) {
-	old := snapshotCreate
+	oldCreate := snapshotCreate
+	oldWithHints := snapshotCreateWithHints
 	snapshotCreate = fn
-	return func() { snapshotCreate = old }
+	snapshotCreateWithHints = func(dir string, paths []string, _ map[string]bool) (backup.Manifest, error) {
+		return fn(dir, paths)
+	}
+	return func() {
+		snapshotCreate = oldCreate
+		snapshotCreateWithHints = oldWithHints
+	}
 }
 
 // SetExternalInstallFn replaces externalInstallFn for testing.

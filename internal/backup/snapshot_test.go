@@ -150,6 +150,140 @@ func TestSnapshotterChecksumIsDeterministic(t *testing.T) {
 	}
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// C-17 snapshot dir-aware tests (1.6 + 1.7)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// TestBuildEntry_DirFields verifies that buildEntry records IsDir and Existed
+// correctly for three cases: preexisting dir, nonexistent dir (with hint), and a file.
+func TestBuildEntry_DirFields(t *testing.T) {
+	home := t.TempDir()
+
+	// Case A: a dir that already exists.
+	existingDir := filepath.Join(home, "existing-dir")
+	if err := os.MkdirAll(existingDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	// Case B: a dir that does NOT exist yet — caller must pass a dir hint so
+	// buildEntry can record IsDir=true without being able to os.Stat it.
+	missingDir := filepath.Join(home, "missing-dir")
+
+	// Case C: a regular file.
+	existingFile := filepath.Join(home, "config.json")
+	if err := os.WriteFile(existingFile, []byte("{}"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	snap := NewSnapshotter()
+	snapshotDir := filepath.Join(home, "snap")
+	dirHints := map[string]bool{filepath.Clean(missingDir): true}
+	manifest, err := snap.CreateWithDirHints(snapshotDir, []string{existingDir, missingDir, existingFile}, dirHints)
+	if err != nil {
+		t.Fatalf("CreateWithDirHints() error = %v", err)
+	}
+
+	findEntry := func(path string) (ManifestEntry, bool) {
+		for _, e := range manifest.Entries {
+			if e.OriginalPath == filepath.Clean(path) {
+				return e, true
+			}
+		}
+		return ManifestEntry{}, false
+	}
+
+	// Case A: existing dir → Existed=true, IsDir=true.
+	if e, ok := findEntry(existingDir); !ok {
+		t.Error("no entry for existing dir")
+	} else {
+		if !e.Existed {
+			t.Errorf("existingDir: Existed = false, want true")
+		}
+		if !e.IsDir {
+			t.Errorf("existingDir: IsDir = false, want true")
+		}
+	}
+
+	// Case B: missing dir (with hint) → Existed=false, IsDir=true.
+	if e, ok := findEntry(missingDir); !ok {
+		t.Error("no entry for missing dir")
+	} else {
+		if e.Existed {
+			t.Errorf("missingDir: Existed = true, want false")
+		}
+		if !e.IsDir {
+			t.Errorf("missingDir: IsDir = false, want true (dir hint was provided)")
+		}
+	}
+
+	// Case C: existing file → IsDir=false, Existed=true.
+	if e, ok := findEntry(existingFile); !ok {
+		t.Error("no entry for existing file")
+	} else {
+		if e.IsDir {
+			t.Errorf("existingFile: IsDir = true, want false")
+		}
+		if !e.Existed {
+			t.Errorf("existingFile: Existed = false, want true")
+		}
+	}
+}
+
+// TestBuildEntry_BackwardCompat_NoDirField verifies that an old manifest without
+// is_dir deserializes IsDir=false, and restoring such entries behaves as before
+// the fix (no regressions on old backups).
+func TestBuildEntry_BackwardCompat_NoDirField(t *testing.T) {
+	home := t.TempDir()
+
+	// Write a manifest JSON without the is_dir field (old format).
+	origFile := filepath.Join(home, "config.json")
+	if err := os.WriteFile(origFile, []byte(`{"old":true}`+"\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile orig: %v", err)
+	}
+
+	snapshotFile := filepath.Join(home, "snap", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(snapshotFile), 0o755); err != nil {
+		t.Fatalf("MkdirAll snap dir: %v", err)
+	}
+	if err := os.WriteFile(snapshotFile, []byte(`{"old":true}`+"\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile snap: %v", err)
+	}
+
+	// Old manifest: no is_dir field → IsDir defaults to false.
+	oldManifest := Manifest{
+		Compressed: false,
+		Entries: []ManifestEntry{
+			// Existed=true, no IsDir (zero value = false) → restoreEntry path (file).
+			{OriginalPath: origFile, SnapshotPath: snapshotFile, Existed: true, Mode: 0o644},
+		},
+	}
+
+	// Overwrite to verify restore brings back original.
+	if err := os.WriteFile(origFile, []byte(`{"modified":true}`+"\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile modified: %v", err)
+	}
+
+	svc := RestoreService{}
+	if err := svc.Restore(oldManifest); err != nil {
+		t.Fatalf("Restore() old manifest error = %v", err)
+	}
+
+	got, err := os.ReadFile(origFile)
+	if err != nil {
+		t.Fatalf("ReadFile after restore: %v", err)
+	}
+	if string(got) != `{"old":true}`+"\n" {
+		t.Errorf("restored content = %q, want original", string(got))
+	}
+
+	// Also verify IsDir field is false (the zero value for the old format).
+	for _, e := range oldManifest.Entries {
+		if e.IsDir {
+			t.Errorf("entry %q: IsDir = true on old manifest (should be false zero-value)", e.OriginalPath)
+		}
+	}
+}
+
 // TestSnapshotterManifestEntrySnapshotPath verifies that ManifestEntry.SnapshotPath
 // holds the relative path inside the archive (not a full disk path).
 func TestSnapshotterManifestEntrySnapshotPath(t *testing.T) {

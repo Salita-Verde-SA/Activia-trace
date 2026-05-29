@@ -33,7 +33,14 @@ func (s RestoreService) restoreCompressed(manifest Manifest) error {
 	}
 
 	for _, entry := range manifest.Entries {
-		if entry.Existed {
+		switch {
+		case entry.Existed && entry.IsDir:
+			// Preexisting directory → NO-OP.
+			// SAFETY: never remove a directory that existed before the install.
+			// Its individual files are restored by their own ManifestEntry records.
+
+		case entry.Existed && !entry.IsDir:
+			// Preexisting file → restore content from archive.
 			// SnapshotPath must be relative inside the archive (e.g. "files/.config/foo.json").
 			// An absolute path would cause filepath.Join to ignore tempDir, reading from
 			// the live filesystem instead of the extraction directory.
@@ -49,11 +56,19 @@ func (s RestoreService) restoreCompressed(manifest Manifest) error {
 			if err := restoreEntry(resolvedEntry); err != nil {
 				return err
 			}
-			continue
-		}
 
-		if err := os.Remove(entry.OriginalPath); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("remove path %q: %w", entry.OriginalPath, err)
+		case !entry.Existed && entry.IsDir:
+			// Directory created by the install → remove the whole tree.
+			// os.RemoveAll handles non-empty directories and ignores IsNotExist.
+			if err := os.RemoveAll(entry.OriginalPath); err != nil {
+				return fmt.Errorf("remove-all path %q: %w", entry.OriginalPath, err)
+			}
+
+		default:
+			// !entry.Existed && !entry.IsDir: file created by the install → remove it.
+			if err := os.Remove(entry.OriginalPath); err != nil && !os.IsNotExist(err) {
+				return fmt.Errorf("remove path %q: %w", entry.OriginalPath, err)
+			}
 		}
 	}
 
@@ -64,15 +79,27 @@ func (s RestoreService) restoreCompressed(manifest Manifest) error {
 // SnapshotPath is an absolute path to a plain file on disk.
 func (s RestoreService) restorePlain(manifest Manifest) error {
 	for _, entry := range manifest.Entries {
-		if entry.Existed {
+		switch {
+		case entry.Existed && entry.IsDir:
+			// Preexisting directory → NO-OP (SAFETY: preserve user config).
+
+		case entry.Existed && !entry.IsDir:
+			// Preexisting file → restore content.
 			if err := restoreEntry(entry); err != nil {
 				return err
 			}
-			continue
-		}
 
-		if err := os.Remove(entry.OriginalPath); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("remove path %q: %w", entry.OriginalPath, err)
+		case !entry.Existed && entry.IsDir:
+			// Directory created by the install → remove the whole tree.
+			if err := os.RemoveAll(entry.OriginalPath); err != nil {
+				return fmt.Errorf("remove-all path %q: %w", entry.OriginalPath, err)
+			}
+
+		default:
+			// !entry.Existed && !entry.IsDir: file created by the install → remove it.
+			if err := os.Remove(entry.OriginalPath); err != nil && !os.IsNotExist(err) {
+				return fmt.Errorf("remove path %q: %w", entry.OriginalPath, err)
+			}
 		}
 	}
 
