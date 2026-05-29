@@ -532,6 +532,143 @@ func TestVerify_SkillMDEmpty_ReturnsError(t *testing.T) {
 	}
 }
 
+// ── C-16: root-layout + .git exclusion ───────────────────────────────────────
+
+// TestClone_RootLayout_InstallsFromRoot verifies that a cloned repo whose
+// SKILL.md lives at the clone root (no <skillID>/ subdir) is installed
+// correctly. This is the layout used by our own skill repos.
+func TestClone_RootLayout_InstallsFromRoot(t *testing.T) {
+	home := t.TempDir()
+	skillsDir := filepath.Join(home, "skills")
+
+	runner := &stubRunner{
+		sideEffect: func(args []string) {
+			// Simulate git clone: SKILL.md at clone root (root layout).
+			destDir := args[len(args)-1]
+			_ = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("# root-skill"), 0o644)
+			assetsDir := filepath.Join(destDir, "assets")
+			_ = os.MkdirAll(assetsDir, 0o755)
+			_ = os.WriteFile(filepath.Join(assetsDir, "config.yaml"), []byte("key: val"), 0o644)
+		},
+	}
+
+	adapter := fakeAdapter{agent: model.AgentClaude, skillsDir: skillsDir}
+	h := makeHarness("root-skill", "clone", "JuanCruz/root-skill", false)
+
+	ins := skill.NewInstaller(runner, nil)
+	results, err := ins.Install(context.Background(), h, []skill.AgentAdapter{adapter}, home, t.TempDir())
+	if err != nil {
+		t.Fatalf("Install() error: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+	if results[0].AlreadyInstalled {
+		t.Error("expected not AlreadyInstalled on fresh install")
+	}
+
+	// SKILL.md must be installed at <skillsDir>/<id>/SKILL.md.
+	dest := filepath.Join(skillsDir, "root-skill", "SKILL.md")
+	data, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatalf("SKILL.md not found in skills dir: %v", err)
+	}
+	if string(data) != "# root-skill" {
+		t.Errorf("SKILL.md content: want %q, got %q", "# root-skill", string(data))
+	}
+
+	// assets/config.yaml must also be installed.
+	assetDest := filepath.Join(skillsDir, "root-skill", "assets", "config.yaml")
+	if _, err := os.Stat(assetDest); err != nil {
+		t.Errorf("assets/config.yaml not found in installed skill: %v", err)
+	}
+}
+
+// TestClone_RootLayout_ExcludesGitDir verifies that when the clone root is the
+// skill source, the .git/ directory is excluded from the installed skill but
+// non-.git dotfiles like .gitignore are preserved.
+func TestClone_RootLayout_ExcludesGitDir(t *testing.T) {
+	home := t.TempDir()
+	skillsDir := filepath.Join(home, "skills")
+
+	runner := &stubRunner{
+		sideEffect: func(args []string) {
+			destDir := args[len(args)-1]
+			// Root SKILL.md.
+			_ = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("# dotfile-skill"), 0o644)
+			// .gitignore at root (must be preserved).
+			_ = os.WriteFile(filepath.Join(destDir, ".gitignore"), []byte("*.tmp\n"), 0o644)
+			// .git/ directory (must be excluded).
+			gitDir := filepath.Join(destDir, ".git")
+			_ = os.MkdirAll(gitDir, 0o755)
+			_ = os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte("ref: refs/heads/main\n"), 0o644)
+		},
+	}
+
+	adapter := fakeAdapter{agent: model.AgentClaude, skillsDir: skillsDir}
+	h := makeHarness("dotfile-skill", "clone", "JuanCruz/dotfile-skill", false)
+
+	ins := skill.NewInstaller(runner, nil)
+	_, err := ins.Install(context.Background(), h, []skill.AgentAdapter{adapter}, home, t.TempDir())
+	if err != nil {
+		t.Fatalf("Install() error: %v", err)
+	}
+
+	// .git/ must NOT be in the installed skill.
+	gitInDest := filepath.Join(skillsDir, "dotfile-skill", ".git")
+	if _, err := os.Stat(gitInDest); err == nil {
+		t.Error(".git/ directory was copied into the installed skill — it must be excluded")
+	}
+
+	// .gitignore must be preserved.
+	gitignoreDest := filepath.Join(skillsDir, "dotfile-skill", ".gitignore")
+	data, err := os.ReadFile(gitignoreDest)
+	if err != nil {
+		t.Fatalf(".gitignore not found in installed skill — it must be preserved: %v", err)
+	}
+	if string(data) != "*.tmp\n" {
+		t.Errorf(".gitignore content: want %q, got %q", "*.tmp\n", string(data))
+	}
+}
+
+// TestClone_NeitherLayout_ReturnsError verifies that when the cloned repo has
+// neither a root SKILL.md nor a <id>/SKILL.md, the installer returns a
+// descriptive error naming the repo and the skill ID.
+func TestClone_NeitherLayout_ReturnsError(t *testing.T) {
+	home := t.TempDir()
+	skillsDir := filepath.Join(home, "skills")
+
+	runner := &stubRunner{
+		sideEffect: func(args []string) {
+			// Clone produces a dir with no SKILL.md in root or subdir.
+			destDir := args[len(args)-1]
+			_ = os.WriteFile(filepath.Join(destDir, "README.md"), []byte("# just a readme"), 0o644)
+		},
+	}
+
+	adapter := fakeAdapter{agent: model.AgentClaude, skillsDir: skillsDir}
+	h := makeHarness("some-skill", "clone", "JuanCruz/some-skill", false)
+
+	ins := skill.NewInstaller(runner, nil)
+	_, err := ins.Install(context.Background(), h, []skill.AgentAdapter{adapter}, home, t.TempDir())
+	if err == nil {
+		t.Fatal("expected error when SKILL.md not found in either layout, got nil")
+	}
+
+	// Error must mention the repo and the skill ID.
+	if !strings.Contains(err.Error(), "some-skill") {
+		t.Errorf("error should mention skill ID %q; got: %v", "some-skill", err)
+	}
+	if !strings.Contains(err.Error(), "github.com/JuanCruz/some-skill") {
+		t.Errorf("error should mention the repo URL; got: %v", err)
+	}
+
+	// Skills dir must not have been written.
+	if _, statErr := os.Stat(filepath.Join(skillsDir, "some-skill")); statErr == nil {
+		t.Error("skills dir was written despite layout error — it must not be touched")
+	}
+}
+
 // ── Types / interface checks ──────────────────────────────────────────────────
 
 // Compile-time check: fakeAdapter must implement skill.AgentAdapter.

@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // cloneInstaller performs a shallow git clone into a temp directory, copies
@@ -38,11 +40,20 @@ func cloneInstaller(
 		return Result{}, fmt.Errorf("skill %q: git clone %q: %w", skillID, repoURL, err)
 	}
 
-	// The cloned repo is expected to have a top-level directory named after the
-	// skill ID.
-	srcDir := filepath.Join(tempDir, skillID)
-	if _, err := os.Stat(srcDir); err != nil {
-		return Result{}, fmt.Errorf("skill %q: expected directory %q in cloned repo %q", skillID, skillID, repoURL)
+	// Resolve the skill source directory: root-first with subdir fallback.
+	//   1. <tempDir>/SKILL.md exists → root layout (our convention).
+	//   2. <tempDir>/<skillID>/SKILL.md exists → legacy subdir layout.
+	//   3. Neither → descriptive error.
+	var srcDir string
+	switch {
+	case fileExists(filepath.Join(tempDir, "SKILL.md")):
+		srcDir = tempDir
+	case fileExists(filepath.Join(tempDir, skillID, "SKILL.md")):
+		srcDir = filepath.Join(tempDir, skillID)
+	default:
+		return Result{}, fmt.Errorf(
+			"skill %q: SKILL.md not found at clone root nor in %q subdir of repo %q",
+			skillID, skillID, repoURL)
 	}
 
 	// Read SKILL.md content for idempotence check.
@@ -77,7 +88,8 @@ func cloneInstaller(
 	return Result{SkillPath: destDir}, nil
 }
 
-// copyDir recursively copies src directory to dst.
+// copyDir recursively copies src directory to dst, excluding the .git/
+// subtree. Non-.git dotfiles (e.g. .gitignore) are preserved.
 func copyDir(src, dst string) error {
 	return filepath.WalkDir(src, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -87,12 +99,27 @@ func copyDir(src, dst string) error {
 		if err != nil {
 			return err
 		}
+		// Skip the .git/ directory and everything inside it.
+		// We match exactly ".git" or ".git" + separator to avoid accidentally
+		// dropping .gitignore, .gitattributes, etc.
+		if rel == ".git" || strings.HasPrefix(rel, ".git"+string(os.PathSeparator)) {
+			if d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
+		}
 		target := filepath.Join(dst, rel)
 		if d.IsDir() {
 			return os.MkdirAll(target, 0o755)
 		}
 		return copyFile(path, target)
 	})
+}
+
+// fileExists returns true if path exists and is a regular file.
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
 }
 
 func copyFile(src, dst string) error {
