@@ -1,0 +1,449 @@
+package verify_test
+
+import (
+	"context"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/JuanCruzRobledo/jr-stack/internal/model"
+	"github.com/JuanCruzRobledo/jr-stack/internal/verify"
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+// newFakeAdapter builds a fakeAdapter wired to a temp dir.
+func newFakeAdapter(t *testing.T, homeDir string, agent model.Agent) fakeAdapter {
+	t.Helper()
+	return fakeAdapter{
+		agent:           agent,
+		skillsDir:       filepath.Join(homeDir, "skills"),
+		instructionsPath: filepath.Join(homeDir, "CLAUDE.md"),
+		settingsPath:    filepath.Join(homeDir, "settings.json"),
+		mcpConfigPath:   filepath.Join(homeDir, "mcp", "server.json"),
+	}
+}
+
+// runCheck is a small helper that runs the first check for a harness and
+// returns the result's status/error.
+func runChecks(t *testing.T, checks []verify.Check) []verify.CheckResult {
+	t.Helper()
+	return verify.RunChecks(context.Background(), checks)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2.2 — HarnessType == skill
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestCheckForSkillHarness_Pass(t *testing.T) {
+	homeDir := t.TempDir()
+	fa := newFakeAdapter(t, homeDir, model.AgentClaude)
+
+	h := model.Harness{
+		ID:   "jr-orchestrator",
+		Type: model.HarnessSkill,
+	}
+
+	// Create the expected SKILL.md with content.
+	skillDir := filepath.Join(fa.SkillsDir(homeDir), h.ID)
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# Skill content"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	checks := verify.ChecksForHarness(h, []verify.Adapter{fa}, homeDir)
+	if len(checks) == 0 {
+		t.Fatal("expected at least one check for skill harness")
+	}
+
+	results := runChecks(t, checks)
+	for _, r := range results {
+		if r.Status != verify.CheckStatusPassed {
+			t.Errorf("check %q: status = %q, error = %q, want passed", r.ID, r.Status, r.Error)
+		}
+	}
+}
+
+func TestCheckForSkillHarness_FailMissingSKILLMD(t *testing.T) {
+	homeDir := t.TempDir()
+	fa := newFakeAdapter(t, homeDir, model.AgentClaude)
+
+	h := model.Harness{
+		ID:   "jr-orchestrator",
+		Type: model.HarnessSkill,
+	}
+
+	// Do NOT create SKILL.md — should fail.
+	checks := verify.ChecksForHarness(h, []verify.Adapter{fa}, homeDir)
+	if len(checks) == 0 {
+		t.Fatal("expected at least one check for skill harness")
+	}
+
+	results := runChecks(t, checks)
+	anyFailed := false
+	for _, r := range results {
+		if r.Status == verify.CheckStatusFailed {
+			anyFailed = true
+		}
+	}
+	if !anyFailed {
+		t.Error("expected at least one failed check when SKILL.md is missing")
+	}
+}
+
+func TestCheckForSkillHarness_FailEmptySKILLMD(t *testing.T) {
+	homeDir := t.TempDir()
+	fa := newFakeAdapter(t, homeDir, model.AgentClaude)
+
+	h := model.Harness{
+		ID:   "jr-orchestrator",
+		Type: model.HarnessSkill,
+	}
+
+	// Create an empty SKILL.md — should fail (not useful as a skill).
+	skillDir := filepath.Join(fa.SkillsDir(homeDir), h.ID)
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(""), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	checks := verify.ChecksForHarness(h, []verify.Adapter{fa}, homeDir)
+	results := runChecks(t, checks)
+	anyFailed := false
+	for _, r := range results {
+		if r.Status == verify.CheckStatusFailed {
+			anyFailed = true
+		}
+	}
+	if !anyFailed {
+		t.Error("expected at least one failed check when SKILL.md is empty")
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2.3 — HarnessType == config
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestCheckForConfigHarness_Pass(t *testing.T) {
+	homeDir := t.TempDir()
+	fa := newFakeAdapter(t, homeDir, model.AgentClaude)
+
+	h := model.Harness{
+		ID:   "sdd-orchestrator",
+		Type: model.HarnessConfig,
+	}
+
+	// Write instructions file with the idempotent marker exactly once.
+	marker := "<!-- jr-stack:sdd-orchestrator -->"
+	closeMarker := "<!-- /jr-stack:sdd-orchestrator -->"
+	content := "# Instructions\n\n" + marker + "\nsome content\n" + closeMarker + "\n"
+	if err := os.WriteFile(fa.InstructionsPath(homeDir), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	checks := verify.ChecksForHarness(h, []verify.Adapter{fa}, homeDir)
+	results := runChecks(t, checks)
+	for _, r := range results {
+		if r.Status != verify.CheckStatusPassed {
+			t.Errorf("check %q: status = %q, error = %q, want passed", r.ID, r.Status, r.Error)
+		}
+	}
+}
+
+func TestCheckForConfigHarness_FailMarkerAbsent(t *testing.T) {
+	homeDir := t.TempDir()
+	fa := newFakeAdapter(t, homeDir, model.AgentClaude)
+
+	h := model.Harness{
+		ID:   "sdd-orchestrator",
+		Type: model.HarnessConfig,
+	}
+
+	// Write instructions file WITHOUT the marker.
+	if err := os.WriteFile(fa.InstructionsPath(homeDir), []byte("# Instructions\nno marker here\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	checks := verify.ChecksForHarness(h, []verify.Adapter{fa}, homeDir)
+	results := runChecks(t, checks)
+	anyFailed := false
+	for _, r := range results {
+		if r.Status == verify.CheckStatusFailed {
+			anyFailed = true
+		}
+	}
+	if !anyFailed {
+		t.Error("expected failure when marker is absent")
+	}
+}
+
+func TestCheckForConfigHarness_FailDuplicateMarker(t *testing.T) {
+	homeDir := t.TempDir()
+	fa := newFakeAdapter(t, homeDir, model.AgentClaude)
+
+	h := model.Harness{
+		ID:   "sdd-orchestrator",
+		Type: model.HarnessConfig,
+	}
+
+	// Write instructions file with duplicate markers (idempotency violated).
+	marker := "<!-- jr-stack:sdd-orchestrator -->"
+	closeMarker := "<!-- /jr-stack:sdd-orchestrator -->"
+	content := marker + "\ncontent\n" + closeMarker + "\n" +
+		marker + "\ncontent again\n" + closeMarker + "\n"
+	if err := os.WriteFile(fa.InstructionsPath(homeDir), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	checks := verify.ChecksForHarness(h, []verify.Adapter{fa}, homeDir)
+	results := runChecks(t, checks)
+	anyFailed := false
+	for _, r := range results {
+		if r.Status == verify.CheckStatusFailed {
+			anyFailed = true
+		}
+	}
+	if !anyFailed {
+		t.Error("expected failure when marker appears more than once (idempotency violation)")
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2.3 — special case: permissions harness → settings path
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestCheckForPermissionsHarness_Pass(t *testing.T) {
+	homeDir := t.TempDir()
+	fa := newFakeAdapter(t, homeDir, model.AgentClaude)
+
+	h := model.Harness{
+		ID:   "permissions",
+		Type: model.HarnessConfig,
+	}
+
+	// Write a settings JSON that contains the permissions key.
+	settings := map[string]interface{}{
+		"permissions": map[string]interface{}{
+			"allow": []string{"Read"},
+		},
+	}
+	data, _ := json.Marshal(settings)
+	if err := os.WriteFile(fa.SettingsPath(homeDir), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	checks := verify.ChecksForHarness(h, []verify.Adapter{fa}, homeDir)
+	results := runChecks(t, checks)
+	for _, r := range results {
+		if r.Status != verify.CheckStatusPassed {
+			t.Errorf("check %q: status = %q, error = %q, want passed", r.ID, r.Status, r.Error)
+		}
+	}
+}
+
+func TestCheckForPermissionsHarness_FailMissingSettingsFile(t *testing.T) {
+	homeDir := t.TempDir()
+	fa := newFakeAdapter(t, homeDir, model.AgentClaude)
+
+	h := model.Harness{
+		ID:   "permissions",
+		Type: model.HarnessConfig,
+	}
+
+	// Settings file does not exist.
+	checks := verify.ChecksForHarness(h, []verify.Adapter{fa}, homeDir)
+	results := runChecks(t, checks)
+	anyFailed := false
+	for _, r := range results {
+		if r.Status == verify.CheckStatusFailed {
+			anyFailed = true
+		}
+	}
+	if !anyFailed {
+		t.Error("expected failure when settings file is missing")
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2.4 — HarnessType == external
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestCheckForExternalHarness_MCP_Pass(t *testing.T) {
+	homeDir := t.TempDir()
+	mcpDir := filepath.Join(homeDir, "mcp")
+	if err := os.MkdirAll(mcpDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	fa := fakeAdapter{
+		agent:        model.AgentClaude,
+		mcpConfigPath: filepath.Join(mcpDir, "server.json"),
+	}
+
+	h := model.Harness{
+		ID:       "context7",
+		Type:     model.HarnessExternal,
+		External: &model.External{Method: "mcp", URL: "https://mcp.context7.com"},
+	}
+
+	// Write a valid JSON MCP config.
+	mcpConfig := map[string]interface{}{
+		"mcpServers": map[string]interface{}{
+			"context7": map[string]interface{}{
+				"url": "https://mcp.context7.com",
+			},
+		},
+	}
+	data, _ := json.Marshal(mcpConfig)
+	if err := os.WriteFile(fa.MCPConfigPath(homeDir, h.ID), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	checks := verify.ChecksForHarness(h, []verify.Adapter{fa}, homeDir)
+	// MCP config check is hard; binary check is Soft.
+	hasSoftCheck := false
+	for _, c := range checks {
+		if c.Soft {
+			hasSoftCheck = true
+		}
+	}
+	if !hasSoftCheck {
+		t.Error("expected at least one Soft check (binary/endpoint) for external harness")
+	}
+
+	results := runChecks(t, checks)
+	report := verify.BuildReport(results)
+	// MCP file exists and is valid JSON, so the hard check passes.
+	// The soft check may warn (binary not in PATH in test env) — that's OK.
+	if report.Failed > 0 {
+		t.Errorf("expected no hard failures for valid MCP config, got %d failures: %+v", report.Failed, results)
+	}
+}
+
+func TestCheckForExternalHarness_MCP_FailInvalidJSON(t *testing.T) {
+	homeDir := t.TempDir()
+	mcpDir := filepath.Join(homeDir, "mcp")
+	if err := os.MkdirAll(mcpDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	fa := fakeAdapter{
+		agent:        model.AgentClaude,
+		mcpConfigPath: filepath.Join(mcpDir, "server.json"),
+	}
+
+	h := model.Harness{
+		ID:       "context7",
+		Type:     model.HarnessExternal,
+		External: &model.External{Method: "mcp", URL: "https://mcp.context7.com"},
+	}
+
+	// Write invalid JSON.
+	if err := os.WriteFile(fa.MCPConfigPath(homeDir, h.ID), []byte("{invalid json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	checks := verify.ChecksForHarness(h, []verify.Adapter{fa}, homeDir)
+	results := runChecks(t, checks)
+
+	anyFailed := false
+	for _, r := range results {
+		if r.Status == verify.CheckStatusFailed {
+			anyFailed = true
+		}
+	}
+	if !anyFailed {
+		t.Error("expected hard failure when MCP config JSON is invalid")
+	}
+}
+
+func TestCheckForExternalHarness_SoftCheckProducesWarningNotFailure(t *testing.T) {
+	homeDir := t.TempDir()
+
+	fa := fakeAdapter{
+		agent:        model.AgentClaude,
+		mcpConfigPath: filepath.Join(homeDir, "mcp", "engram.json"),
+	}
+
+	// Engram uses homebrew, not mcp — its binary check is Soft.
+	h := model.Harness{
+		ID:       "engram",
+		Type:     model.HarnessExternal,
+		External: &model.External{Method: "homebrew", Pkg: "engram"},
+	}
+
+	checks := verify.ChecksForHarness(h, []verify.Adapter{fa}, homeDir)
+
+	// All checks for a homebrew harness should be Soft (binary in PATH).
+	for _, c := range checks {
+		if !c.Soft {
+			t.Errorf("check %q should be Soft for homebrew external harness", c.ID)
+		}
+	}
+
+	results := runChecks(t, checks)
+	report := verify.BuildReport(results)
+
+	// The binary is not installed in test env, so we get warnings — but NOT failures.
+	if report.Failed > 0 {
+		t.Errorf("Soft checks must not produce failures: got %d failures", report.Failed)
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2.2 — Multiple adapters: one check per (harness × agent)
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestCheckForSkillHarness_MultipleAdapters(t *testing.T) {
+	homeDir := t.TempDir()
+
+	// Two adapters for two agents.
+	claudeSkillsDir := filepath.Join(homeDir, "claude", "skills")
+	opencodeSkillsDir := filepath.Join(homeDir, "opencode", "skills")
+
+	claudeAdapter := fakeAdapter{
+		agent:     model.AgentClaude,
+		skillsDir: claudeSkillsDir,
+	}
+	opencodeAdapter := fakeAdapter{
+		agent:     model.AgentOpenCode,
+		skillsDir: opencodeSkillsDir,
+	}
+
+	h := model.Harness{
+		ID:   "jr-orchestrator",
+		Type: model.HarnessSkill,
+	}
+
+	// Create SKILL.md for claude only.
+	skillDir := filepath.Join(claudeSkillsDir, h.ID)
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# content"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// opencode's SKILL.md is missing.
+
+	checks := verify.ChecksForHarness(h, []verify.Adapter{claudeAdapter, opencodeAdapter}, homeDir)
+
+	// Should have checks for both agents.
+	if len(checks) < 2 {
+		t.Fatalf("expected at least 2 checks (one per adapter), got %d", len(checks))
+	}
+
+	results := runChecks(t, checks)
+	report := verify.BuildReport(results)
+
+	// Claude passes, opencode fails → report not ready.
+	if report.Ready {
+		t.Error("Ready = true, want false when opencode SKILL.md is missing")
+	}
+}
