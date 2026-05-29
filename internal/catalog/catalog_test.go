@@ -7,6 +7,91 @@ import (
 	"github.com/JuanCruzRobledo/jr-stack/internal/model"
 )
 
+// ─────────────────────────────────────────────────────────────────────────────
+// C-19: best-effort harness flag
+// ─────────────────────────────────────────────────────────────────────────────
+
+// TestBestEffortFlag_FindSkillAndSkillCreatorAreBestEffort asserts that the
+// embedded catalog parses find-skill and skill-creator with BestEffort == true,
+// while all other harnesses default to BestEffort == false.
+func TestBestEffortFlag_FindSkillAndSkillCreatorAreBestEffort(t *testing.T) {
+	c, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	bestEffortIDs := []string{"find-skill", "skill-creator"}
+	for _, id := range bestEffortIDs {
+		h, ok := c.ByID(id)
+		if !ok {
+			t.Errorf("harness %q not found in catalog", id)
+			continue
+		}
+		if !h.BestEffort {
+			t.Errorf("harness %q: BestEffort = false, want true", id)
+		}
+	}
+}
+
+// TestBestEffortFlag_NonBestEffortHarnessesDefaultToFalse asserts that harnesses
+// without best_effort set default to BestEffort == false.
+func TestBestEffortFlag_NonBestEffortHarnessesDefaultToFalse(t *testing.T) {
+	c, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	nonBestEffortIDs := []string{"openspec", "engram", "sdd-orchestrator", "jr-orchestrator", "permissions"}
+	for _, id := range nonBestEffortIDs {
+		h, ok := c.ByID(id)
+		if !ok {
+			t.Errorf("harness %q not found in catalog", id)
+			continue
+		}
+		if h.BestEffort {
+			t.Errorf("harness %q: BestEffort = true, want false (should default to false)", id)
+		}
+	}
+}
+
+// TestBestEffortFlag_ParseFromYAML asserts that catalog.parse() correctly reads
+// best_effort: true from raw YAML, and that absence of the field defaults to false.
+func TestBestEffortFlag_ParseFromYAML(t *testing.T) {
+	yaml := `harnesses:
+  - id: be-skill
+    name: Best Effort
+    type: skill
+    best_effort: true
+    source: { repo: some/repo, method: npx }
+    install_modes: [full]
+  - id: normal-skill
+    name: Normal Skill
+    type: skill
+    source: { repo: some/repo, method: clone }
+    install_modes: [full]`
+
+	c, err := parse([]byte(yaml))
+	if err != nil {
+		t.Fatalf("parse() error = %v", err)
+	}
+
+	beH, ok := c.ByID("be-skill")
+	if !ok {
+		t.Fatal("be-skill not found")
+	}
+	if !beH.BestEffort {
+		t.Errorf("be-skill: BestEffort = false, want true")
+	}
+
+	normalH, ok := c.ByID("normal-skill")
+	if !ok {
+		t.Fatal("normal-skill not found")
+	}
+	if normalH.BestEffort {
+		t.Errorf("normal-skill: BestEffort = true, want false (no best_effort in YAML)")
+	}
+}
+
 func TestLoad_EmbeddedCatalogIsValid(t *testing.T) {
 	c, err := Load()
 	if err != nil {

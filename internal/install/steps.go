@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"os"
 
 	"github.com/JuanCruzRobledo/jr-stack/internal/backup"
 	extinstaller "github.com/JuanCruzRobledo/jr-stack/internal/harness/external"
@@ -11,6 +12,7 @@ import (
 	perminstaller "github.com/JuanCruzRobledo/jr-stack/internal/harness/config/permissions"
 	skillinstaller "github.com/JuanCruzRobledo/jr-stack/internal/harness/skill"
 	"github.com/JuanCruzRobledo/jr-stack/internal/model"
+	"github.com/JuanCruzRobledo/jr-stack/internal/pipeline"
 	"github.com/JuanCruzRobledo/jr-stack/internal/system"
 )
 
@@ -98,13 +100,19 @@ var skillInstallFn = func(
 }
 
 type skillStep struct {
-	h          model.Harness
-	adapters   []AgentAdapter
-	homeDir    string
-	backupDir  string
-	embeddedFS fs.FS
-	runner     skillRunner
-	manifest   *backup.Manifest
+	h           model.Harness
+	adapters    []AgentAdapter
+	homeDir     string
+	backupDir   string
+	embeddedFS  fs.FS
+	runner      skillRunner
+	manifest    *backup.Manifest
+	// bestEffort mirrors h.BestEffort: when true a Run() failure is soft
+	// (warning emitted, nil returned) so the pipeline does not abort/rollback.
+	bestEffort  bool
+	// onProgress is the optional progress callback forwarded from Options.
+	// When non-nil it receives a warning ProgressEvent on best-effort failure.
+	onProgress  pipeline.ProgressFunc
 }
 
 func (s *skillStep) ID() string { return "skill:" + s.h.ID }
@@ -113,7 +121,25 @@ func (s *skillStep) setManifest(m *backup.Manifest) { s.manifest = m }
 func (s *skillStep) Run() error {
 	skill := toSkillAdapters(s.adapters)
 	_, err := skillInstallFn(s.runner, s.embeddedFS, context.Background(), s.h, skill, s.homeDir, s.backupDir)
-	return err
+	if err == nil {
+		return nil
+	}
+	if !s.bestEffort {
+		return err
+	}
+	// Best-effort: emit a warning and return nil so the pipeline continues.
+	warningMsg := fmt.Sprintf("[best-effort] skill %q install failed (continuing): %v", s.h.ID, err)
+	if s.onProgress != nil {
+		s.onProgress(pipeline.ProgressEvent{
+			StepID: s.ID(),
+			Stage:  pipeline.StageApply,
+			Status: pipeline.StepStatusFailed,
+			Err:    fmt.Errorf("%s", warningMsg),
+		})
+	} else {
+		fmt.Fprintln(os.Stderr, warningMsg)
+	}
+	return nil
 }
 
 func (s *skillStep) Rollback() error {

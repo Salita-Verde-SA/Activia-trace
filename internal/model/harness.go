@@ -90,6 +90,10 @@ type Harness struct {
 	InstallModes []InstallMode `yaml:"install_modes"`
 	DependsOn    []string      `yaml:"depends_on,omitempty"`
 	Agents       []Agent       `yaml:"agents,omitempty"` // empty = all agents
+	// BestEffort marks a harness as tolerant of install failures.
+	// When true, a failing install step emits a warning and continues
+	// (the pipeline does not abort and roll back). Defaults to false.
+	BestEffort bool `yaml:"best_effort,omitempty"`
 }
 
 // InMode reports whether this harness belongs to the given install mode.

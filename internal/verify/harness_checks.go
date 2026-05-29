@@ -63,6 +63,10 @@ func checkSkill(h model.Harness, adapter Adapter, homeDir string) []Check {
 		{
 			ID:          fmt.Sprintf("skill:%s:%s", h.ID, agentID),
 			Description: fmt.Sprintf("SKILL.md present and non-empty for %s/%s", agentID, h.ID),
+			// A best-effort harness that failed to install is a warning, not a
+			// hard failure: the operator was already warned at install time, and
+			// the verify hook must not roll back a successful (soft) install.
+			Soft: h.BestEffort,
 			Run: func(_ context.Context) error {
 				skillMD := filepath.Join(skillsDir, h.ID, "SKILL.md")
 				info, err := os.Stat(skillMD)

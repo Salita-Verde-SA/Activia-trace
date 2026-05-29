@@ -414,6 +414,85 @@ func TestCheckPermissionsFailureMentionsCorrectKey(t *testing.T) {
 	}
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// C-19: best-effort harness — tasks 4.1, 4.2
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Task 4.1a — checkSkill for a best-effort harness emits a Check with Soft == true.
+func TestCheckForSkillHarness_BestEffort_CheckIsSoft(t *testing.T) {
+	homeDir := t.TempDir()
+	fa := newFakeAdapter(t, homeDir, model.AgentClaude)
+
+	h := model.Harness{
+		ID:         "find-skill",
+		Type:       model.HarnessSkill,
+		BestEffort: true,
+	}
+
+	checks := verify.ChecksForHarness(h, []verify.Adapter{fa}, homeDir)
+	if len(checks) == 0 {
+		t.Fatal("expected at least one check for best-effort skill harness")
+	}
+
+	for _, c := range checks {
+		if !c.Soft {
+			t.Errorf("check %q: Soft = false, want true for best-effort harness", c.ID)
+		}
+	}
+}
+
+// Task 4.1b — checkSkill for a NON-best-effort harness emits a Check with Soft == false (regression).
+func TestCheckForSkillHarness_NonBestEffort_CheckIsHard(t *testing.T) {
+	homeDir := t.TempDir()
+	fa := newFakeAdapter(t, homeDir, model.AgentClaude)
+
+	h := model.Harness{
+		ID:         "jr-orchestrator",
+		Type:       model.HarnessSkill,
+		BestEffort: false,
+	}
+
+	checks := verify.ChecksForHarness(h, []verify.Adapter{fa}, homeDir)
+	if len(checks) == 0 {
+		t.Fatal("expected at least one check for non-best-effort skill harness")
+	}
+
+	for _, c := range checks {
+		if c.Soft {
+			t.Errorf("check %q: Soft = true, want false for non-best-effort harness", c.ID)
+		}
+	}
+}
+
+// Task 4.2 — a best-effort skill check that fails (SKILL.md missing) produces a
+// warning (CheckStatusWarning) — not a hard failure — and the report stays Ready.
+func TestCheckForSkillHarness_BestEffort_FailIsWarningNotFailure(t *testing.T) {
+	homeDir := t.TempDir()
+	fa := newFakeAdapter(t, homeDir, model.AgentClaude)
+
+	h := model.Harness{
+		ID:         "find-skill",
+		Type:       model.HarnessSkill,
+		BestEffort: true,
+	}
+
+	// Intentionally do NOT create SKILL.md — the check should warn, not fail.
+	checks := verify.ChecksForHarness(h, []verify.Adapter{fa}, homeDir)
+	results := runChecks(t, checks)
+
+	for _, r := range results {
+		if r.Status == verify.CheckStatusFailed {
+			t.Errorf("check %q: status = Failed, want Warning for best-effort harness", r.ID)
+		}
+	}
+
+	// The report must still be Ready (warnings don't flip Ready).
+	report := verify.BuildReport(results)
+	if !report.Ready {
+		t.Errorf("report.Ready = false, want true when only best-effort skill check fails (should be warning)")
+	}
+}
+
 // containsKey reports whether s contains the quoted or unquoted form of key.
 func containsKey(s, key string) bool {
 	return containsStr(s, `"`+key+`"`) || containsStr(s, key)
