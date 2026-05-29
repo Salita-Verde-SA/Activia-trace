@@ -74,7 +74,7 @@ C-07 harness external                │             │
 | 4 | C-11a | C-11b | **HECHO** — install-pipeline: orquestación headless + rollback |
 | 5 | C-11b | C-12, C-13 | **HECHO** — TUI Bubbletea slim: punto de convergencia visible |
 | 6 | C-12, C-13 | C-14 | **HECHO** — uninstall + orquestador de fundación (C-13 split a/b/c) |
-| 7 | C-14 | — | verify + E2E (cierre) — **ÚNICO PENDIENTE** |
+| 7 | C-14 | — | **HECHO** — verify + E2E (cierre del pipeline) |
 
 **Camino crítico**: `C-01 → C-02 → C-04/C-05 → C-09 → C-10 → C-11a → C-11b → C-13 → C-14`.
 Es la cadena más larga: el merge/backup habilitan el installer de config
@@ -200,10 +200,14 @@ estrecha hacia la convergencia en C-11b (la TUI).
 - **Leer antes**: ARCHITECTURE.md §4.2, MANUAL Etapas 1–4, catálogo (skills propias).
 
 ### C-14 — Verify + E2E
-- **Estado**: PENDIENTE.
-- **Scope**: Portar `internal/verify` (health checks post-install) + suite E2E Docker (Ubuntu + Arch) adaptada a harnesses. Cierre del pipeline.
+- **Estado**: HECHO (split A/B). Cierra el pipeline.
+  - **Wave A** — `internal/verify` harness-aware: motor de checks + report + hook wireado al pipeline (el `VerifyHook` quedaba `nil` desde C-11a). Commit `ee26282`.
+  - **Wave B** — modo headless del binario (resuelve D4: `jr-stack install --headless --mode --agent --custom --dry-run --yes --home`, sin flags → TUI, cero regresión; commit `d34bb8b`) + suite E2E harness-first con matrix Docker Ubuntu+Arch (Go 1.26). **Tier 1 VERDE 15/15 en ambas distros.** Commit `6e3cd4c`.
+- **Hallazgos del E2E** (el install real destapó bugs que los unit tests ocultaban con fakes):
+  - **Arreglados** (commit `fddde4d`): panic nil-runner al clonar skills (`skillStep` sin `runner` → inyectado vía `Options.CmdRunner`) + URL de asset con `goos` vacío (`engram_<v>__amd64` → HTTP 404; `Options.Profile` con `runtime.GOOS`).
+  - **Follow-ups (TBD → changes futuros)**: **(C-15)** los Dockerfiles E2E no instalan node/npm → `openspec` (npm) falla en Tier 2; opción: instalar node en los Dockerfiles o marcar el step `Soft`/skip sin npm. **(C-16)** el repo `JuanCruzRobledo/agent-instruction` no expone el subdir que espera `skill/clone.go` (`tempDir/<skillID>`) → revisar la convención de layout del repo skill vs. el installer.
 - **Dependencias**: C-12, C-13.
-- **Governance**: BAJO.
+- **Governance**: BAJO (verify/E2E); los fixes tocaron `install`/`harness` (MEDIO).
 - **Leer antes**: repo viejo `internal/verify/` y `e2e/`, ARCHITECTURE.md §6 punto 8.
 
 ---
