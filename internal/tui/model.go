@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -9,6 +10,7 @@ import (
 	"github.com/JuanCruzRobledo/jr-stack/internal/install"
 	"github.com/JuanCruzRobledo/jr-stack/internal/model"
 	"github.com/JuanCruzRobledo/jr-stack/internal/pipeline"
+	"github.com/JuanCruzRobledo/jr-stack/internal/system"
 )
 
 // ModelDeps holds the injected dependencies for the TUI model.
@@ -246,6 +248,7 @@ func (m Model) enterReview() (tea.Model, tea.Cmd) {
 		opts := install.Options{
 			HomeDir:  m.deps.HomeDir,
 			Registry: m.deps.Registry,
+			Profile:  system.PlatformProfile{OS: runtime.GOOS},
 		}
 		plan, err := m.deps.BuildPlanFn(m.deps.Catalog, intent, opts)
 		if err != nil {
@@ -279,6 +282,7 @@ func (m Model) startInstall() (tea.Model, tea.Cmd) {
 		HomeDir:    m.deps.HomeDir,
 		Registry:   m.deps.Registry,
 		OnProgress: m.bridge.OnProgress,
+		Profile:    system.PlatformProfile{OS: runtime.GOOS},
 	}
 
 	var plan install.Plan

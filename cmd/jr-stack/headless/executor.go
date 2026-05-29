@@ -3,9 +3,11 @@ package headless
 import (
 	"fmt"
 	"io"
+	"runtime"
 
 	"github.com/JuanCruzRobledo/jr-stack/internal/install"
 	"github.com/JuanCruzRobledo/jr-stack/internal/pipeline"
+	"github.com/JuanCruzRobledo/jr-stack/internal/system"
 	"github.com/JuanCruzRobledo/jr-stack/internal/verify"
 )
 
@@ -28,10 +30,14 @@ import (
 // VerifyHookFn is injected, matching the "no hook" TUI path for the test cases
 // that don't supply harnesses with verify checks).
 func RunHeadless(params ParsedFlags, cat install.Catalog, reg install.Registry, w io.Writer) int {
-	// Build install options.
+	// Build install options. Profile.OS is populated from runtime.GOOS so that
+	// external-harness steps build a well-formed GitHub Releases asset URL.
+	// (An empty OS would produce a double-underscore filename like
+	// "engram_1.16.1__amd64.tar.gz" and result in HTTP 404.)
 	opts := install.Options{
 		HomeDir:  params.HomeDir,
 		Registry: reg,
+		Profile:  system.PlatformProfile{OS: runtime.GOOS},
 	}
 
 	// Wire verify hook.

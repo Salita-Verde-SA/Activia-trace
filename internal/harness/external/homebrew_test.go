@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -64,15 +65,157 @@ func TestNormalizeArch(t *testing.T) {
 // ── buildAssetURL ─────────────────────────────────────────────────────────
 
 func TestBuildAssetURL(t *testing.T) {
-	got := buildAssetURL("https://github.com", "Owner", "repo", "1.0.0", "linux", "amd64")
-	want := "https://github.com/Owner/repo/releases/download/v1.0.0/repo_1.0.0_linux_amd64.tar.gz"
-	if got != want {
-		t.Errorf("buildAssetURL = %q, want %q", got, want)
+	tests := []struct {
+		name        string
+		baseURL     string
+		owner       string
+		repo        string
+		version     string
+		goos        string
+		goarch      string
+		wantURL     string
+		wantSuffix  string // checked when wantURL is empty
+		wantNoDouble bool  // true: assert no double-underscore in filename
+	}{
+		{
+			name:    "linux amd64 tar.gz",
+			baseURL: "https://github.com",
+			owner:   "Gentleman-Programming",
+			repo:    "engram",
+			version: "1.16.1",
+			goos:    "linux",
+			goarch:  "amd64",
+			wantURL: "https://github.com/Gentleman-Programming/engram/releases/download/v1.16.1/engram_1.16.1_linux_amd64.tar.gz",
+		},
+		{
+			name:    "windows amd64 zip",
+			baseURL: "https://github.com",
+			owner:   "Gentleman-Programming",
+			repo:    "engram",
+			version: "1.16.1",
+			goos:    "windows",
+			goarch:  "amd64",
+			wantURL: "https://github.com/Gentleman-Programming/engram/releases/download/v1.16.1/engram_1.16.1_windows_amd64.zip",
+		},
+		{
+			name:    "darwin arm64 tar.gz",
+			baseURL: "https://github.com",
+			owner:   "Owner",
+			repo:    "repo",
+			version: "1.0.0",
+			goos:    "darwin",
+			goarch:  "arm64",
+			wantURL: "https://github.com/Owner/repo/releases/download/v1.0.0/repo_1.0.0_darwin_arm64.tar.gz",
+		},
+		{
+			// Regression: empty goos must NOT produce a double-underscore filename
+			// (e.g. "engram_1.16.1__amd64.tar.gz"). This reproduced the real HTTP 404.
+			name:         "empty goos must not produce double underscore",
+			baseURL:      "https://github.com",
+			owner:        "Gentleman-Programming",
+			repo:         "engram",
+			version:      "1.16.1",
+			goos:         "", // zero-value — the broken case
+			goarch:       "amd64",
+			wantNoDouble: true,
+		},
 	}
 
-	gotWin := buildAssetURL("https://github.com", "Owner", "repo", "1.0.0", "windows", "amd64")
-	if !strings.HasSuffix(gotWin, ".zip") {
-		t.Errorf("windows asset URL should end in .zip, got %q", gotWin)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildAssetURL(tt.baseURL, tt.owner, tt.repo, tt.version, tt.goos, tt.goarch)
+
+			if tt.wantURL != "" && got != tt.wantURL {
+				t.Errorf("buildAssetURL = %q\nwant           %q", got, tt.wantURL)
+			}
+
+			if tt.wantSuffix != "" && !strings.HasSuffix(got, tt.wantSuffix) {
+				t.Errorf("URL %q should end in %q", got, tt.wantSuffix)
+			}
+
+			if tt.wantNoDouble && strings.Contains(got, "__") {
+				t.Errorf("URL contains double-underscore (goos was empty): %q", got)
+			}
+		})
+	}
+}
+
+// TestDownloadBinary_EmptyProfileOS is a regression test for the real-world HTTP 404:
+//
+//	https://github.com/…/engram_1.16.1__amd64.tar.gz  ← double underscore, no goos
+//
+// Root cause: internal/install/steps.go passed system.PlatformProfile{} (zero-value),
+// so profile.OS == "" in downloadBinary, which caused buildAssetURL to build a
+// malformed filename. After the fix, goos must fall back to runtime.GOOS so the
+// URL is always well-formed.
+func TestDownloadBinary_EmptyProfileOS(t *testing.T) {
+	const binaryContent = "fake-engram-binary"
+	const version = "1.16.1"
+
+	// The mock server must serve the archive format that matches the runtime OS
+	// because after the fix, an empty profile.OS falls back to runtime.GOOS.
+	// On Windows this produces a .zip URL; on other platforms it produces .tar.gz.
+	var archiveData []byte
+	binaryFilename := "engram"
+	if runtime.GOOS == "windows" {
+		binaryFilename = "engram.exe"
+		archiveData = buildZip(t, binaryFilename, []byte(binaryContent))
+	} else {
+		archiveData = buildTarGz(t, binaryFilename, []byte(binaryContent))
+	}
+
+	var gotAssetPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/releases/latest") {
+			json.NewEncoder(w).Encode(map[string]string{"tag_name": "v" + version})
+			return
+		}
+		gotAssetPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Write(archiveData)
+	}))
+	defer srv.Close()
+
+	origBase := githubBaseURL
+	githubBaseURL = srv.URL
+	defer func() { githubBaseURL = origBase }()
+
+	origClient := httpClient
+	httpClient = srv.Client()
+	defer func() { httpClient = origClient }()
+
+	installDir := t.TempDir()
+	origFn := binaryInstallDirFn
+	binaryInstallDirFn = func(string) string { return installDir }
+	defer func() { binaryInstallDirFn = origFn }()
+
+	h := harnessWithMethod("homebrew", "engram", "")
+	h.External.Repo = "Gentleman-Programming/engram"
+
+	// Pass a zero-value profile (OS == "") — this is exactly what the install
+	// pipeline was doing in externalStep.Run() before the fix.
+	profile := system.PlatformProfile{} // OS intentionally empty
+
+	_, err := downloadBinary(nil, h, profile)
+	if err != nil {
+		t.Fatalf("downloadBinary failed: %v", err)
+	}
+
+	// The asset URL must NOT contain a double underscore in the filename segment.
+	if strings.Contains(gotAssetPath, "__") {
+		t.Errorf("asset path contains double-underscore (goos was empty/not resolved): %q", gotAssetPath)
+	}
+
+	// The filename segment must contain a non-empty goos token between the version and arch.
+	// Expected pattern: /engram_1.16.1_<goos>_<arch>.<ext>
+	parts := strings.Split(gotAssetPath, "/")
+	filename := parts[len(parts)-1] // e.g. "engram_1.16.1_linux_amd64.tar.gz"
+	// Strip known suffixes before splitting on "_".
+	baseName := strings.TrimSuffix(strings.TrimSuffix(filename, ".tar.gz"), ".zip")
+	segments := strings.Split(baseName, "_")
+	// segments: ["engram", "1.16.1", "<goos>", "<arch>"]
+	if len(segments) < 4 || segments[2] == "" {
+		t.Errorf("filename %q is missing the goos segment; got segments: %v", filename, segments)
 	}
 }
 

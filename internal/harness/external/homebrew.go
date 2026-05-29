@@ -68,8 +68,18 @@ func downloadBinary(ctx context.Context, h model.Harness, profile system.Platfor
 		source = h.External.Pkg
 	}
 	owner, repo := resolveOwnerRepo(source)
+
+	// Resolve goos early so it is used consistently for binaryName, the asset
+	// URL, and the install directory. Falling back to runtime.GOOS when
+	// profile.OS is empty avoids the double-underscore filename bug
+	// ("engram_1.16.1__amd64.tar.gz") that produced HTTP 404 on GitHub Releases.
+	goos := profile.OS
+	if goos == "" {
+		goos = runtime.GOOS
+	}
+
 	binaryName := repo
-	if profile.OS == "windows" {
+	if goos == "windows" {
 		binaryName = repo + ".exe"
 	}
 
@@ -84,7 +94,6 @@ func downloadBinary(ctx context.Context, h model.Harness, profile system.Platfor
 		return "", fmt.Errorf("fetch latest version for %s/%s: %w", owner, repo, err)
 	}
 
-	goos := profile.OS
 	goarch := normalizeArch(runtime.GOARCH)
 	assetURL := buildAssetURL(baseURL, owner, repo, version, goos, goarch)
 
@@ -130,7 +139,13 @@ func normalizeArch(goarch string) string {
 }
 
 // buildAssetURL constructs the GitHub Releases download URL for a binary asset.
+// If goos is empty it falls back to runtime.GOOS to guarantee a well-formed
+// filename (an empty goos would produce a double-underscore like
+// "engram_1.16.1__amd64.tar.gz", causing an HTTP 404 on GitHub Releases).
 func buildAssetURL(baseURL, owner, repo, version, goos, goarch string) string {
+	if goos == "" {
+		goos = runtime.GOOS
+	}
 	ext := ".tar.gz"
 	if goos == "windows" {
 		ext = ".zip"

@@ -3,12 +3,35 @@
 package install
 
 import (
+	"context"
 	"io/fs"
+	"os/exec"
 
 	"github.com/JuanCruzRobledo/jr-stack/internal/harness/external"
 	"github.com/JuanCruzRobledo/jr-stack/internal/model"
 	"github.com/JuanCruzRobledo/jr-stack/internal/pipeline"
+	"github.com/JuanCruzRobledo/jr-stack/internal/system"
 )
+
+// CmdRunner is the interface used by skill steps to execute external commands
+// (e.g. "git clone", "npx …"). It is satisfied by the real OS exec wrapper and
+// by stub implementations in tests.
+//
+// The interface is intentionally identical to skill.Runner so the same stub can
+// satisfy both without importing the skill package.
+type CmdRunner interface {
+	Run(ctx context.Context, args []string) error
+}
+
+// defaultCmdRunner is the production CmdRunner backed by os/exec.
+type defaultCmdRunner struct{}
+
+func (defaultCmdRunner) Run(ctx context.Context, args []string) error {
+	if len(args) == 0 {
+		return nil
+	}
+	return exec.CommandContext(ctx, args[0], args[1:]...).Run()
+}
 
 // Intent describes what the user wants to install.
 type Intent struct {
@@ -51,6 +74,11 @@ type Options struct {
 	HomeDir string
 	// Registry maps agents to their concrete adapters.
 	Registry Registry
+	// Profile is the detected platform profile for the current machine.
+	// It is forwarded to external-harness steps so they can build the
+	// correct GitHub Releases asset URL (OS, package manager, etc.).
+	// When zero-value, external.downloadBinary falls back to runtime.GOOS/GOARCH.
+	Profile system.PlatformProfile
 	// VerifyHook is an optional function executed after a successful Apply stage.
 	// A nil hook is a no-op.
 	VerifyHook func() error
@@ -60,12 +88,24 @@ type Options struct {
 	// embeddedSkillsFS is the fs.FS for the "embed" skill install method.
 	// It is set via WithEmbeddedSkillsFS; nil means clone/npx only.
 	embeddedSkillsFS fs.FS
+	// cmdRunner is the CmdRunner forwarded to skill steps for clone/npx methods.
+	// When nil, buildHarnessStep substitutes defaultCmdRunner so production
+	// installs always have a non-nil runner; tests inject a stub via WithCmdRunner.
+	cmdRunner CmdRunner
 }
 
 // WithEmbeddedSkillsFS returns a copy of opts with the embedded skills FS set.
 // Pass assets.SkillsFS from the binary entry point.
 func WithEmbeddedSkillsFS(opts Options, f fs.FS) Options {
 	opts.embeddedSkillsFS = f
+	return opts
+}
+
+// WithCmdRunner returns a copy of opts with the given CmdRunner set.
+// Use this in tests to inject a stub; production code omits it so the default
+// exec-backed runner is used automatically.
+func WithCmdRunner(opts Options, r CmdRunner) Options {
+	opts.cmdRunner = r
 	return opts
 }
 

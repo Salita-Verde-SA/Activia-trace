@@ -216,15 +216,21 @@ func buildHarnessStep(h model.Harness, adapters []AgentAdapter, opts Options) (p
 			h:        h,
 			adapters: adapters,
 			homeDir:  opts.HomeDir,
+			profile:  opts.Profile,
 		}, nil
 
 	case model.HarnessSkill:
+		runner := opts.cmdRunner
+		if runner == nil {
+			runner = defaultCmdRunner{}
+		}
 		return &skillStep{
 			h:          h,
 			adapters:   adapters,
 			homeDir:    opts.HomeDir,
 			backupDir:  filepath.Join(opts.HomeDir, ".jr-stack", "backups", "skills", h.ID),
 			embeddedFS: opts.embeddedSkillsFS,
+			runner:     runner,
 		}, nil
 
 	case model.HarnessConfig:

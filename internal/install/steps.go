@@ -59,6 +59,7 @@ type externalStep struct {
 	h        model.Harness
 	adapters []AgentAdapter
 	homeDir  string
+	profile  system.PlatformProfile
 	manifest *backup.Manifest
 }
 
@@ -67,7 +68,7 @@ func (s *externalStep) setManifest(m *backup.Manifest) { s.manifest = m }
 
 func (s *externalStep) Run() error {
 	ext := toExternalAdapters(s.adapters)
-	_, err := externalInstallFn(context.Background(), s.h, system.PlatformProfile{}, ext, s.homeDir)
+	_, err := externalInstallFn(context.Background(), s.h, s.profile, ext, s.homeDir)
 	return err
 }
 
