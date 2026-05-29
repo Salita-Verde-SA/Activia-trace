@@ -3,7 +3,10 @@
 //
 // Usage:
 //
-//	jr-stack install   Launch the interactive TUI install flow.
+//	jr-stack install              Launch the interactive TUI install flow.
+//	jr-stack install --headless   Non-interactive install (also implied by --mode/--agent).
+//	jr-stack install --dry-run    Print the install plan; do not execute.
+//	jr-stack install --help       Show all available flags.
 package main
 
 import (
@@ -11,6 +14,7 @@ import (
 	"os"
 
 	"github.com/JuanCruzRobledo/jr-stack/assets"
+	"github.com/JuanCruzRobledo/jr-stack/cmd/jr-stack/headless"
 	"github.com/JuanCruzRobledo/jr-stack/internal/agents"
 	"github.com/JuanCruzRobledo/jr-stack/internal/catalog"
 	"github.com/JuanCruzRobledo/jr-stack/internal/install"
@@ -29,7 +33,7 @@ func main() {
 
 	switch os.Args[1] {
 	case "install":
-		if err := runInstall(); err != nil {
+		if err := runInstall(os.Args[2:]); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
@@ -53,8 +57,14 @@ func (a agentRegistryAdapter) Get(agent model.Agent) (install.AgentAdapter, bool
 	return adapter, true
 }
 
-func runInstall() error {
-	// 1. Load the embedded catalog.
+func runInstall(args []string) error {
+	// Parse flags to determine TUI vs headless mode.
+	parsed, err := headless.ParseInstallFlags(args)
+	if err != nil {
+		return err
+	}
+
+	// 1. Load the embedded catalog (needed for both TUI and headless).
 	cat, err := catalog.Load()
 	if err != nil {
 		return fmt.Errorf("load catalog: %w", err)
@@ -66,6 +76,38 @@ func runInstall() error {
 		return fmt.Errorf("create agent registry: %w", err)
 	}
 
+	// Wrap the registry to satisfy install.Registry.
+	regWrapper := agentRegistryAdapter{r: reg}
+
+	// ── Headless mode ──────────────────────────────────────────────────────
+	if !parsed.TUI {
+		// Use the home dir from the parsed flags (may have been --home overridden).
+		parsed.HomeDir = resolveHomeDir(parsed.HomeDir, reg)
+
+		// Wire the verify hook (same logic as the TUI BuildPlanFn below).
+		if parsed.VerifyHookFn == nil {
+			verifyAdapters := resolveVerifyAdapters(parsed.Intent.Agents, reg)
+			selectedHarnesses := collectSelectedHarnesses(cat, parsed.Intent)
+			parsed.VerifyHookFn = verify.BuildHook(selectedHarnesses, verifyAdapters, parsed.HomeDir)
+		}
+
+		// Wire the embedded skills FS into BuildPlan via BuildPlanFn.
+		// RunHeadless uses this function instead of calling install.BuildPlan directly,
+		// so the FS is injected into opts before the plan is built.
+		parsed.BuildPlanFn = func(c install.Catalog, intent install.Intent, opts install.Options) (install.Plan, error) {
+			opts = install.WithEmbeddedSkillsFS(opts, assets.SkillsFS)
+			return install.BuildPlan(c, intent, opts)
+		}
+
+		exitCode := headless.RunHeadless(parsed, cat, regWrapper, os.Stdout)
+		if exitCode != 0 {
+			os.Exit(exitCode)
+		}
+		return nil
+	}
+
+	// ── TUI (interactive) mode — no flags were passed ─────────────────────
+
 	// 3. Resolve home directory.
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -75,9 +117,6 @@ func runInstall() error {
 	// 4. Detect installed agents; intersect with registered adapters.
 	detectedAgents := tui.DetectInstalledAgents(homeDir)
 	availableAgents := tui.AvailableAgentsList(detectedAgents, reg.SupportedAgents())
-
-	// Wrap the registry to satisfy install.Registry.
-	regWrapper := agentRegistryAdapter{r: reg}
 
 	// 5. Build the TUI deps with the embedded skills FS wired.
 	deps := tui.ModelDeps{
@@ -105,6 +144,17 @@ func runInstall() error {
 		return fmt.Errorf("tui: %w", err)
 	}
 	return nil
+}
+
+// resolveHomeDir returns homeDir if non-empty, otherwise falls back to
+// os.UserHomeDir(). Any error resolving the system home is silently ignored
+// (the caller already validated this path before reaching headless mode).
+func resolveHomeDir(homeDir string, _ *agents.Registry) string {
+	if homeDir != "" {
+		return homeDir
+	}
+	h, _ := os.UserHomeDir()
+	return h
 }
 
 // resolveVerifyAdapters resolves the concrete adapters for the given agents from

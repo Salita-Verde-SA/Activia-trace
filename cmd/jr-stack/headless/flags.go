@@ -1,0 +1,169 @@
+// Package headless implements the non-interactive (headless) install mode for
+// the jr-stack binary. It is extracted into its own package so that flag
+// parsing and execution logic can be unit-tested without running main().
+package headless
+
+import (
+	"flag"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/JuanCruzRobledo/jr-stack/internal/install"
+	"github.com/JuanCruzRobledo/jr-stack/internal/model"
+)
+
+// ParsedFlags is the result of parsing the install sub-command flags.
+// When TUI is true, no headless execution should happen; the caller must
+// launch the interactive TUI instead.
+type ParsedFlags struct {
+	// TUI is true when no headless intent was expressed (no --headless,
+	// no --mode, no --agent). The caller must launch the interactive TUI.
+	TUI bool
+
+	// Intent is the resolved install intent (agents, mode, custom harnesses).
+	// Valid only when TUI == false.
+	Intent install.Intent
+
+	// HomeDir is the resolved home directory override.
+	// When --home is not provided this is set to os.UserHomeDir().
+	HomeDir string
+
+	// DryRun, when true, means the caller should print the plan steps and
+	// exit without executing anything.
+	DryRun bool
+
+	// Yes means "confirm without prompting" (--yes / -y).
+	Yes bool
+
+	// VerifyHookFn, when non-nil, overrides the default verify hook wired by
+	// the executor. Used only by tests to inject a fake verify hook.
+	VerifyHookFn func() error
+
+	// BuildPlanFn, when non-nil, overrides the default install.BuildPlan call
+	// inside RunHeadless. The entry point (main.go) uses this to inject
+	// install.WithEmbeddedSkillsFS into opts before calling install.BuildPlan.
+	// Tests leave it nil to use the default install.BuildPlan directly.
+	BuildPlanFn func(cat install.Catalog, intent install.Intent, opts install.Options) (install.Plan, error)
+}
+
+// ParseInstallFlags parses the raw argument list for the "install" sub-command.
+//
+// Rules (from design D4):
+//   - No flags → TUI mode (ParsedFlags.TUI == true).
+//   - --headless, --mode, or --agent → headless mode.
+//   - --mode must be "lite", "full", or "custom".
+//   - --custom requires --mode custom.
+//   - --home defaults to os.UserHomeDir().
+//
+// The returned error is non-nil for validation failures (invalid mode, --custom
+// without --mode custom). Callers must write the error to stderr and exit != 0.
+func ParseInstallFlags(args []string) (ParsedFlags, error) {
+	fs := flag.NewFlagSet("install", flag.ContinueOnError)
+	// Suppress the default output so callers control stderr.
+	fs.SetOutput(os.Stderr)
+
+	var (
+		headless bool
+		mode     string
+		agent    string
+		custom   string
+		dryRun   bool
+		yes      bool
+		yShort   bool
+		home     string
+	)
+
+	fs.BoolVar(&headless, "headless", false, "non-interactive install; implied by --mode or --agent")
+	fs.StringVar(&mode, "mode", "", "install mode: lite|full|custom")
+	fs.StringVar(&agent, "agent", "", "comma-separated list of agents (e.g. claude,opencode)")
+	fs.StringVar(&custom, "custom", "", "comma-separated harness IDs (only with --mode custom)")
+	fs.BoolVar(&dryRun, "dry-run", false, "print plan steps; do not execute")
+	fs.BoolVar(&yes, "yes", false, "confirm without prompt")
+	fs.BoolVar(&yShort, "y", false, "alias for --yes")
+	fs.StringVar(&home, "home", "", "override home directory (default: os.UserHomeDir())")
+
+	if err := fs.Parse(args); err != nil {
+		return ParsedFlags{}, err
+	}
+
+	// Merge -y into yes.
+	if yShort {
+		yes = true
+	}
+
+	// Determine if headless mode is active.
+	// --custom alone (without --mode) should also trigger headless so we can
+	// validate and reject it rather than silently falling back to TUI.
+	isHeadless := headless || mode != "" || agent != "" || custom != ""
+
+	// No intent expressed → TUI.
+	if !isHeadless {
+		return ParsedFlags{TUI: true}, nil
+	}
+
+	// ── Validate mode ──────────────────────────────────────────────────────
+	var installMode model.InstallMode
+	if mode != "" {
+		switch mode {
+		case "lite":
+			installMode = model.ModeLite
+		case "full":
+			installMode = model.ModeFull
+		case "custom":
+			installMode = model.ModeCustom
+		default:
+			return ParsedFlags{}, fmt.Errorf("invalid --mode %q: must be lite, full, or custom", mode)
+		}
+	}
+
+	// ── Validate --custom ──────────────────────────────────────────────────
+	if custom != "" && installMode != model.ModeCustom {
+		return ParsedFlags{}, fmt.Errorf("--custom requires --mode custom (got --mode %q)", mode)
+	}
+
+	// ── Parse agents ───────────────────────────────────────────────────────
+	var agents []model.Agent
+	if agent != "" {
+		for _, raw := range strings.Split(agent, ",") {
+			raw = strings.TrimSpace(raw)
+			if raw == "" {
+				continue
+			}
+			agents = append(agents, model.Agent(raw))
+		}
+	}
+
+	// ── Parse custom harness IDs ───────────────────────────────────────────
+	var customIDs []string
+	if custom != "" {
+		for _, raw := range strings.Split(custom, ",") {
+			raw = strings.TrimSpace(raw)
+			if raw != "" {
+				customIDs = append(customIDs, raw)
+			}
+		}
+	}
+
+	// ── Resolve home dir ───────────────────────────────────────────────────
+	homeDir := home
+	if homeDir == "" {
+		var err error
+		homeDir, err = os.UserHomeDir()
+		if err != nil {
+			return ParsedFlags{}, fmt.Errorf("resolve home dir: %w", err)
+		}
+	}
+
+	return ParsedFlags{
+		TUI:    false,
+		DryRun: dryRun,
+		Yes:    yes,
+		HomeDir: homeDir,
+		Intent: install.Intent{
+			Mode:   installMode,
+			Agents: agents,
+			Custom: customIDs,
+		},
+	}, nil
+}
