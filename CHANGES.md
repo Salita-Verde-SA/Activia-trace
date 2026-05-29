@@ -71,10 +71,10 @@ C-07 harness external                │             │
 | 1 | C-03, C-04, C-05, C-06 | olas 2–4 | **HECHO** — 4 ports independientes del repo viejo |
 | 2 | C-07, C-08, C-09, C-09b | C-10 | **HECHO** — 4 installers (external/skill/config/permissions) |
 | 3 | C-10 | C-11a | **HECHO** — adapters slim (P0 claude+opencode) |
-| 4 | C-11a | C-11b | install-pipeline: orquestación headless + rollback |
-| 5 | C-11b | C-12, C-13 | TUI Bubbletea slim: punto de convergencia visible |
-| 6 | C-12, C-13 | C-14 | uninstall + orquestador de fundación, en paralelo |
-| 7 | C-14 | — | verify + E2E (cierre) |
+| 4 | C-11a | C-11b | **HECHO** — install-pipeline: orquestación headless + rollback |
+| 5 | C-11b | C-12, C-13 | **HECHO** — TUI Bubbletea slim: punto de convergencia visible |
+| 6 | C-12, C-13 | C-14 | **HECHO** — uninstall + orquestador de fundación (C-13 split a/b/c) |
+| 7 | C-14 | — | verify + E2E (cierre) — **ÚNICO PENDIENTE** |
 
 **Camino crítico**: `C-01 → C-02 → C-04/C-05 → C-09 → C-10 → C-11a → C-11b → C-13 → C-14`.
 Es la cadena más larga: el merge/backup habilitan el installer de config
@@ -175,21 +175,25 @@ estrecha hacia la convergencia en C-11b (la TUI).
 - **Leer antes**: repo viejo `internal/pipeline/`, ARCHITECTURE.md §4.1, firmas reales de catalog/planner/backup/agents/installers.
 
 ### C-11b — TUI flujo install (lite/full/custom, Bubbletea slim)
-- **Estado**: PENDIENTE.
+- **Estado**: HECHO (commit `8472cf6` — interactive install flow con Bubbletea).
 - **Scope**: Portar `internal/tui` (Bubbletea) **slim**, sin theme cosmético. Flujo: detectar OS/agentes → elegir agente(s) → elegir modo (Lite/Full/Custom) → invocar `internal/install` (C-11a) → render de progreso suscrito al `ProgressFunc`. Selección/agrupación **por harness** (no por componente viejo). Se descarta theme/statusline/keybindings/persona-marketing.
 - **Dependencias**: C-11a.
 - **Governance**: BAJO (la TUI orquesta; el riesgo vive en el pipeline que invoca).
 - **Leer antes**: ARCHITECTURE.md §4.1 (flujo install), repo viejo `internal/tui/`, skill `go-testing` (teatest).
 
 ### C-12 — Flujo uninstall harness-aware
-- **Estado**: PENDIENTE.
+- **Estado**: HECHO (archivado `2026-05-27-c12-uninstall`, commit `392984b`). Engine headless `internal/uninstall/` espejo de `internal/install/`, 28 tests en verde. Verificado PASS (governance ALTO).
 - **Scope**: Uninstall que entiende **harnesses** (no componentes viejos): revertir inyecciones por markers, restaurar desde backup, remover skills clonadas. Mantener la interfaz de uninstall de la TUI.
 - **Dependencias**: C-11.
 - **Governance**: **ALTO** (restaura/borra config del usuario).
 - **Leer antes**: repo viejo flujo uninstall + `internal/backup/restore.go`, ARCHITECTURE.md §1.1 (nota uninstall).
 
 ### C-13 — jr-orchestrator como orquestador de fundación
-- **Estado**: PENDIENTE.
+- **Estado**: HECHO. Se dividió en tres changes por atomicidad (cada skill su contrato):
+  - **C-13a** — `jr-orchestrator` thin orchestrator from scratch + congelado del contrato modular (`.jr-starter-state.json` v2 + matriz I/O). Archivado `2026-05-27-c13-jr-starter`.
+  - **C-13b** — `kb-creator` integra el contrato (owner del slice `state.kb`, discovery interactiva). Archivado `2026-05-27-c13b-kb-creator`.
+  - **C-13c** — `roadmap-generator` integra el contrato (`state.roadmap`, standalone-safe). Archivado `2026-05-27-c13c-roadmap-generator`, verificado PASS.
+- **Cierre**: rename `jr-starter` → `jr-orchestrator` (commit `f89c7e8`) + publicación pública de los 3 repos (`JuanCruzRobledo/{jr-orchestrator,kb-creator,roadmap-generator}`). Flujo de fundación instalable end-to-end.
 - **Scope**: Crear la skill `jr-orchestrator` (thin orchestrator from scratch) con lazy-loading (ARCHITECTURE.md §4.2): `openspec init` → `kb-creator` → `roadmap-generator` → `find-skill` → `agent-instruction`.
 - **Dependencias**: C-11.
 - **Governance**: MEDIO.
