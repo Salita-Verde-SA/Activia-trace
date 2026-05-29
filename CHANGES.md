@@ -205,10 +205,35 @@ estrecha hacia la convergencia en C-11b (la TUI).
   - **Wave B** — modo headless del binario (resuelve D4: `jr-stack install --headless --mode --agent --custom --dry-run --yes --home`, sin flags → TUI, cero regresión; commit `d34bb8b`) + suite E2E harness-first con matrix Docker Ubuntu+Arch (Go 1.26). **Tier 1 VERDE 15/15 en ambas distros.** Commit `6e3cd4c`.
 - **Hallazgos del E2E** (el install real destapó bugs que los unit tests ocultaban con fakes):
   - **Arreglados** (commit `fddde4d`): panic nil-runner al clonar skills (`skillStep` sin `runner` → inyectado vía `Options.CmdRunner`) + URL de asset con `goos` vacío (`engram_<v>__amd64` → HTTP 404; `Options.Profile` con `runtime.GOOS`).
-  - **Follow-ups (TBD → changes futuros)**: **(C-15)** los Dockerfiles E2E no instalan node/npm → `openspec` (npm) falla en Tier 2; opción: instalar node en los Dockerfiles o marcar el step `Soft`/skip sin npm. **(C-16)** el repo `JuanCruzRobledo/agent-instruction` no expone el subdir que espera `skill/clone.go` (`tempDir/<skillID>`) → revisar la convención de layout del repo skill vs. el installer.
+  - **Follow-ups**: **(C-15)** → HECHO. **(C-16)** → HECHO. Nuevos hallazgos del install real: **C-17/C-18/C-19** (ver fichas).
 - **Dependencias**: C-12, C-13.
 - **Governance**: BAJO (verify/E2E); los fixes tocaron `install`/`harness` (MEDIO).
 - **Leer antes**: repo viejo `internal/verify/` y `e2e/`, ARCHITECTURE.md §6 punto 8.
+
+### C-16 — Skill clone: SKILL.md en la raíz del repo
+- **Estado**: HECHO (commit `ce348b5`, archivado `2026-05-29-c16-skill-clone-layout`).
+- **Scope**: `skill/clone.go` esperaba un subdir `tempDir/<skillID>`; la convención real es SKILL.md en la raíz del repo. Fix root-first con fallback a subdir + `copyDir` excluye `.git/` (preserva `.gitignore`). Verificado en E2E: las 5 skills clone instalan.
+- **Governance**: MEDIO.
+
+### C-15 — Pre-flight dependency gate + Node en imágenes E2E
+- **Estado**: HECHO (commit `feat(install)` C-15, archivar). Cierra el clone+externals del camino `lite`.
+- **Scope**: `system.RequiredDependencies` deriva deps según harnesses elegidos; gate en headless+TUI que aborta temprano (sin rollback a mitad) con `InstallHint` si falta una dep required; `npx` agregado a `deps.go`; Node en `Dockerfile.ubuntu`/`arch`. Verificado: `lite+claude` pasa completo.
+- **Governance**: MEDIO (gate) + BAJO (Dockerfiles).
+
+### C-17 — Rollback robusto ante directorios no vacíos  *(PENDIENTE)*
+- **Estado**: PENDIENTE. **Gravedad ALTA** (governance ALTO — rollback puede dejar config a medias).
+- **Scope**: el rollback de un step falla con `remove "<dir>/skills": directory not empty` cuando otro step llenó el dir compartido. El install real (E2E `lite+opencode`) lo destapó. Revisar uso de `os.Remove` vs `os.RemoveAll` y la propiedad del dir entre steps; un rollback NUNCA debe fallar dejando estado inconsistente.
+- **Governance**: **ALTO**. Propone y espera review.
+
+### C-18 — verify-hook: clave `permissions` ausente en opencode.json  *(PENDIENTE)*
+- **Estado**: PENDIENTE.
+- **Scope**: el check `permissions:permissions:opencode` falla (`"permissions" key not found in opencode.json`) tras instalar el harness permissions en opencode — el installer/adapter de opencode no escribe la clave que el verify espera (en claude pasa). Inconsistencia installer↔verify para opencode.
+- **Governance**: MEDIO.
+
+### C-19 — Empaquetado npx de `find-skill` / `skill-creator`  *(PENDIENTE)*
+- **Estado**: PENDIENTE (depende de upstream).
+- **Scope**: con Node presente, `npx skills add` da `exit status 1` — empaquetado de terceros (`vercel-labs/skills`, `anthropics/skills`), el TBD del catálogo. Decidir: confirmar el comando/paquete real, o marcar estos harness `Soft`/skip cuando el comando falla (no abortar el install entero).
+- **Governance**: MEDIO. Relacionado con el TBD "Empaquetado de skills de terceros".
 
 ---
 
