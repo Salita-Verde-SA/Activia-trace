@@ -174,6 +174,13 @@ func (m Model) handleKey(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 				if m.deps.Catalog != nil {
 					all := m.deps.Catalog.ForMode(model.ModeCustom)
 					m.AvailableHarnesses = filterHarnessesByAgents(all, m.Selection.Agents)
+					// C-21: permissions es security-first — no desactivable en
+					// Custom. Lo pre-seleccionamos para que arranque marcado y el
+					// usuario vea que se instala siempre.
+					if isHarnessAvailable(m.AvailableHarnesses, permissionsHarnessID) &&
+						!isStringSelected(m.Selection.CustomHarnesses, permissionsHarnessID) {
+						m.Selection.CustomHarnesses = append(m.Selection.CustomHarnesses, permissionsHarnessID)
+					}
 				}
 				m.Screen = ScreenCustomPicker
 				m.Cursor = 0
@@ -201,7 +208,11 @@ func (m Model) handleKey(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case tea.KeySpace:
 			if m.Cursor < len(m.AvailableHarnesses) {
 				id := m.AvailableHarnesses[m.Cursor].ID
-				m.Selection.CustomHarnesses = toggleString(m.Selection.CustomHarnesses, id)
+				// C-21: permissions es security-first — ignorar el toggle, no se
+				// puede desmarcar.
+				if id != permissionsHarnessID {
+					m.Selection.CustomHarnesses = toggleString(m.Selection.CustomHarnesses, id)
+				}
 			}
 		case tea.KeyEnter:
 			return m.enterReview()
@@ -420,7 +431,14 @@ func (m Model) viewCustomPicker() string {
 		if isStringSelected(m.Selection.CustomHarnesses, h.ID) {
 			checked = selectedStyle.Render("[x]")
 		}
-		sb.WriteString(fmt.Sprintf("%s%s %s\n", cursor, checked, h.Name))
+		// C-21: permissions es security-first — se muestra forzado ([x] fijo)
+		// con un sufijo que explica por qué no se puede desmarcar.
+		suffix := ""
+		if h.ID == permissionsHarnessID {
+			checked = selectedStyle.Render("[x]")
+			suffix = dimStyle.Render(" (requerido — security-first)")
+		}
+		sb.WriteString(fmt.Sprintf("%s%s %s%s\n", cursor, checked, h.Name, suffix))
 	}
 	sb.WriteString("\nSpace = toggle  Enter = continue  Esc = back\n")
 	return sb.String()
@@ -493,6 +511,21 @@ func statusIcon(s pipeline.StepStatus) string {
 }
 
 // ── Selection helpers ─────────────────────────────────────────────────────────
+
+// permissionsHarnessID is the catalog ID of the security-first permissions
+// harness. It is non-deselectable in Custom mode (C-21).
+const permissionsHarnessID = "permissions"
+
+// isHarnessAvailable reports whether a harness with the given ID is present in
+// the (already agent-filtered) available list.
+func isHarnessAvailable(harnesses []model.Harness, id string) bool {
+	for _, h := range harnesses {
+		if h.ID == id {
+			return true
+		}
+	}
+	return false
+}
 
 func toggleAgent(agents []model.Agent, a model.Agent) []model.Agent {
 	for i, existing := range agents {

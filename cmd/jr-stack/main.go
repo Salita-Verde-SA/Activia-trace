@@ -179,9 +179,22 @@ func collectSelectedHarnesses(c install.Catalog, intent install.Intent) []model.
 	switch intent.Mode {
 	case model.ModeCustom:
 		var out []model.Harness
+		seen := make(map[string]struct{}, len(intent.Custom)+1)
 		for _, id := range intent.Custom {
+			if _, dup := seen[id]; dup {
+				continue
+			}
 			if h, ok := c.ByID(id); ok {
+				seen[id] = struct{}{}
 				out = append(out, h)
+			}
+		}
+		// C-21: permissions es security-first — no desactivable en Custom.
+		// Espejo de install.selectHarnesses: lo forzamos acá también para que el
+		// verify hook chequee permissions, consistente con lo que se instala.
+		if _, picked := seen["permissions"]; !picked {
+			if perm, ok := c.ByID("permissions"); ok {
+				out = append(out, perm)
 			}
 		}
 		return filterHarnessesByAgents(out, intent.Agents)

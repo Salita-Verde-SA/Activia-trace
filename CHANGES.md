@@ -251,9 +251,11 @@ estrecha hacia la convergencia en C-11b (la TUI).
 - **Estado**: HECHO (catálogo + test `TestForMode_JROrchestratorIsFullOnly`, `go test ./internal/catalog/` verde). Governance BAJO.
 - **Scope**: `harnesses.yaml` — `jr-orchestrator` de `[lite, full]` a `[full]`. Lite = sustrato; Full = fundación guiada.
 
-### C-21 — Custom: `permissions` NO desactivable  *(PENDIENTE)*
-- **Estado**: PENDIENTE. Decisión tomada: en modo Custom, `permissions` (security-first) queda **forzado**, no se puede desmarcar. Coherente con "la seguridad no es opcional" (CLAUDE.md §1).
-- **Scope**: `internal/tui/screen.go` (`customSelected`/`customToggle()`) — arrancar `permissions` seleccionado y bloquear su toggle. TDD: test que afirme que un Custom sin permissions igual lo incluye. Governance MEDIO (toca selección que alimenta el pipeline de escritura).
+### C-21 — Custom: `permissions` NO desactivable
+- **Estado**: HECHO (strict TDD; `go test -count=1 ./internal/...` verde, `go vet` limpio). Governance MEDIO, revisado por el operador en fresco. En modo Custom `permissions` (security-first) queda forzado, no se puede desmarcar (CLAUDE.md §1).
+- **Arquitectura (defensa en profundidad)**: la garantía vive en el **chokepoint** `selectHarnesses` (`internal/install/plan.go`), por donde pasan TANTO la TUI como el headless (`--mode custom`): si `permissions` no está en `intent.Custom`, se fuerza al set (salvo que el agente no lo soporte → `filterByAgents` lo descarta, overlay inexistente). Espejo en `selectTUIHarnesses` (`gate.go`) para coherencia del preflight.
+- **UX**: el picker (`model.go`) arranca con `permissions` seleccionado, el toggle lo ignora, y el render lo muestra `[x] permissions (requerido — security-first)`. No miente: no hay un toggle muerto sin señal.
+- **Scope**: `internal/install/plan.go`, `internal/tui/{gate.go,model.go,screen.go}` + tests en `plan_test.go`, `gate_test.go`, `model_test.go`.
 
 ### C-22 — Skill installer terceros: npx → git clone + subdir
 - **Estado**: HECHO (strict TDD; `go test ./internal/...` 15/15 verde, `go vet` limpio). Governance MEDIO, revisado por el operador (tests frescos `-count=1`). Cierra el TBD de empaquetado de terceros.

@@ -117,12 +117,26 @@ func selectHarnesses(cat Catalog, intent Intent) ([]model.Harness, error) {
 	switch intent.Mode {
 	case model.ModeCustom:
 		var out []model.Harness
+		seen := make(map[string]struct{}, len(intent.Custom)+1)
 		for _, id := range intent.Custom {
 			h, ok := cat.ByID(id)
 			if !ok {
 				return nil, fmt.Errorf("install: custom harness %q not found in catalog", id)
 			}
+			if _, dup := seen[id]; dup {
+				continue
+			}
+			seen[id] = struct{}{}
 			out = append(out, h)
+		}
+		// C-21: permissions es security-first — no desactivable en Custom.
+		// Lo forzamos en el set aunque el usuario no lo haya elegido. El
+		// filterByAgents final lo descarta si el agente no lo soporta (límite
+		// correcto: no se puede forzar un overlay que no existe para ese agente).
+		if _, picked := seen["permissions"]; !picked {
+			if perm, ok := cat.ByID("permissions"); ok {
+				out = append(out, perm)
+			}
 		}
 		return filterByAgents(out, intent.Agents), nil
 

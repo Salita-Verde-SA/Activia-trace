@@ -61,9 +61,22 @@ func selectTUIHarnesses(cat install.Catalog, intent install.Intent) []model.Harn
 	switch intent.Mode {
 	case model.ModeCustom:
 		var out []model.Harness
+		seen := make(map[string]struct{}, len(intent.Custom)+1)
 		for _, id := range intent.Custom {
+			if _, dup := seen[id]; dup {
+				continue
+			}
 			if h, ok := cat.ByID(id); ok {
+				seen[id] = struct{}{}
 				out = append(out, h)
+			}
+		}
+		// C-21: permissions es security-first — no desactivable en Custom.
+		// Espejo de install.selectHarnesses: forzamos permissions para que el
+		// cálculo de deps preflight y la vista sean consistentes con lo que se instala.
+		if _, picked := seen["permissions"]; !picked {
+			if perm, ok := cat.ByID("permissions"); ok {
+				out = append(out, perm)
 			}
 		}
 		return filterHarnessesByAgents(out, intent.Agents)
