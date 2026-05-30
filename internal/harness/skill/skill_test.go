@@ -4,7 +4,7 @@ package skill_test
 // Tests for internal/harness/skill
 //
 // TDD order: all tests written RED first, then implementation makes them GREEN.
-// No real git/npx commands are executed — all exec is mocked via the Runner
+// No real git commands are executed — all exec is mocked via the Runner
 // interface.  File system operations use t.TempDir().
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -40,14 +40,14 @@ type fakeAdapter struct {
 	skillsDir string
 }
 
-func (f fakeAdapter) Agent() model.Agent           { return f.agent }
+func (f fakeAdapter) Agent() model.Agent              { return f.agent }
 func (f fakeAdapter) SkillsDir(homeDir string) string { return f.skillsDir }
 
 // stubRunner records the command that was run and optionally creates a file
 // to simulate a successful installation side-effect.
 type stubRunner struct {
-	called   [][]string
-	err      error
+	called [][]string
+	err    error
 	// sideEffect, if non-nil, is called before returning so the test can
 	// create the expected SKILL.md to simulate a real install.
 	sideEffect func(args []string)
@@ -98,59 +98,6 @@ func TestInstaller_Clone_CallsRunner(t *testing.T) {
 	// First arg must be "git"
 	if runner.called[0][0] != "git" {
 		t.Errorf("expected first arg %q, got %q", "git", runner.called[0][0])
-	}
-}
-
-func TestInstaller_NPX_CallsRunner(t *testing.T) {
-	home := t.TempDir()
-	skillsDir := filepath.Join(home, "skills")
-
-	runner := &stubRunner{
-		sideEffect: func(args []string) {
-			// Simulate npx writing SKILL.md to the skills dir.
-			// Find the --skills-dir flag value.
-			dir := ""
-			for i, a := range args {
-				if a == "--skills-dir" && i+1 < len(args) {
-					dir = args[i+1]
-				}
-			}
-			if dir == "" {
-				return
-			}
-			skillDir := filepath.Join(dir, "third-skill")
-			_ = os.MkdirAll(skillDir, 0o755)
-			_ = os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# third"), 0o644)
-		},
-	}
-
-	adapter := fakeAdapter{agent: model.AgentClaude, skillsDir: skillsDir}
-	h := makeHarness("third-skill", "npx", "vercel/skills", true)
-
-	ins := skill.NewInstaller(runner, nil)
-	results, err := ins.Install(context.Background(), h, []skill.AgentAdapter{adapter}, home, t.TempDir())
-	if err != nil {
-		t.Fatalf("Install() error: %v", err)
-	}
-	if len(results) != 1 {
-		t.Fatalf("expected 1 result, got %d", len(results))
-	}
-	// Verify npx was called with --skills-dir
-	if len(runner.called) == 0 {
-		t.Fatal("expected runner to be called for npx")
-	}
-	args := runner.called[0]
-	if args[0] != "npx" {
-		t.Errorf("expected first arg %q, got %q", "npx", args[0])
-	}
-	hasFlag := false
-	for _, a := range args {
-		if a == "--skills-dir" {
-			hasFlag = true
-		}
-	}
-	if !hasFlag {
-		t.Errorf("expected --skills-dir flag in args %v", args)
 	}
 }
 
@@ -323,66 +270,6 @@ func TestClone_RunnerError_ReturnsError(t *testing.T) {
 	_, err := ins.Install(context.Background(), h, []skill.AgentAdapter{adapter}, home, t.TempDir())
 	if err == nil {
 		t.Fatal("expected error on runner failure, got nil")
-	}
-}
-
-// ── Task 7.3: npx.go ─────────────────────────────────────────────────────────
-
-func TestNPX_SkillsDirFlag(t *testing.T) {
-	home := t.TempDir()
-	skillsDir := filepath.Join(home, "skills")
-
-	runner := &stubRunner{
-		sideEffect: func(args []string) {
-			dir := ""
-			for i, a := range args {
-				if a == "--skills-dir" && i+1 < len(args) {
-					dir = args[i+1]
-				}
-			}
-			if dir == "" {
-				return
-			}
-			d := filepath.Join(dir, "npx-skill")
-			_ = os.MkdirAll(d, 0o755)
-			_ = os.WriteFile(filepath.Join(d, "SKILL.md"), []byte("# npx"), 0o644)
-		},
-	}
-
-	adapter := fakeAdapter{agent: model.AgentClaude, skillsDir: skillsDir}
-	h := makeHarness("npx-skill", "npx", "vercel/skills", true)
-
-	ins := skill.NewInstaller(runner, nil)
-	_, err := ins.Install(context.Background(), h, []skill.AgentAdapter{adapter}, home, t.TempDir())
-	if err != nil {
-		t.Fatalf("Install() error: %v", err)
-	}
-	args := runner.called[0]
-	// Verify: npx skills add <id> --skills-dir <dir>
-	if args[0] != "npx" {
-		t.Errorf("first arg: want npx, got %q", args[0])
-	}
-	// --skills-dir must be followed by the actual skills dir path
-	for i, a := range args {
-		if a == "--skills-dir" && i+1 < len(args) {
-			if args[i+1] != skillsDir {
-				t.Errorf("--skills-dir value: want %q, got %q", skillsDir, args[i+1])
-			}
-		}
-	}
-}
-
-func TestNPX_NonZeroExit_ReturnsError(t *testing.T) {
-	home := t.TempDir()
-	skillsDir := filepath.Join(home, "skills")
-	runner := &stubRunner{err: errors.New("exit status 1")}
-	adapter := fakeAdapter{agent: model.AgentClaude, skillsDir: skillsDir}
-	h := makeHarness("npx-skill", "npx", "vercel/skills", true)
-
-	ins := skill.NewInstaller(runner, nil)
-	_, err := ins.Install(context.Background(), h, []skill.AgentAdapter{adapter}, home, t.TempDir())
-	if err == nil {
-		t.Fatal("expected error on non-zero npx exit, got nil")
 	}
 }
 

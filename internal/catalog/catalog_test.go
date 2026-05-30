@@ -62,7 +62,7 @@ func TestBestEffortFlag_ParseFromYAML(t *testing.T) {
     name: Best Effort
     type: skill
     best_effort: true
-    source: { repo: some/repo, method: npx }
+    source: { repo: some/repo, method: clone }
     install_modes: [full]
   - id: normal-skill
     name: Normal Skill
@@ -245,7 +245,7 @@ func TestSkillHarnesses_HaveMethod(t *testing.T) {
 			t.Errorf("skill harness %q has empty source.method after catalog load", h.ID)
 		}
 		switch h.Source.Method {
-		case "clone", "npx", "embed":
+		case "clone", "embed":
 			// valid
 		default:
 			t.Errorf("skill harness %q has unknown source.method %q", h.ID, h.Source.Method)
@@ -254,7 +254,8 @@ func TestSkillHarnesses_HaveMethod(t *testing.T) {
 }
 
 func TestMethodInference_ThirdParty(t *testing.T) {
-	// A skill harness with third_party:true and no method should infer "npx".
+	// A skill harness with third_party:true and no method should infer "clone"
+	// (npx support was removed: third-party skills now clone like first-party).
 	yaml := `harnesses:
   - id: x
     name: X
@@ -267,8 +268,8 @@ func TestMethodInference_ThirdParty(t *testing.T) {
 		t.Fatalf("parse(): %v", err)
 	}
 	h, _ := c.ByID("x")
-	if h.Source.Method != "npx" {
-		t.Errorf("expected method %q for third_party skill, got %q", "npx", h.Source.Method)
+	if h.Source.Method != "clone" {
+		t.Errorf("expected method %q for third_party skill, got %q", "clone", h.Source.Method)
 	}
 }
 
@@ -350,6 +351,15 @@ func TestValidate_RejectsBadCatalogs(t *testing.T) {
     name: X
     type: skill
     source: { repo: some/repo, method: ftp }
+    install_modes: [full]`,
+			want: "unknown source.method",
+		},
+		"skill with removed npx method": {
+			yaml: `harnesses:
+  - id: x
+    name: X
+    type: skill
+    source: { repo: some/repo, method: npx }
     install_modes: [full]`,
 			want: "unknown source.method",
 		},

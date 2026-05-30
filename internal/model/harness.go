@@ -66,7 +66,7 @@ const (
 type Source struct {
 	Repo   string `yaml:"repo"`             // e.g. JuanCruzRobledo/kb-creator
 	Ref    string `yaml:"ref,omitempty"`    // tag/branch/commit; defaults to "latest"
-	Method string `yaml:"method,omitempty"` // clone | npx | embed; inferred if empty
+	Method string `yaml:"method,omitempty"` // clone | embed; inferred if empty
 	// Path is the subdir within the cloned repo where the SKILL.md lives.
 	// Empty = repo root (C-16 root-first behavior). Used by third-party
 	// monorepos where the skill is nested (e.g. skills/find-skills).
@@ -87,10 +87,10 @@ type Harness struct {
 	Name         string        `yaml:"name"`
 	Description  string        `yaml:"description,omitempty"`
 	Type         HarnessType   `yaml:"type"`
-	ThirdParty   bool          `yaml:"third_party,omitempty"`   // not owned by us, bundled
-	Source       *Source       `yaml:"source,omitempty"`        // skill harnesses
-	External     *External     `yaml:"external,omitempty"`      // external harnesses
-	Toggles      []string      `yaml:"toggles,omitempty"`       // config harnesses (composable pieces)
+	ThirdParty   bool          `yaml:"third_party,omitempty"` // not owned by us, bundled
+	Source       *Source       `yaml:"source,omitempty"`      // skill harnesses
+	External     *External     `yaml:"external,omitempty"`    // external harnesses
+	Toggles      []string      `yaml:"toggles,omitempty"`     // config harnesses (composable pieces)
 	InstallModes []InstallMode `yaml:"install_modes"`
 	DependsOn    []string      `yaml:"depends_on,omitempty"`
 	Agents       []Agent       `yaml:"agents,omitempty"` // empty = all agents

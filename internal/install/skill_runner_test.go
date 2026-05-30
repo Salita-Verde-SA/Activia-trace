@@ -3,8 +3,8 @@ package install_test
 // skill_runner_test.go — regression tests for the nil-runner panic in skillStep.
 //
 // Bug: buildHarnessStep constructed a skillStep without setting the runner field.
-// For harnesses with Source.Method "clone" or "npx", the real skillInstallFn
-// forwards that nil runner to skill.NewInstaller → cloneInstaller/npxInstaller
+// For harnesses with Source.Method "clone", the real skillInstallFn
+// forwards that nil runner to skill.NewInstaller → cloneInstaller
 // → runner.Run() → nil pointer dereference panic.
 //
 // Existing tests in steps_test.go and integration_test.go all replace
@@ -32,7 +32,7 @@ import (
 
 // installStubRunner satisfies both install.CmdRunner and skill.Runner.
 // It records that it was called and returns a predictable error so that
-// clone/npx logic halts without real network or disk access.
+// clone logic halts without real network or disk access.
 // The panic-before-fix occurs BEFORE this error is reached — the nil
 // dereference happens on the first runner.Run call.
 type installStubRunner struct {
@@ -91,45 +91,6 @@ func TestSkillStep_CloneMethod_RunnerIsNotNil(t *testing.T) {
 		}
 		if !stub.called {
 			t.Error("stub runner must be invoked for clone method")
-		}
-	})
-}
-
-func TestSkillStep_NPXMethod_RunnerIsNotNil(t *testing.T) {
-	// Same regression test for the "npx" code path.
-	stub := &installStubRunner{}
-
-	h := model.Harness{
-		ID:           "npx-skill",
-		Type:         model.HarnessSkill,
-		Source:       &model.Source{Repo: "owner/npx-skill", Method: "npx"},
-		InstallModes: []model.InstallMode{model.ModeFull},
-	}
-	cat := &fakeCatalog{harnesses: []model.Harness{h}}
-	homeDir := t.TempDir()
-	reg := &fakeRegistry{adapters: map[model.Agent]install.AgentAdapter{
-		model.AgentClaude: fakeAdapter{agent: model.AgentClaude},
-	}}
-
-	restoreSnap := install.SetSnapshotCreate(noopSnapshotFn)
-	defer restoreSnap()
-
-	opts := install.WithCmdRunner(buildOptions(homeDir, reg, nil), stub)
-
-	plan, err := install.BuildPlan(cat, install.Intent{
-		Agents: []model.Agent{model.AgentClaude},
-		Mode:   model.ModeFull,
-	}, opts)
-	if err != nil {
-		t.Fatalf("BuildPlan() error = %v", err)
-	}
-
-	runPlanStep(t, plan, "skill:npx-skill", func(runErr error) {
-		if runErr == nil {
-			t.Fatal("expected stub runner error, got nil")
-		}
-		if !stub.called {
-			t.Error("stub runner must be invoked for npx method")
 		}
 	})
 }

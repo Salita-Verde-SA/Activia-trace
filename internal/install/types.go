@@ -14,7 +14,7 @@ import (
 )
 
 // CmdRunner is the interface used by skill steps to execute external commands
-// (e.g. "git clone", "npx …"). It is satisfied by the real OS exec wrapper and
+// (e.g. "git clone"). It is satisfied by the real OS exec wrapper and
 // by stub implementations in tests.
 //
 // The interface is intentionally identical to skill.Runner so the same stub can
@@ -86,9 +86,9 @@ type Options struct {
 	// When nil no progress events are emitted.
 	OnProgress pipeline.ProgressFunc
 	// embeddedSkillsFS is the fs.FS for the "embed" skill install method.
-	// It is set via WithEmbeddedSkillsFS; nil means clone/npx only.
+	// It is set via WithEmbeddedSkillsFS; nil means clone only.
 	embeddedSkillsFS fs.FS
-	// cmdRunner is the CmdRunner forwarded to skill steps for clone/npx methods.
+	// cmdRunner is the CmdRunner forwarded to skill steps for the clone method.
 	// When nil, buildHarnessStep substitutes defaultCmdRunner so production
 	// installs always have a non-nil runner; tests inject a stub via WithCmdRunner.
 	cmdRunner CmdRunner

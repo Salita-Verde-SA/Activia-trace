@@ -20,7 +20,7 @@ import (
 // Task 2.1 — best-effort skillStep whose install fn fails → Run() returns nil
 // (pipeline does not abort).
 func TestSkillStep_BestEffort_FailReturnNil(t *testing.T) {
-	installErr := errors.New("npx skills add: exit status 1")
+	installErr := errors.New("git clone: exit status 1")
 
 	restore := install.SetSkillInstallFn(func(
 		_ interface{},
@@ -43,7 +43,7 @@ func TestSkillStep_BestEffort_FailReturnNil(t *testing.T) {
 		ID:           "find-skill",
 		Type:         model.HarnessSkill,
 		BestEffort:   true,
-		Source:       &model.Source{Repo: "vercel-labs/skills", Method: "npx"},
+		Source:       &model.Source{Repo: "vercel-labs/skills", Method: "clone"},
 		InstallModes: []model.InstallMode{model.ModeFull},
 	}
 	cat := &fakeCatalog{harnesses: []model.Harness{h}}
@@ -69,7 +69,7 @@ func TestSkillStep_BestEffort_FailReturnNil(t *testing.T) {
 
 // Task 2.2a — best-effort skillStep failure emits a warning via onProgress callback.
 func TestSkillStep_BestEffort_EmitsWarningViaProgressCallback(t *testing.T) {
-	installErr := errors.New("npx skills add: exit status 1")
+	installErr := errors.New("git clone: exit status 1")
 
 	restore := install.SetSkillInstallFn(func(
 		_ interface{},
@@ -92,7 +92,7 @@ func TestSkillStep_BestEffort_EmitsWarningViaProgressCallback(t *testing.T) {
 		ID:           "find-skill",
 		Type:         model.HarnessSkill,
 		BestEffort:   true,
-		Source:       &model.Source{Repo: "vercel-labs/skills", Method: "npx"},
+		Source:       &model.Source{Repo: "vercel-labs/skills", Method: "clone"},
 		InstallModes: []model.InstallMode{model.ModeFull},
 	}
 	cat := &fakeCatalog{harnesses: []model.Harness{h}}
@@ -195,7 +195,7 @@ func TestSkillStep_NonBestEffort_FailReturnsError(t *testing.T) {
 // the failing best-effort step returns nil (soft success), and OnProgress receives
 // a warning event carrying the install error.
 func TestBuildHarnessStep_BestEffortSkill_PropagatesBestEffortAndProgress(t *testing.T) {
-	installErr := errors.New("npx: not available")
+	installErr := errors.New("git: not available")
 
 	restore := install.SetSkillInstallFn(func(
 		_ interface{},
@@ -218,7 +218,7 @@ func TestBuildHarnessStep_BestEffortSkill_PropagatesBestEffortAndProgress(t *tes
 		ID:           "skill-creator",
 		Type:         model.HarnessSkill,
 		BestEffort:   true,
-		Source:       &model.Source{Repo: "anthropics/skills", Method: "npx"},
+		Source:       &model.Source{Repo: "anthropics/skills", Method: "clone"},
 		InstallModes: []model.InstallMode{model.ModeFull},
 	}
 	cat := &fakeCatalog{harnesses: []model.Harness{h}}

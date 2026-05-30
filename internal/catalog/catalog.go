@@ -35,11 +35,8 @@ func parse(data []byte) (*Catalog, error) {
 	// Infer Source.Method for skill harnesses that omit it.
 	for i, h := range c.Harnesses {
 		if h.Type == model.HarnessSkill && h.Source != nil && h.Source.Method == "" {
-			if h.ThirdParty {
-				c.Harnesses[i].Source.Method = "npx"
-			} else {
-				c.Harnesses[i].Source.Method = "clone"
-			}
+			// Both first-party and third-party skills clone (npx support removed).
+			c.Harnesses[i].Source.Method = "clone"
 		}
 	}
 	for _, h := range c.Harnesses {
@@ -77,10 +74,10 @@ func (c *Catalog) validate() error {
 				return fmt.Errorf("catalog: skill harness %q needs a source.repo", h.ID)
 			}
 			switch h.Source.Method {
-			case "clone", "npx", "embed":
+			case "clone", "embed":
 				// valid
 			default:
-				return fmt.Errorf("catalog: skill harness %q has unknown source.method %q (want clone|npx|embed)", h.ID, h.Source.Method)
+				return fmt.Errorf("catalog: skill harness %q has unknown source.method %q (want clone|embed)", h.ID, h.Source.Method)
 			}
 		case model.HarnessExternal:
 			if h.External == nil || h.External.Method == "" {

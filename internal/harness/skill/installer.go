@@ -15,15 +15,15 @@ type Runner interface {
 }
 
 // Installer dispatches skill installation to the correct method based on
-// Source.Method (clone | npx | embed).
+// Source.Method (clone | embed).
 type Installer struct {
 	runner     Runner
 	embeddedFS fs.FS
 }
 
 // NewInstaller creates a new Installer.
-//   - runner is used for clone and npx methods (can be nil if only embed is needed).
-//   - embeddedFS is the FS for the embed method (can be nil if only clone/npx is needed).
+//   - runner is used for the clone method (can be nil if only embed is needed).
+//   - embeddedFS is the FS for the embed method (can be nil if only clone is needed).
 func NewInstaller(runner Runner, embeddedFS fs.FS) *Installer {
 	return &Installer{runner: runner, embeddedFS: embeddedFS}
 }
@@ -76,14 +76,12 @@ func (ins *Installer) installForAdapter(
 	switch h.Source.Method {
 	case "clone":
 		return cloneInstaller(ctx, ins.runner, h.ID, h.Source.Repo, h.Source.Ref, h.Source.Path, skillsDir, backupDir)
-	case "npx":
-		return npxInstaller(ctx, ins.runner, h.ID, skillsDir, backupDir)
 	case "embed":
 		if ins.embeddedFS == nil {
 			return Result{}, fmt.Errorf("harness %q: embed method requires an embedded FS", h.ID)
 		}
 		return embedInstaller(ins.embeddedFS, h.ID, skillsDir, backupDir)
 	default:
-		return Result{}, fmt.Errorf("harness %q: unsupported source.method %q (supported: clone, npx, embed)", h.ID, h.Source.Method)
+		return Result{}, fmt.Errorf("harness %q: unsupported source.method %q (supported: clone, embed)", h.ID, h.Source.Method)
 	}
 }
