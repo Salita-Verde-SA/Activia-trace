@@ -268,5 +268,13 @@ estrecha hacia la convergencia en C-11b (la TUI).
 - **Verificado**: grep confirma `ByID(SecurityFirstHarnessID)` sólo en `plan.go:130`. Sin ciclos de import. Tests: `select_harnesses_test.go`, `unified_selection_test.go` (afirma que TUI e install resuelven el mismo set).
 
 ### C-23 — Limpiar el método `npx` huérfano
-- **Estado**: HECHO (strict TDD; `go test -count=1 ./...` verde, `go vet` limpio). `rg npx` sobre código (.go/.yaml) = **cero referencias**. El contrato del installer queda `clone | embed`.
+- **Estado**: HECHO (strict TDD; `go test -count=1 ./...` verde, `go vet` limpio). `npx` como **método de instalación** = cero referencias; el contrato del installer queda `clone | embed`. Queda `npx` como **dependencia de sistema** (no es método) → ver **C-25**.
 - **Scope**: borrado `internal/harness/skill/npx.go` + casos npx en `skill_test.go`; quitado el `case "npx"` de `installer.go` (doc y error de método pasan a `clone, embed`); en `catalog.go` la inferencia third-party pasa de `npx` a `clone` y `npx` sale de los métodos válidos; `TestMethodInference_ThirdParty` ahora espera `clone`; comentario `clone | npx | embed` → `clone | embed` en `model.Source`. find-skill/skill-creator sin cambios (ya usan clone explícito).
+
+### C-25 — Limpiar `npx` en la capa de pre-flight / dependencias  *(PENDIENTE)*
+- **Estado**: PENDIENTE. Hallazgo de C-23: tras remover el método `npx`, quedó código relacionado **inalcanzable** en la capa de detección de deps:
+  - `internal/system/preflight.go:51-52` → `case "npx"` que mapea `Source.Method=="npx"` → `node/npm/npx`. El catálogo ya no puede producir `method: npx`, así que ese case es **inalcanzable** en producción.
+  - `internal/system/deps.go:68` → define la dependencia `npx`.
+  - `internal/system/preflight_test.go` → ~15 referencias; tests que construyen harnesses sintéticos `method:"npx"` y verifican el mapeo a node/npm/npx. **Tests verdes que ejercen un camino muerto** (confianza falsa).
+- **A confirmar ANTES de tocar** (no es 100% mecánico): ¿algún harness `external` con `method: npm` (ej. `openspec`) necesita el binario `npx` en runtime? Si **sí** → la dep `npx` se queda y solo se limpia el `case` muerto + sus tests. Si **no** → se puede quitar la dep `npx` de `deps.go` también (eso es cambio de comportamiento del gate, decisión explícita).
+- **Scope tentativo**: quitar el `case "npx"` inalcanzable de `preflight.go`; depurar `preflight_test.go` de los casos sintéticos npx; decidir el destino de la dep `npx` en `deps.go` según la confirmación de arriba. Governance MEDIO (toca el pre-flight gate que aborta el install). TDD.
