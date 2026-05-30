@@ -237,10 +237,27 @@ estrecha hacia la convergencia en C-11b (la TUI).
 
 ---
 
-## Decisiones abiertas (TBD)
+## Decisiones tomadas (antes TBD) — 2026-05-30
 
-- **Nombre del repo remoto en GitHub** (colisión con el `jr-stack` actual): renombrar / archivar / nombre nuevo. (ARCHITECTURE.md §7).
-- **Granularidad final de los toggles** de `sdd-orchestrator` (afecta C-09).
-- **Qué harness entra exactamente en cada modo** Lite/Full/Custom (afecta C-11; el catálogo tiene un mapeo provisional).
-- **Empaquetado de skills de terceros** (`find-skill`, `skill-creator`): repos `vercel-labs/skills` y `anthropics/skills` marcados TBD en el catálogo (afecta C-08).
-- ~~**Repos de skills propias** `jr-starter` y `skill-registry`: marcados TBD en el catálogo.~~ → **RESUELTO** (`JuanCruzRobledo/jr-orchestrator` y `JuanCruzRobledo/skill-registry`, ambos públicos).
+- ~~**Nombre del repo remoto en GitHub**.~~ → **RESUELTO**: el repo viejo queda **archivado como legacy**; este conserva el nombre **`jr-stack`** (binario y repo). Doc-only.
+- ~~**Qué harness entra en cada modo** Lite/Full/Custom.~~ → **RESUELTO** (ver **C-20**, HECHO): **Lite = sustrato** (openspec, engram, context7, sdd-orchestrator, permissions); **Full = sustrato + fundación guiada** (jr-orchestrator + skills que orquesta); **Custom = todos**. `jr-orchestrator` se movió a Full-only (en Lite quedaba huérfano: orquesta skills que no se instalaban).
+- ~~**Granularidad de toggles** de `sdd-orchestrator`.~~ → **RESUELTO**: los 5 toggles (`tdd`, `engram`, `model-routing`, `delegation`, `governance`) son la granularidad final (ya implementada en C-09; confirmado en ARCHITECTURE.md §7 "Resueltas").
+- ~~**Repos de skills propias** `jr-starter` y `skill-registry`.~~ → **RESUELTO** (`JuanCruzRobledo/jr-orchestrator` y `JuanCruzRobledo/skill-registry`, ambos públicos).
+- **Empaquetado de skills de terceros** → **CONFIRMADO el comando** (`npx skills add <owner/repo> --skill <name>` — paquete npm `skills` de vercel-labs). Falta **implementar** el `--skill` en el installer (ver **C-22**): hoy `npx skills add <repo>` sin `--skill` entra en selección interactiva y sin TTY (E2E Docker) revienta con `exit 1`. Ya degradado best-effort por C-19, así que no bloquea.
+
+## Pendientes de implementación (decididos, falta código)
+
+### C-20 — Mapeo de modos: jr-orchestrator a Full-only
+- **Estado**: HECHO (catálogo + test `TestForMode_JROrchestratorIsFullOnly`, `go test ./internal/catalog/` verde). Governance BAJO.
+- **Scope**: `harnesses.yaml` — `jr-orchestrator` de `[lite, full]` a `[full]`. Lite = sustrato; Full = fundación guiada.
+
+### C-21 — Custom: `permissions` NO desactivable  *(PENDIENTE)*
+- **Estado**: PENDIENTE. Decisión tomada: en modo Custom, `permissions` (security-first) queda **forzado**, no se puede desmarcar. Coherente con "la seguridad no es opcional" (CLAUDE.md §1).
+- **Scope**: `internal/tui/screen.go` (`customSelected`/`customToggle()`) — arrancar `permissions` seleccionado y bloquear su toggle. TDD: test que afirme que un Custom sin permissions igual lo incluye. Governance MEDIO (toca selección que alimenta el pipeline de escritura).
+
+### C-22 — Skill installer npx: comando real (3 bugs)  *(PENDIENTE)*
+- **Estado**: PENDIENTE. Comando upstream confirmado por investigación: `npx skills add <owner/repo> --skill <name>` (pkg npm `skills` de vercel-labs). Al leer `internal/harness/skill/npx.go` salieron **3 bugs** que juntos explican el `exit 1` del E2E:
+  1. **Repo equivocado**: `installer.go` pasa `h.ID` (`find-skill`) a `npxInstaller`, no `h.Source.Repo` (`vercel-labs/skills`). Arma `npx skills add find-skill` → repo inexistente.
+  2. **Flag inventado**: usa `--skills-dir <dir>`, que la CLI real **no tiene** (el propio código lo admite con un `TODO: verificar contra npx skills --help`). Flag desconocido → error.
+  3. **Sin `--skill`**: sin él, un repo multi-skill entra en selección interactiva (fzf); sin TTY (Docker E2E) → `exit 1`.
+- **Scope**: campo `Skill string` en `model.Source`; catálogo `find-skill`→`{repo: vercel-labs/skills, skill: find-skills}` (el skill real es **`find-skills`**, plural) y `skill-creator`→`{repo: anthropics/skills, skill: skill-creator}`; reescribir `npxInstaller` para `npx skills add <repo> --skill <name>` (sin `--skills-dir`), pasar `h.Source.Repo`. TDD: `npx_test.go` + `skill_test.go` (hoy esperan `--skills-dir`, hay que actualizarlos). Governance MEDIO. Cierra el TBD de empaquetado de terceros.

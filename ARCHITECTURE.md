@@ -201,9 +201,12 @@ Cada incremento será un **change OPSX** (dogfooding) en `openspec/` (ignorado p
   `engram` (engram-protocol) + `tdd` (strict-tdd) + `governance` (niveles, Etapa 4).
 
 ### Follow-ups / abiertas
-- **Fix engram download**: `model.External` conflà `Pkg` para fórmula homebrew y
-  para inferir owner/repo del download (resuelve a `engram/engram` → 404 en
-  Linux/Windows). Separar un campo `Repo` (owner/repo = `Gentleman-Programming/engram`)
-  del `Pkg`. Change chico, afecta install en plataformas sin brew.
-- **Nombre del repo remoto en GitHub**: colisión con `JuanCruzRobledo/jr-stack`
-  (el actual). Definir: renombrar / archivar / nombre nuevo (local queda `Framework/jr-stack`).
+- ~~**Fix engram download**~~ → **RESUELTO**: `model.External` ya separa `Repo`
+  (`Gentleman-Programming/engram`) del `Pkg` (ver `internal/model/harness.go` y el catálogo).
+- ~~**Nombre del repo remoto en GitHub**~~ → **RESUELTO** (2026-05-30): el viejo
+  `JuanCruzRobledo/jr-stack` queda **archivado como legacy**; este conserva `jr-stack`.
+- ~~**Mapeo harness↔modo**~~ → **RESUELTO** (CHANGES.md C-20): Lite = sustrato,
+  Full = sustrato + fundación guiada, Custom = todos. `jr-orchestrator` movido a Full-only.
+- **Empaquetado de skills de terceros** → comando confirmado (`npx skills add <owner/repo> --skill <name>`);
+  falta corregir el installer (CHANGES.md **C-22**, 3 bugs en `npx.go`). Skill de Vercel = `find-skills` (plural).
+- **Custom + `permissions`** → decisión: NO desactivable (security-first); falta implementar (CHANGES.md **C-21**).
