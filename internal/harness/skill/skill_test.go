@@ -669,6 +669,89 @@ func TestClone_NeitherLayout_ReturnsError(t *testing.T) {
 	}
 }
 
+// ── C-22: clone from repo subdir (Source.Path) ───────────────────────────────
+
+// TestClone_WithPath_InstallsFromSubdir verifies that when Source.Path is set,
+// the SKILL.md is copied from <tempDir>/<path>/ (not the clone root) into
+// <skillsDir>/<id>/. This is how third-party skills (find-skill, skill-creator)
+// live in monorepos like vercel-labs/skills and anthropics/skills.
+func TestClone_WithPath_InstallsFromSubdir(t *testing.T) {
+	home := t.TempDir()
+	skillsDir := filepath.Join(home, "skills")
+
+	runner := &stubRunner{
+		sideEffect: func(args []string) {
+			// Simulate git clone of a monorepo: SKILL.md lives in
+			// <tempDir>/skills/find-skills/ (PLURAL upstream name).
+			destDir := args[len(args)-1]
+			subDir := filepath.Join(destDir, "skills", "find-skills")
+			_ = os.MkdirAll(subDir, 0o755)
+			_ = os.WriteFile(filepath.Join(subDir, "SKILL.md"), []byte("# find-skill content"), 0o644)
+			// Also write a root SKILL.md to prove we do NOT pick it up when path is set.
+			_ = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("# WRONG root"), 0o644)
+		},
+	}
+
+	adapter := fakeAdapter{agent: model.AgentClaude, skillsDir: skillsDir}
+	// Harness ID stays "find-skill"; upstream subdir is "skills/find-skills".
+	h := model.Harness{
+		ID: "find-skill", Name: "find-skill", Type: model.HarnessSkill,
+		ThirdParty:   true,
+		Source:       &model.Source{Repo: "vercel-labs/skills", Method: "clone", Path: "skills/find-skills"},
+		InstallModes: []model.InstallMode{model.ModeFull},
+	}
+
+	ins := skill.NewInstaller(runner, nil)
+	results, err := ins.Install(context.Background(), h, []skill.AgentAdapter{adapter}, home, t.TempDir())
+	if err != nil {
+		t.Fatalf("Install() error: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+
+	// Content must come from the subdir, installed at <skillsDir>/<id>/SKILL.md.
+	dest := filepath.Join(skillsDir, "find-skill", "SKILL.md")
+	data, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatalf("SKILL.md not found in skills dir: %v", err)
+	}
+	if string(data) != "# find-skill content" {
+		t.Errorf("SKILL.md content: want %q, got %q", "# find-skill content", string(data))
+	}
+}
+
+// TestClone_EmptyPath_KeepsRootBehavior is a C-16 regression guard: with an
+// empty Source.Path, the root-first / <id>-subdir fallback resolution must be
+// unchanged.
+func TestClone_EmptyPath_KeepsRootBehavior(t *testing.T) {
+	home := t.TempDir()
+	skillsDir := filepath.Join(home, "skills")
+
+	runner := &stubRunner{
+		sideEffect: func(args []string) {
+			destDir := args[len(args)-1]
+			_ = os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte("# root layout"), 0o644)
+		},
+	}
+
+	adapter := fakeAdapter{agent: model.AgentClaude, skillsDir: skillsDir}
+	h := makeHarness("own-skill", "clone", "JuanCruz/own-skill", false) // Path == ""
+
+	ins := skill.NewInstaller(runner, nil)
+	if _, err := ins.Install(context.Background(), h, []skill.AgentAdapter{adapter}, home, t.TempDir()); err != nil {
+		t.Fatalf("Install() error: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(skillsDir, "own-skill", "SKILL.md"))
+	if err != nil {
+		t.Fatalf("SKILL.md not found in skills dir: %v", err)
+	}
+	if string(data) != "# root layout" {
+		t.Errorf("SKILL.md content: want %q, got %q", "# root layout", string(data))
+	}
+}
+
 // ── Types / interface checks ──────────────────────────────────────────────────
 
 // Compile-time check: fakeAdapter must implement skill.AgentAdapter.

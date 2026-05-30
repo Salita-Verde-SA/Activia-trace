@@ -90,8 +90,9 @@ harnesses:
     description: Busca y recomienda skills relevantes (registry de Vercel).
     type: skill
     third_party: true
-    best_effort: true # TBD confirmar empaquetado — falla de npx no aborta el install
-    source: { repo: vercel-labs/skills, ref: latest, method: npx } # TBD confirmar empaquetado
+    best_effort: true # falla del clone no aborta el install (terceros: layout puede cambiar)
+    # ID propio "find-skill"; el skill upstream se llama "find-skills" (PLURAL) y vive en un subdir.
+    source: { repo: vercel-labs/skills, ref: latest, method: clone, path: skills/find-skills }
     install_modes: [full]
 
   - id: skill-creator
@@ -99,6 +100,6 @@ harnesses:
     description: Crea nuevas skills siguiendo la spec de Agent Skills.
     type: skill
     third_party: true
-    best_effort: true # TBD confirmar empaquetado — falla de npx no aborta el install
-    source: { repo: anthropics/skills, ref: latest, method: npx } # TBD confirmar empaquetado
+    best_effort: true # falla del clone no aborta el install (terceros: layout puede cambiar)
+    source: { repo: anthropics/skills, ref: latest, method: clone, path: skills/skill-creator }
     install_modes: [full]

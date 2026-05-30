@@ -67,6 +67,10 @@ type Source struct {
 	Repo   string `yaml:"repo"`             // e.g. JuanCruzRobledo/kb-creator
 	Ref    string `yaml:"ref,omitempty"`    // tag/branch/commit; defaults to "latest"
 	Method string `yaml:"method,omitempty"` // clone | npx | embed; inferred if empty
+	// Path is the subdir within the cloned repo where the SKILL.md lives.
+	// Empty = repo root (C-16 root-first behavior). Used by third-party
+	// monorepos where the skill is nested (e.g. skills/find-skills).
+	Path string `yaml:"path,omitempty"`
 }
 
 // External describes how to install a third-party tool harness.

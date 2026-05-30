@@ -75,7 +75,7 @@ func (ins *Installer) installForAdapter(
 ) (Result, error) {
 	switch h.Source.Method {
 	case "clone":
-		return cloneInstaller(ctx, ins.runner, h.ID, h.Source.Repo, h.Source.Ref, skillsDir, backupDir)
+		return cloneInstaller(ctx, ins.runner, h.ID, h.Source.Repo, h.Source.Ref, h.Source.Path, skillsDir, backupDir)
 	case "npx":
 		return npxInstaller(ctx, ins.runner, h.ID, skillsDir, backupDir)
 	case "embed":

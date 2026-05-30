@@ -15,7 +15,7 @@ import (
 func cloneInstaller(
 	ctx context.Context,
 	runner Runner,
-	skillID, repo, ref, skillsDir, backupDir string,
+	skillID, repo, ref, path, skillsDir, backupDir string,
 ) (Result, error) {
 	if repo == "" {
 		return Result{}, fmt.Errorf("skill %q: source.repo is empty (placeholder not yet confirmed)", skillID)
@@ -40,12 +40,24 @@ func cloneInstaller(
 		return Result{}, fmt.Errorf("skill %q: git clone %q: %w", skillID, repoURL, err)
 	}
 
-	// Resolve the skill source directory: root-first with subdir fallback.
+	// Resolve the skill source directory.
+	//
+	// When path is set (C-22), the skill lives in an explicit subdir of the
+	// repo (e.g. third-party monorepos). We use it directly — no root fallback.
+	//
+	// When path is empty (C-16), use root-first with subdir fallback:
 	//   1. <tempDir>/SKILL.md exists → root layout (our convention).
 	//   2. <tempDir>/<skillID>/SKILL.md exists → legacy subdir layout.
 	//   3. Neither → descriptive error.
 	var srcDir string
 	switch {
+	case path != "":
+		srcDir = filepath.Join(tempDir, path)
+		if !fileExists(filepath.Join(srcDir, "SKILL.md")) {
+			return Result{}, fmt.Errorf(
+				"skill %q: SKILL.md not found in %q subdir of repo %q",
+				skillID, path, repoURL)
+		}
 	case fileExists(filepath.Join(tempDir, "SKILL.md")):
 		srcDir = tempDir
 	case fileExists(filepath.Join(tempDir, skillID, "SKILL.md")):

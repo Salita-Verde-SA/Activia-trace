@@ -92,6 +92,38 @@ func TestBestEffortFlag_ParseFromYAML(t *testing.T) {
 	}
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// C-22: find-skill / skill-creator install via clone from a repo subdir
+// ─────────────────────────────────────────────────────────────────────────────
+
+// TestC22_ThirdPartySkillsUseCloneWithPath asserts that find-skill and
+// skill-creator abandoned npx in favor of clone + a non-empty Source.Path
+// (the subdir inside the upstream monorepo where their SKILL.md lives).
+func TestC22_ThirdPartySkillsUseCloneWithPath(t *testing.T) {
+	c, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	for _, id := range []string{"find-skill", "skill-creator"} {
+		h, ok := c.ByID(id)
+		if !ok {
+			t.Errorf("harness %q not found in catalog", id)
+			continue
+		}
+		if h.Source == nil {
+			t.Errorf("harness %q has nil source", id)
+			continue
+		}
+		if h.Source.Method != "clone" {
+			t.Errorf("harness %q: Source.Method = %q, want %q", id, h.Source.Method, "clone")
+		}
+		if h.Source.Path == "" {
+			t.Errorf("harness %q: Source.Path is empty, want a subdir path", id)
+		}
+	}
+}
+
 func TestLoad_EmbeddedCatalogIsValid(t *testing.T) {
 	c, err := Load()
 	if err != nil {
