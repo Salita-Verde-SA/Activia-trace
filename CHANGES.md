@@ -205,7 +205,7 @@ estrecha hacia la convergencia en C-11b (la TUI).
   - **Wave B** — modo headless del binario (resuelve D4: `jr-stack install --headless --mode --agent --custom --dry-run --yes --home`, sin flags → TUI, cero regresión; commit `d34bb8b`) + suite E2E harness-first con matrix Docker Ubuntu+Arch (Go 1.26). **Tier 1 VERDE 15/15 en ambas distros.** Commit `6e3cd4c`.
 - **Hallazgos del E2E** (el install real destapó bugs que los unit tests ocultaban con fakes):
   - **Arreglados** (commit `fddde4d`): panic nil-runner al clonar skills (`skillStep` sin `runner` → inyectado vía `Options.CmdRunner`) + URL de asset con `goos` vacío (`engram_<v>__amd64` → HTTP 404; `Options.Profile` con `runtime.GOOS`).
-  - **Follow-ups**: **(C-15)** → HECHO. **(C-16)** → HECHO. Nuevos hallazgos del install real: **C-17/C-18/C-19** (ver fichas).
+  - **Follow-ups**: **(C-15)** → HECHO. **(C-16)** → HECHO. **(C-17/C-18/C-19)** → HECHO (cerrados en el Tier 2/3 del E2E real, ver fichas).
 - **Dependencias**: C-12, C-13.
 - **Governance**: BAJO (verify/E2E); los fixes tocaron `install`/`harness` (MEDIO).
 - **Leer antes**: repo viejo `internal/verify/` y `e2e/`, ARCHITECTURE.md §6 punto 8.
@@ -220,19 +220,19 @@ estrecha hacia la convergencia en C-11b (la TUI).
 - **Scope**: `system.RequiredDependencies` deriva deps según harnesses elegidos; gate en headless+TUI que aborta temprano (sin rollback a mitad) con `InstallHint` si falta una dep required; `npx` agregado a `deps.go`; Node en `Dockerfile.ubuntu`/`arch`. Verificado: `lite+claude` pasa completo.
 - **Governance**: MEDIO (gate) + BAJO (Dockerfiles).
 
-### C-17 — Rollback robusto ante directorios no vacíos  *(PENDIENTE)*
-- **Estado**: PENDIENTE. **Gravedad ALTA** (governance ALTO — rollback puede dejar config a medias).
-- **Scope**: el rollback de un step falla con `remove "<dir>/skills": directory not empty` cuando otro step llenó el dir compartido. El install real (E2E `lite+opencode`) lo destapó. Revisar uso de `os.Remove` vs `os.RemoveAll` y la propiedad del dir entre steps; un rollback NUNCA debe fallar dejando estado inconsistente.
-- **Governance**: **ALTO**. Propone y espera review.
+### C-17 — Rollback robusto ante directorios no vacíos
+- **Estado**: HECHO (commit `53e22e8` — `fix(backup): rollback consciente de directorios`, archivado `c17-rollback-dir-aware`). **Gravedad ALTA** (governance ALTO — propuesto y aprobado antes de tocar). Verificado en E2E real: el rollback no destruye config preexistente.
+- **Scope**: el rollback de un step fallaba con `remove "<dir>/skills": directory not empty` cuando otro step llenaba el dir compartido. Fix dir-aware vía nuevo `IsDir bool` en `ManifestEntry`: el rollback distingue dirs preexistentes de dirs creados por el install (el fix obvio `RemoveAll` a secas habría borrado skills del usuario). Un rollback NUNCA debe fallar dejando estado inconsistente.
+- **Governance**: **ALTO**.
 
-### C-18 — verify-hook: clave `permissions` ausente en opencode.json  *(PENDIENTE)*
-- **Estado**: PENDIENTE.
-- **Scope**: el check `permissions:permissions:opencode` falla (`"permissions" key not found in opencode.json`) tras instalar el harness permissions en opencode — el installer/adapter de opencode no escribe la clave que el verify espera (en claude pasa). Inconsistencia installer↔verify para opencode.
+### C-18 — verify-hook: clave `permissions` ausente en opencode.json
+- **Estado**: HECHO (commit `b13d577` — `fix(verify): clave de permisos por agente en el check`). Verificado en E2E real: opencode verde.
+- **Scope**: el check `permissions:permissions:opencode` fallaba (`"permissions" key not found in opencode.json`) — el verify hardcodeaba la clave `"permissions"` (plural) para todos los agentes, pero opencode escribe `"permission"` (singular). Fix: nuevo helper `permissionsKeyFor(agent)` en `internal/verify/harness_checks.go` que resuelve la clave JSON por agente.
 - **Governance**: MEDIO.
 
-### C-19 — Empaquetado npx de `find-skill` / `skill-creator`  *(PENDIENTE)*
-- **Estado**: PENDIENTE (depende de upstream).
-- **Scope**: con Node presente, `npx skills add` da `exit status 1` — empaquetado de terceros (`vercel-labs/skills`, `anthropics/skills`), el TBD del catálogo. Decidir: confirmar el comando/paquete real, o marcar estos harness `Soft`/skip cuando el comando falla (no abortar el install entero).
+### C-19 — harness best-effort (degradar sin abortar)
+- **Estado**: HECHO (commit `355a378` — `feat(install): harness best-effort (degradar sin abortar)`, strict TDD, `internal/pipeline/` intacto). Verificado en E2E real: `full` cierra.
+- **Scope**: `find-skill` y `skill-creator` usan `method: npx` con empaquetado upstream TBD — `npx skills add` da `exit status 1` y abortaba el install entero. Fix: estos harness degradan con warning en vez de tumbar el pipeline. El TBD de empaquetado de terceros sigue abierto (no es bug nuestro).
 - **Governance**: MEDIO. Relacionado con el TBD "Empaquetado de skills de terceros".
 
 ---
