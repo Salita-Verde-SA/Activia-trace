@@ -50,7 +50,9 @@ harnesses:
     description: Orquestador delgado de la fase de fundación (openspec init → kb-creator → roadmap-generator → find-skill → agent-instruction).
     type: skill
     source: { repo: JuanCruzRobledo/jr-orchestrator, ref: latest, method: clone }
-    install_modes: [lite, full]
+    # Full-only: orquesta kb-creator/roadmap-generator/agent-instruction/find-skill,
+    # todas Full. En Lite quedaría huérfano. Lite = sustrato; Full = fundación guiada.
+    install_modes: [full]
     depends_on: [openspec]
 
   - id: kb-creator

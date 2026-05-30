@@ -140,6 +140,29 @@ func TestForMode_LiteIsSubsetOfFull(t *testing.T) {
 	}
 }
 
+func TestForMode_JROrchestratorIsFullOnly(t *testing.T) {
+	c, err := Load()
+	if err != nil {
+		t.Fatalf("Load(): %v", err)
+	}
+
+	for _, h := range c.ForMode(model.ModeLite) {
+		if h.ID == "jr-orchestrator" {
+			t.Fatal("jr-orchestrator must not be in lite: it orchestrates full-only skills (kb-creator, roadmap-generator, agent-instruction, find-skill)")
+		}
+	}
+
+	var inFull bool
+	for _, h := range c.ForMode(model.ModeFull) {
+		if h.ID == "jr-orchestrator" {
+			inFull = true
+		}
+	}
+	if !inFull {
+		t.Fatal("jr-orchestrator must be in full")
+	}
+}
+
 func TestForMode_CustomReturnsAll(t *testing.T) {
 	c, err := Load()
 	if err != nil {
