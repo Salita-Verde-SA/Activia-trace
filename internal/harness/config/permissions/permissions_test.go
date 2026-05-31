@@ -69,6 +69,10 @@ func antigravityAdapter() permissions.PermissionsAdapter {
 	return stubAdapter{agent: model.AgentAntigravity}
 }
 
+func windsurfAdapter() permissions.PermissionsAdapter {
+	return stubAdapter{agent: model.AgentWindsurf}
+}
+
 // --- Task 4.1: Claude uses acceptEdits + deny list ---
 
 func TestInstallClaudeCode(t *testing.T) {
@@ -361,6 +365,21 @@ func TestInstallAntigravityNoOp(t *testing.T) {
 	}
 	if len(result.Files) != 0 {
 		t.Fatalf("Antigravity: expected Files=[], got %v", result.Files)
+	}
+}
+
+func TestInstallWindsurfNoOp(t *testing.T) {
+	home := t.TempDir()
+
+	result, err := permissions.Install(home, []permissions.PermissionsAdapter{windsurfAdapter()})
+	if err != nil {
+		t.Fatalf("Install() error = %v", err)
+	}
+	if result.Changed {
+		t.Fatal("Windsurf: expected Changed=false (no-op)")
+	}
+	if len(result.Files) != 0 {
+		t.Fatalf("Windsurf: expected Files=[], got %v", result.Files)
 	}
 }
 

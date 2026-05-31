@@ -101,8 +101,12 @@ func agentOverlay(agent model.Agent) []byte {
 		// Terminal Command Auto Execution). No injectable settings.json schema.
 		// Explicit no-op.
 		return nil
+	case model.AgentWindsurf:
+		// Windsurf manages permissions via the IDE UI (Cascade), not via an
+		// injectable settings.json schema. Firm decision (was TBD): explicit no-op.
+		return nil
 	default:
-		// Unknown agent (e.g. Windsurf — marked TBD in design.md). Explicit no-op.
+		// Agent not yet contemplated by the catalog. Defensive no-op.
 		return nil
 	}
 }
