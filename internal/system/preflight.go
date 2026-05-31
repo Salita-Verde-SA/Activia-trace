@@ -13,7 +13,6 @@ import (
 //
 // Mapping rules (from design D1):
 //   - external method=="npm"   → node, npm
-//   - skill   method=="npx"   → node, npm, npx
 //   - skill   method=="clone" → git
 //   - config / skill embed / external homebrew|download|mcp|go-install → (none)
 func RequiredDependencies(harnesses []model.Harness, profile PlatformProfile) []Dependency {
@@ -48,8 +47,6 @@ func RequiredDependencies(harnesses []model.Harness, profile PlatformProfile) []
 		case model.HarnessSkill:
 			if h.Source != nil {
 				switch h.Source.Method {
-				case "npx":
-					add("node", "npm", "npx")
 				case "clone":
 					add("git")
 				// embed → no runtime deps

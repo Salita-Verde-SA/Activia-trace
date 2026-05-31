@@ -36,7 +36,7 @@ func (m Model) checkPreflightDeps() error {
 	intent := m.Selection.BuildIntent()
 	selected := selectTUIHarnesses(m.deps.Catalog, intent)
 	// Use an empty profile — the harness→deps mapping is profile-independent
-	// for the set of required names (node/npm/npx/git). Profile only affects
+	// for the set of required names (node/npm/git). Profile only affects
 	// InstallHint text, which comes from defineDependencies inside RequiredDependencies.
 	profile := system.PlatformProfile{}
 	reqDeps := system.RequiredDependencies(selected, profile)

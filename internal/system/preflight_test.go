@@ -81,22 +81,6 @@ func TestRequiredDependencies_ExternalNpm_NodeAndNpm(t *testing.T) {
 	}
 }
 
-func TestRequiredDependencies_SkillNpx_NodeNpmNpx(t *testing.T) {
-	profile := PlatformProfile{OS: "linux", PackageManager: "apt"}
-	harnesses := []model.Harness{
-		harnessByType(model.HarnessSkill, "npx"),
-	}
-
-	got := RequiredDependencies(harnesses, profile)
-	names := depNames(got)
-
-	for _, want := range []string{"node", "npm", "npx"} {
-		if !containsDep(names, want) {
-			t.Fatalf("npx-skill: want %q in deps, got %v", want, names)
-		}
-	}
-}
-
 func TestRequiredDependencies_SkillClone_Git(t *testing.T) {
 	profile := PlatformProfile{OS: "linux", PackageManager: "apt"}
 	harnesses := []model.Harness{
@@ -145,23 +129,6 @@ func TestRequiredDependencies_MixedNpmAndClone_Deduped(t *testing.T) {
 	}
 }
 
-func TestRequiredDependencies_MixedNpxAndConfig_NpxSet(t *testing.T) {
-	profile := PlatformProfile{OS: "linux", PackageManager: "apt"}
-	harnesses := []model.Harness{
-		harnessByType(model.HarnessSkill, "npx"),
-		harnessByType(model.HarnessConfig, ""),
-	}
-
-	got := RequiredDependencies(harnesses, profile)
-	names := depNames(got)
-
-	for _, want := range []string{"node", "npm", "npx"} {
-		if !containsDep(names, want) {
-			t.Fatalf("npx+config: want %q in deps, got %v", want, names)
-		}
-	}
-}
-
 func TestRequiredDependencies_MetadataFromDefineDeps(t *testing.T) {
 	// Verify MinVersion and InstallHint come from defineDependencies, not hard-coded.
 	profile := PlatformProfile{OS: "darwin", PackageManager: "brew"}
@@ -191,25 +158,22 @@ func TestRequiredDependencies_EmptyHarnesses_Empty(t *testing.T) {
 	}
 }
 
-// ─── npx added to defineDependencies ─────────────────────────────────────────
+// ─── npx removed from defineDependencies (C-25) ──────────────────────────────
 
-func TestDefineDependencies_IncludesNpx(t *testing.T) {
+// TestDefineDependencies_ExcludesNpx asserts that npx is NOT a system dependency.
+// C-23 removed npx as an install method (the catalog rejects method:npx), so no
+// harness can ever require npx. Keeping it as a Required dep would surface a
+// phantom prerequisite in the global diagnostic (DetectDependencies). The npm
+// install/verify path uses `npm install -g` + the package's own binary — never npx.
+func TestDefineDependencies_ExcludesNpx(t *testing.T) {
 	profile := PlatformProfile{OS: "linux", PackageManager: "apt"}
 	deps := defineDependencies(profile)
 
 	for _, dep := range deps {
 		if dep.Name == "npx" {
-			if len(dep.DetectCmd) == 0 || dep.DetectCmd[0] != "npx" {
-				t.Fatalf("npx DetectCmd = %v, want [npx ...]", dep.DetectCmd)
-			}
-			// npx should be required (since failing to detect npx halts the install)
-			if !dep.Required {
-				t.Fatalf("npx should be Required=true")
-			}
-			return
+			t.Fatalf("npx must NOT be in defineDependencies (C-25): no harness requires it")
 		}
 	}
-	t.Fatalf("npx not found in defineDependencies")
 }
 
 // ─── DetectDepsFor ────────────────────────────────────────────────────────────
