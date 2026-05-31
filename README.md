@@ -105,6 +105,8 @@ jr-stack install --help          # Todos los flags
 
 Pasar `--mode` o `--agent` activa el modo **headless** automáticamente (ideal para CI o scripts).
 
+> 💡 **¿Usuario final en Windows?** Una vez que tengas el binario (`jr-stack.exe`), hacé **doble-click** para arrancar la TUI: autodetecta tus agentes instalados y te guía paso a paso — sin escribir un solo flag ni abrir una terminal.
+
 ---
 
 ## Modos de instalación
