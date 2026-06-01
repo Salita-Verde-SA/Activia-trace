@@ -7,6 +7,7 @@ import (
 
 	"github.com/JuanCruzRobledo/jr-stack/internal/backup"
 	"github.com/JuanCruzRobledo/jr-stack/internal/filemerge"
+	"github.com/JuanCruzRobledo/jr-stack/internal/harness/config"
 	"github.com/JuanCruzRobledo/jr-stack/internal/model"
 )
 
@@ -60,6 +61,31 @@ var markerRemovalFn = func(path, sectionID string) error {
 	return err
 }
 
+// stalePurgeFn removes every jr-stack-marked section the current installer no
+// longer owns (legacy/renamed sections from older layouts: persona,
+// engram-protocol, strict-tdd-mode, …). It mirrors the install-time cleanup so
+// uninstall leaves no orphaned blocks behind, and reuses config.PurgeStaleSections
+// as the single source of truth for the owned/stale policy.
+//
+// It is a package-level variable so tests can swap it out.
+var stalePurgeFn = func(path string) error {
+	existing, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// File doesn't exist — nothing to purge; no-op.
+			return nil
+		}
+		return fmt.Errorf("read instructions file %q: %w", path, err)
+	}
+	updated := config.PurgeStaleSections(string(existing))
+	if updated == string(existing) {
+		// No stale sections present; no-op.
+		return nil
+	}
+	_, err = filemerge.WriteFileAtomic(path, []byte(updated), 0o644)
+	return err
+}
+
 type markerRemovalStep struct {
 	h        model.Harness
 	adapters []AgentAdapter
@@ -73,8 +99,14 @@ func (s *markerRemovalStep) setManifest(m *backup.Manifest) { s.manifest = m }
 func (s *markerRemovalStep) Run() error {
 	for _, a := range s.adapters {
 		path := a.InstructionsPath(s.homeDir)
+		// Remove this harness's own section first…
 		if err := markerRemovalFn(path, s.h.ID); err != nil {
 			return fmt.Errorf("marker removal for harness %q on agent %q: %w", s.h.ID, a.Agent(), err)
+		}
+		// …then purge any legacy jr-stack sections from older layouts so the
+		// uninstall leaves no orphaned blocks behind.
+		if err := stalePurgeFn(path); err != nil {
+			return fmt.Errorf("stale section purge for harness %q on agent %q: %w", s.h.ID, a.Agent(), err)
 		}
 	}
 	return nil
