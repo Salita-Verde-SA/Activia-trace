@@ -166,6 +166,55 @@ func TestScreenPermissionsSkippedForGeminiAndVSCode(t *testing.T) {
 	}
 }
 
+// ── Bugfix: Space selects the tier under the cursor without advancing ────────
+
+// TestPermissionsSpaceSelectsTierWithoutAdvancing verifies that pressing Space
+// on ScreenPermissions sets Selection.Tier to the tier under the cursor and
+// STAYS on the screen (does not advance to Review). This mirrors the Space
+// toggle used by the multi-select screens; previously Space was a dead key here
+// and only Enter (which also advances) could set the tier.
+func TestPermissionsSpaceSelectsTierWithoutAdvancing(t *testing.T) {
+	for cursor, want := range tierOrder {
+		t.Run(string(want), func(t *testing.T) {
+			m := newModel(ModelDeps{})
+			m.Screen = ScreenPermissions
+			m.Cursor = cursor
+
+			updated, _ := m.Update(tea.KeyMsg{Type: tea.KeySpace})
+			state := updated.(Model)
+
+			if state.Selection.Tier != want {
+				t.Errorf("after Space: Selection.Tier = %q, want %q", state.Selection.Tier, want)
+			}
+			// Space must NOT advance — that is Enter's job.
+			if state.Screen != ScreenPermissions {
+				t.Errorf("after Space: Screen = %v, want ScreenPermissions (must not advance)", state.Screen)
+			}
+		})
+	}
+}
+
+// TestPermissionsSpaceThenEnterKeepsSelection verifies the two-step flow:
+// Space picks a non-default tier, Enter confirms it and advances to Review
+// carrying the picked tier.
+func TestPermissionsSpaceThenEnterKeepsSelection(t *testing.T) {
+	m := newModel(ModelDeps{})
+	m.Screen = ScreenPermissions
+	m.Cursor = 0 // estricto (a non-default tier)
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeySpace})
+	state := updated.(Model)
+	updated, _ = state.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	state = updated.(Model)
+
+	if state.Screen != ScreenReview {
+		t.Errorf("after Space+Enter: Screen = %v, want ScreenReview", state.Screen)
+	}
+	if state.Selection.Tier != model.TierEstricto {
+		t.Errorf("after Space+Enter: Selection.Tier = %q, want %q", state.Selection.Tier, model.TierEstricto)
+	}
+}
+
 // ── Task 5.5: Render balanceado preselected ──────────────────────────────────
 
 // TestPermissionsScreenPreSelectsBalanceado verifies that the initial cursor

@@ -81,7 +81,7 @@ func (m Model) viewPermissions() string {
 		sb.WriteString("\n" + errorStyle.Render(bypassWarning) + "\n")
 	}
 
-	sb.WriteString("\nEnter = select  Esc = back\n")
+	sb.WriteString("\nSpace = pick  Enter = confirm  Esc = back\n")
 	return sb.String()
 }
 
@@ -96,8 +96,12 @@ func (m Model) handlePermissionsKey(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.Cursor < len(tierOrder)-1 {
 			m.Cursor++
 		}
+	case tea.KeySpace:
+		// Pick the tier under the cursor without advancing — mirrors the
+		// Space toggle of the multi-select screens. Enter then confirms.
+		m.Selection.Tier = tierOrder[m.Cursor]
 	case tea.KeyEnter:
-		// Commit the tier and advance to review.
+		// Commit the tier (cursor wins even if Space was not pressed) and advance.
 		m.Selection.Tier = tierOrder[m.Cursor]
 		return m.enterReview()
 	case tea.KeyEsc:
