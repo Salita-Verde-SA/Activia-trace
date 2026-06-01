@@ -29,6 +29,25 @@ func SetSnapshotCreate(fn func(dir string, paths []string) (backup.Manifest, err
 	}
 }
 
+// SetSnapshotCreateWithHints replaces the snapshotCreateWithHints function for
+// testing. Unlike SetSnapshotCreate, this preserves the dir hints parameter so
+// tests can inspect which paths were recorded as directory hints (DirHints).
+// This is the preferred seam for tests that exercise DirHint behaviour (e.g.
+// skill harnesses must be recorded as DirHints for dir-aware rollback).
+func SetSnapshotCreateWithHints(fn func(dir string, paths []string, dirHints map[string]bool) (backup.Manifest, error)) (restore func()) {
+	oldCreate := snapshotCreate
+	oldWithHints := snapshotCreateWithHints
+	snapshotCreateWithHints = fn
+	// Also override the non-hints variant so simple Set calls still use the same fn.
+	snapshotCreate = func(dir string, paths []string) (backup.Manifest, error) {
+		return fn(dir, paths, nil)
+	}
+	return func() {
+		snapshotCreate = oldCreate
+		snapshotCreateWithHints = oldWithHints
+	}
+}
+
 // SetExternalInstallFn replaces externalInstallFn for testing.
 func SetExternalInstallFn(fn func(
 	ctx context.Context,

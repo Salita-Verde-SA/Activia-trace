@@ -78,6 +78,15 @@ func (a fakeAdapter) SettingsPath(homeDir string) string              { return h
 func (a fakeAdapter) MCPConfigPath(homeDir, serverName string) string { return homeDir + "/mcp/" + serverName + ".json" }
 func (a fakeAdapter) MCPStrategy() external.MCPStrategy              { return external.StrategySeparateFile }
 func (a fakeAdapter) VariantKey() string                              { return string(a.agent) }
+func (a fakeAdapter) PathsFor(base string, t model.InstallTarget) model.AgentPaths {
+	return model.AgentPaths{
+		InstructionsPath: base + "/instr.md",
+		SkillsDir:        base + "/skills",
+		SettingsPath:     base + "/settings.json",
+	}.WithMCPConfigFn(func(serverName string) string {
+		return base + "/mcp/" + serverName + ".json"
+	})
+}
 
 // buildOptions returns a minimal set of options for BuildPlan.
 func buildOptions(homeDir string, reg install.Registry, verify func() error) install.Options {

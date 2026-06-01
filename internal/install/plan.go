@@ -57,6 +57,14 @@ func BuildPlan(cat Catalog, intent Intent, opts Options) (Plan, error) {
 		adapters = append(adapters, adapter)
 	}
 
+	// Resolve the effective base directory for this install target.
+	// Machine (zero-value) → homeDir: identical to pre-C-27 behaviour.
+	// Project              → projectRoot: routes writes to the project.
+	effectiveBase := opts.HomeDir
+	if opts.Target == model.Project && opts.ProjectRoot != "" {
+		effectiveBase = opts.ProjectRoot
+	}
+
 	// 5. Build the Apply steps in topological order.
 	applySteps := make([]pipeline.Step, 0, len(resolved.OrderedIDs))
 	for _, id := range resolved.OrderedIDs {
@@ -64,7 +72,7 @@ func BuildPlan(cat Catalog, intent Intent, opts Options) (Plan, error) {
 		if !ok {
 			return empty, fmt.Errorf("install: harness %q not found in catalog", id)
 		}
-		step, err := buildHarnessStep(h, adapters, opts)
+		step, err := buildHarnessStep(h, adapters, opts, effectiveBase)
 		if err != nil {
 			return empty, fmt.Errorf("install: build step for harness %q: %w", id, err)
 		}
@@ -72,8 +80,9 @@ func BuildPlan(cat Catalog, intent Intent, opts Options) (Plan, error) {
 	}
 
 	// 6. Collect all paths that Apply steps will write; build the snapshot step.
-	snapshotDir := filepath.Join(opts.HomeDir, ".jr-stack", "backups", "install")
-	writePaths := collectWritePaths(adapters, opts.HomeDir, resolved.OrderedIDs, cat)
+	// Snapshot dir follows the same effective base (project root for Project target).
+	snapshotDir := filepath.Join(effectiveBase, ".jr-stack", "backups", "install")
+	writePaths := collectWritePaths(adapters, effectiveBase, opts.Target, resolved.OrderedIDs, cat)
 	dirHints := writePaths.DirHints
 	prepareSteps := []pipeline.Step{
 		&snapshotStep{
@@ -196,7 +205,11 @@ type writePathsResult struct {
 // write, so the snapshot in Prepare captures exactly those paths.
 // It also records which paths are directories (DirHints) so the snapshotter
 // can distinguish them from files even when they don't exist on disk yet.
-func collectWritePaths(adapters []AgentAdapter, homeDir string, orderedIDs []string, cat Catalog) writePathsResult {
+//
+// For Machine target (zero-value), the existing per-method resolution is used
+// (zero regression from C-27). For Project target, PathsFor is called with the
+// effective base so each adapter resolves its project-specific layout.
+func collectWritePaths(adapters []AgentAdapter, effectiveBase string, target model.InstallTarget, orderedIDs []string, cat Catalog) writePathsResult {
 	seen := make(map[string]struct{})
 	result := writePathsResult{DirHints: make(map[string]bool)}
 
@@ -229,29 +242,67 @@ func collectWritePaths(adapters []AgentAdapter, homeDir string, orderedIDs []str
 		switch h.Type {
 		case model.HarnessConfig:
 			for _, a := range adapters {
-				addFile(a.InstructionsPath(homeDir))
+				addFile(resolvedInstructionsPath(a, effectiveBase, target))
 			}
 		case model.HarnessSkill:
 			for _, a := range adapters {
 				// SkillsDir is a directory path — must be tracked as a dir hint.
-				addDir(a.SkillsDir(homeDir))
+				addDir(resolvedSkillsDir(a, effectiveBase, target))
 			}
 		case model.HarnessExternal:
 			for _, a := range adapters {
 				if h.External != nil && h.External.Method == "mcp" {
-					addFile(a.MCPConfigPath(homeDir, h.ID))
+					addFile(resolvedMCPConfigPath(a, effectiveBase, target, h.ID))
 				}
 			}
 		}
 		// permissions harness (id == "permissions") — settings paths.
 		if id == "permissions" {
 			for _, a := range adapters {
-				addFile(a.SettingsPath(homeDir))
+				addFile(resolvedSettingsPath(a, effectiveBase, target))
 			}
 		}
 	}
 
 	return result
+}
+
+// resolvedInstructionsPath returns the instructions file path for the given
+// adapter, base directory, and install target.
+// Machine: delegates to the existing InstructionsPath method (zero regression).
+// Project: uses PathsFor to resolve the project layout.
+func resolvedInstructionsPath(a AgentAdapter, base string, t model.InstallTarget) string {
+	if t == model.Project {
+		return a.PathsFor(base, t).InstructionsPath
+	}
+	return a.InstructionsPath(base)
+}
+
+// resolvedSkillsDir returns the skills directory path for the given adapter,
+// base directory, and install target.
+func resolvedSkillsDir(a AgentAdapter, base string, t model.InstallTarget) string {
+	if t == model.Project {
+		return a.PathsFor(base, t).SkillsDir
+	}
+	return a.SkillsDir(base)
+}
+
+// resolvedSettingsPath returns the settings file path for the given adapter,
+// base directory, and install target.
+func resolvedSettingsPath(a AgentAdapter, base string, t model.InstallTarget) string {
+	if t == model.Project {
+		return a.PathsFor(base, t).SettingsPath
+	}
+	return a.SettingsPath(base)
+}
+
+// resolvedMCPConfigPath returns the MCP config path for the given adapter,
+// base directory, install target, and server name.
+func resolvedMCPConfigPath(a AgentAdapter, base string, t model.InstallTarget, serverName string) string {
+	if t == model.Project {
+		return a.PathsFor(base, t).MCPConfigPath(serverName)
+	}
+	return a.MCPConfigPath(base, serverName)
 }
 
 // snapshotCreate is the backing function for creating snapshots. It is a
@@ -276,13 +327,17 @@ var restoreFn = func(m backup.Manifest) error {
 
 // buildHarnessStep constructs the correct pipeline.Step for a single harness.
 // The "permissions" config harness is special: it uses the permissions installer.
-func buildHarnessStep(h model.Harness, adapters []AgentAdapter, opts Options) (pipeline.Step, error) {
+//
+// effectiveBase is the resolved base directory for this install (homeDir for
+// Machine target, projectRoot for Project target). Steps store it as homeDir
+// for backward compatibility with existing step implementations.
+func buildHarnessStep(h model.Harness, adapters []AgentAdapter, opts Options, effectiveBase string) (pipeline.Step, error) {
 	switch h.Type {
 	case model.HarnessExternal:
 		return &externalStep{
 			h:        h,
 			adapters: adapters,
-			homeDir:  opts.HomeDir,
+			homeDir:  effectiveBase,
 			profile:  opts.Profile,
 		}, nil
 
@@ -294,8 +349,8 @@ func buildHarnessStep(h model.Harness, adapters []AgentAdapter, opts Options) (p
 		return &skillStep{
 			h:          h,
 			adapters:   adapters,
-			homeDir:    opts.HomeDir,
-			backupDir:  filepath.Join(opts.HomeDir, ".jr-stack", "backups", "skills", h.ID),
+			homeDir:    effectiveBase,
+			backupDir:  filepath.Join(effectiveBase, ".jr-stack", "backups", "skills", h.ID),
 			embeddedFS: opts.embeddedSkillsFS,
 			runner:     runner,
 			bestEffort: h.BestEffort,
@@ -307,13 +362,13 @@ func buildHarnessStep(h model.Harness, adapters []AgentAdapter, opts Options) (p
 			return &permissionsStep{
 				h:        h,
 				adapters: adapters,
-				homeDir:  opts.HomeDir,
+				homeDir:  effectiveBase,
 			}, nil
 		}
 		return &configStep{
 			h:        h,
 			adapters: adapters,
-			homeDir:  opts.HomeDir,
+			homeDir:  effectiveBase,
 		}, nil
 
 	default:

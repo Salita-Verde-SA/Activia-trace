@@ -62,3 +62,34 @@ func (a *Adapter) MCPStrategy() external.MCPStrategy {
 func (a *Adapter) VariantKey() string {
 	return "opencode"
 }
+
+// PathsFor returns the resolved AgentPaths for the given base directory and
+// install target. For Machine, the result is identical to the existing per-method
+// outputs (zero regression). For Project, OpenCode uses .opencode/ instead of
+// .config/opencode/ — this difference lives here, never in the caller.
+//
+// OpenCode layout by target (D2, confirmed against official docs):
+//   Machine: <homeDir>/.config/opencode/...   (XDG global convention)
+//   Project: <root>/.opencode/...             (project-local convention)
+func (a *Adapter) PathsFor(base string, t model.InstallTarget) model.AgentPaths {
+	var openCodeDir string
+	switch t {
+	case model.Project:
+		// Project layout: .opencode/ in the project root (NOT .config/opencode/).
+		// Confirmed: official OpenCode docs use .opencode/ for per-project config.
+		openCodeDir = filepath.Join(base, ".opencode")
+	default:
+		// Machine layout (default, zero-value): .config/opencode/ under home.
+		// This is identical to the pre-C-27 per-method results → zero regression.
+		openCodeDir = filepath.Join(base, ".config", "opencode")
+	}
+	return model.AgentPaths{
+		InstructionsPath: filepath.Join(openCodeDir, "AGENTS.md"),
+		SkillsDir:        filepath.Join(openCodeDir, "skills"),
+		SettingsPath:     filepath.Join(openCodeDir, "opencode.json"),
+	}.WithMCPConfigFn(func(_ string) string {
+		// OpenCode merges MCP entries into opencode.json (StrategyMergeIntoSettings),
+		// so the MCP config path is always the settings file, regardless of server name.
+		return filepath.Join(openCodeDir, "opencode.json")
+	})
+}

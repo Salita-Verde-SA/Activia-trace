@@ -61,6 +61,10 @@ type AgentAdapter interface {
 	MCPConfigPath(homeDir, serverName string) string
 	MCPStrategy() external.MCPStrategy
 	VariantKey() string
+	// PathsFor returns target-aware resolved paths for the given base dir and
+	// install target. Added in C-27 to route project installs without hardcoding
+	// agent-specific layout in the pipeline.
+	PathsFor(base string, t model.InstallTarget) model.AgentPaths
 }
 
 // Registry maps agents to their adapters. It is satisfied by *agents.Registry.
@@ -70,8 +74,16 @@ type Registry interface {
 
 // Options carries the dependencies and configuration for BuildPlan.
 type Options struct {
-	// HomeDir is the user's home directory, passed to adapters for path resolution.
+	// HomeDir is the user's home directory, passed to adapters for machine-target
+	// path resolution and as the default base when Target is unspecified.
 	HomeDir string
+	// Target selects whether harness writes go to the machine (home) or to a
+	// project root. The zero-value is Machine, preserving the pre-C-27 behaviour
+	// for all existing call sites (zero regression).
+	Target model.InstallTarget
+	// ProjectRoot is the project directory used when Target == Project.
+	// It is ignored when Target is Machine (zero-value).
+	ProjectRoot string
 	// Registry maps agents to their concrete adapters.
 	Registry Registry
 	// Profile is the detected platform profile for the current machine.

@@ -61,6 +61,39 @@ C-07 harness external                │             │
 > - C-10 (adapters) necesita que exista al menos un installer que los consuma; arranca P0 con claude+opencode.
 > - C-11 (TUI) integra catálogo + planner + installers + adapters → es el gran punto de convergencia.
 
+### Epic: Starter packs (capa proyecto) — rama desde C-02
+
+```
+C-02 modelo + catálogo  [HECHO]
+   │
+   ▼
+C-26 modelo de starters  [HECHO]
+   │
+   ├───────────────────────────────┐
+   ▼                               ▼
+C-27 target proyecto           C-30 publicar repos
+(adapters → .claude/ proj)     por starter + curar
+   │                               │
+   ▼                               │
+C-28 mcp scope proyecto            │
+(.mcp.json idempotente)            │
+   │                               │
+   ▼                               │
+C-29 subcomando                    │
+jr-stack starter add               │
+   │              │                │
+   ▼              └────────┬───────┘
+C-31 slash               ▼
+command            C-32 verify + E2E
+(invoca binario)   starters
+```
+
+> Notas del epic starters:
+> - El epic cuelga del sustrato YA TERMINADO (C-01..C-25): reusa backup/filemerge/pipeline/verify.
+> - C-27 es **governance ALTO** (escribe config del usuario en el proyecto) → propone-y-espera-review.
+> - C-30 (publicar repos) es paralelizable con C-27/C-28/C-29, pero **debe** estar antes de C-32 (el E2E clona los repos reales).
+> - C-28 tiene incógnita abierta: verificar dónde escribe hoy el installer `external`/`method:mcp` antes de tocarlo.
+
 ---
 
 ## Plan óptimo de paralelización
@@ -75,12 +108,20 @@ C-07 harness external                │             │
 | 5 | C-11b | C-12, C-13 | **HECHO** — TUI Bubbletea slim: punto de convergencia visible |
 | 6 | C-12, C-13 | C-14 | **HECHO** — uninstall + orquestador de fundación (C-13 split a/b/c) |
 | 7 | C-14 | — | **HECHO** — verify + E2E (cierre del pipeline) |
+| 8 | C-26 | C-27, C-30 | **HECHO** — modelo de starters (base del epic starter packs) |
+| 9 | C-27, C-30 | C-28/C-29, C-32 | C-27 target proyecto (ALTO) ‖ C-30 publicar repos por starter |
+| 10 | C-28 | C-29 | mcp scope proyecto (.mcp.json) |
+| 11 | C-29 | C-31, C-32 | subcomando `jr-stack starter add` |
+| 12 | C-31, C-32 | — | slash-command ‖ verify + E2E starters (cierre del epic) |
 
-**Camino crítico**: `C-01 → C-02 → C-04/C-05 → C-09 → C-10 → C-11a → C-11b → C-13 → C-14`.
+**Camino crítico (instalador, HECHO)**: `C-01 → C-02 → C-04/C-05 → C-09 → C-10 → C-11a → C-11b → C-13 → C-14`.
 Es la cadena más larga: el merge/backup habilitan el installer de config
 (sdd-orchestrator), que alimenta los adapters, que alimentan el install-pipeline
 headless, que monta la TUI, que habilita el orquestador de fundación, que se
 cierra con verify+E2E.
+
+**Camino crítico (epic starter packs)**: `C-26 → C-27 → C-28 → C-29 → C-32`.
+C-30 (publicar repos) corre en paralelo pero bloquea el E2E final.
 
 **Máximo paralelismo útil**: 4 agentes (ola 1). A partir de ahí el grafo se
 estrecha hacia la convergencia en C-11b (la TUI).
@@ -283,3 +324,39 @@ estrecha hacia la convergencia en C-11b (la TUI).
   - `internal/tui/gate.go` → comentario `node/npm/npx/git` → `node/npm/git`.
   - **No tocado**: `catalog.go` / `catalog_test.go` (comentarios + guard que rechaza `method:npx` son correctos y se conservan como red de seguridad).
 - **Governance**: MEDIO. TDD estricto (RED: `ExcludesNpx` falla con `npx` aún presente → GREEN tras la limpieza).
+
+### C-26 — Modelo de starters (base de starter packs)
+- **Estado**: HECHO (strict TDD; `go test -count=1 ./...` verde, `go vet` limpio). 12/12 tasks completadas.
+- **Scope**: Nueva capa de curación de dominio (estilo Spring Boot starters) sobre los harnesses existentes.
+  - Nuevo tipo `model.Starter` (`internal/model/starter.go`) con `ID`, `Name`, `Description`, `Harnesses []string`, `Includes []string`, `MCPs []MCP` (placeholder, shape definitivo en C-28) y método `Validate()`.
+  - Sección `starters:` en `internal/catalog/harnesses.yaml` con 3 entradas seed: `active-ia` (compone `ux-ui + backend`), `ux-ui`, `backend`. Entradas placeholder; curación real de contenido en C-30.
+  - `catalog.Catalog` extendido con `Starters []model.Starter` + `starterIndex`; `validateStarters()` invocada desde `validate()` con las mismas garantías que harnesses: id no vacío, sin duplicados, harnesses referenciados existentes, includes existentes, **detección de ciclos DFS tri-estado** (autorreferencia + ciclo indirecto ambos cubiertos).
+  - Nuevos métodos públicos: `StarterByID(id)` (lookup O(1)) y `ResolveStarter(id)` (expansión recursiva deduplicada, preserva orden de primera aparición, determinista).
+- **Decisiones clave**:
+  - `Starter` es un tipo NUEVO e independiente, no un `Harness` sobrecargado (D1): contratos y campos son distintos; mezclarlos contaminaría el planner y violaría SRP.
+  - DFS de validación (tri-estado, devuelve error) y DFS de resolución (set de visitados, acumula harnesses) son estructuralmente similares pero sirven contratos distintos; no se extrajo helper para evitar sobre-ingeniería (D4).
+  - `MCPs []MCP` marcado `(TBD)` — el shape definitivo (`Command`, `Args`, `Transport`, etc.) se decide en C-28 al implementar escritura de `.mcp.json` (D5).
+- **Dependencias**: C-02 (modelo + catálogo base). Habilita: C-27 (target proyecto en adapters), C-28 (escritura .mcp.json), C-29 (subcomando `jr-stack starter add`), C-30 (publicar repos por starter), C-31 (slash-command), C-32 (verify + E2E starters).
+- **Governance**: BAJO (model/catalog). TDD estricto — 3 archivos nuevos, 12 tests nuevos, 0 regressions.
+- **Archivos tocados**: `internal/model/starter.go` (nuevo), `internal/model/starter_test.go` (nuevo), `internal/catalog/catalog.go` (extendido), `internal/catalog/harnesses.yaml` (sección starters:), `internal/catalog/starter_test.go` (nuevo).
+
+### C-27 — Target de proyecto en adapters + pipeline
+- **Estado**: HECHO (strict TDD; `go test -count=1 ./...` verde 21/21 paquetes, `go vet` limpio). 12/12 tasks completadas.
+- **Scope**: Infraestructura de "target de proyecto" para el epic starter packs. Habilita escribir harnesses bajo `<proyecto>/.claude/` (o `.opencode/`) en lugar del home. NO expone comando nuevo (eso es C-29).
+  - Nuevo tipo `model.InstallTarget` (`Machine | Project`, zero-value = `Machine`) en `internal/model/installtarget.go`. La garantía de zero-value = Machine asegura cero regresión en todos los call-sites existentes.
+  - Nuevo tipo `model.AgentPaths` en `internal/model/agentpaths.go`: struct con `InstructionsPath`, `SkillsDir`, `SettingsPath` y método `MCPConfigPath(serverName)` via closure. Vive en `model` (no en `agents`) para evitar el ciclo de import `agents/claude → agents`.
+  - Nuevo método `PathsFor(base string, t model.InstallTarget) model.AgentPaths` en la interfaz `agents.Adapter` (y en `install.AgentAdapter`). Claude: mismo layout `.claude/` para Machine y Project (solo cambia la base). OpenCode: Machine → `.config/opencode/` (XDG), Project → `.opencode/` (project-local, confirmado contra docs oficiales de OpenCode).
+  - `install.Options` gana `Target model.InstallTarget` y `ProjectRoot string`. `BuildPlan` resuelve la base efectiva (`Machine → HomeDir`, `Project → ProjectRoot`) y la propaga a `collectWritePaths`, `buildHarnessStep` y al cálculo del snapshot dir y skill backup dirs.
+  - `collectWritePaths` es ahora target-aware: para `Project` usa `PathsFor()` en vez de los métodos individuales. Los 4 helper internos (`resolvedInstructionsPath`, `resolvedSkillsDir`, `resolvedSettingsPath`, `resolvedMCPConfigPath`) encapsulan la bifurcación.
+  - Snapshot de proyecto bajo `<ProjectRoot>/.jr-stack/backups/install`. Reusa `internal/backup` con `CreateWithDirHints` exactamente igual que el flujo de máquina. Skills dirs registradas como DirHints para rollback dir-aware (RemoveAll si fue creado por el install, NO-OP si preexistía).
+  - Nuevo testseam `SetSnapshotCreateWithHints` en `install/testseams.go` para tests que inspeccionan DirHints.
+- **TBD resueltos**:
+  - D2 (layout OpenCode proyecto): confirmado `.opencode/` contra docs oficiales de OpenCode (`opencode.ai/docs/config/`). Machine sigue usando `.config/opencode/` (XDG). Diferencia encapsulada en el adapter.
+  - Firma del método target-aware: `PathsFor(base string, t model.InstallTarget) model.AgentPaths` — un solo método aditivo (opción elegida de D1), sin multiplicar métodos ni tocar las 4 interfaces de installer (ISP preservado).
+- **TBD pendientes**:
+  - D1: adapter con estado (`TargetRoot` inyectado, alternativa B) diferido a C-29 si el parámetro resulta incómodo al cablear.
+- **Invariante verificado**: cero regresión del flujo de máquina. Los 7 métodos existentes de cada adapter (`Agent`, `InstructionsPath`, `SkillsDir`, `SettingsPath`, `MCPConfigPath`, `MCPStrategy`, `VariantKey`) conservan exactamente su salida anterior. Tests explícitos de regresión en `adapter_regression_test.go` para claude y opencode. Tests `TestBuildPlanMachineTarget_*` verifican que `BuildPlan` sin Target produce paths y snapshot dir idénticos a hoy.
+- **Dependencias**: C-26 (modelo starters, base del epic). Habilita: C-28 (mcp scope proyecto), C-29 (subcomando `jr-stack starter add`).
+- **Governance**: ALTO. Propuesta aprobada por el operador antes del apply. Cada step de escritura tiene su `Rollback()` vía el pipeline existente. Backup del proyecto antes de escribir usando `internal/backup` (C-17, dir-aware).
+- **Archivos nuevos**: `internal/model/installtarget.go`, `internal/model/installtarget_test.go`, `internal/model/agentpaths.go`, `internal/agents/claude/adapter_project_test.go`, `internal/agents/claude/adapter_regression_test.go`, `internal/agents/opencode/adapter_project_test.go`, `internal/agents/opencode/adapter_regression_test.go`, `internal/install/project_target_test.go`, `internal/install/machine_regression_test.go`, `internal/install/collect_write_paths_test.go`, `internal/install/project_rollback_test.go`.
+- **Archivos modificados**: `internal/model/agentpaths.go` (nuevo tipo de dominio), `internal/agents/interface.go` (método `PathsFor` + doc), `internal/agents/claude/adapter.go` (implementa `PathsFor`), `internal/agents/opencode/adapter.go` (implementa `PathsFor`), `internal/agents/registry_test.go` (fakeAdapter += PathsFor), `internal/install/types.go` (`AgentAdapter` += `PathsFor`; `Options` += `Target`/`ProjectRoot`), `internal/install/plan.go` (`BuildPlan` + `collectWritePaths` + `buildHarnessStep` target-aware; 4 helpers de resolución), `internal/install/testseams.go` (`SetSnapshotCreateWithHints`), `cmd/jr-stack/headless/executor_test.go` (fakeExecAdapter += PathsFor).

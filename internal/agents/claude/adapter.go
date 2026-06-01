@@ -59,3 +59,28 @@ func (a *Adapter) MCPStrategy() external.MCPStrategy {
 func (a *Adapter) VariantKey() string {
 	return "claude"
 }
+
+// PathsFor returns the resolved AgentPaths for the given base directory and
+// install target. For Machine, the result is identical to the existing per-method
+// outputs (zero regression). For Project, the base uses the same .claude/
+// subdirectory layout but anchored to the project root instead of home.
+//
+// Claude project layout (D2):
+//   <root>/.claude/skills
+//   <root>/.claude/CLAUDE.md
+//   <root>/.claude/settings.json
+//   <root>/.claude/mcp/<server>.json
+func (a *Adapter) PathsFor(base string, t model.InstallTarget) model.AgentPaths {
+	// Claude uses the same .claude/ subdirectory layout for both machine and
+	// project targets. The only difference is the base directory.
+	// Machine: base = homeDir  → identical to the pre-C-27 per-method results.
+	// Project: base = projectRoot → writes under <root>/.claude/...
+	claudeDir := filepath.Join(base, ".claude")
+	return model.AgentPaths{
+		InstructionsPath: filepath.Join(claudeDir, "CLAUDE.md"),
+		SkillsDir:        filepath.Join(claudeDir, "skills"),
+		SettingsPath:     filepath.Join(claudeDir, "settings.json"),
+	}.WithMCPConfigFn(func(serverName string) string {
+		return filepath.Join(claudeDir, "mcp", serverName+".json")
+	})
+}

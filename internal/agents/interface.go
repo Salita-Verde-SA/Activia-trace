@@ -39,4 +39,13 @@ type Adapter interface {
 	// VariantKey returns the asset base key used to select variant-specific
 	// config assets (e.g. "claude", "opencode", "generic").
 	VariantKey() string
+
+	// PathsFor returns the resolved model.AgentPaths for the given base directory
+	// and install target. For Machine, the paths are identical to the existing
+	// per-method results (zero regression). For Project, the paths resolve
+	// under the agent's project layout (which may differ from machine layout).
+	//
+	// The per-agent layout difference lives inside the adapter implementation,
+	// never in the caller. This is the single target-aware resolver added by C-27.
+	PathsFor(base string, t model.InstallTarget) model.AgentPaths
 }
