@@ -103,3 +103,20 @@ harnesses:
     best_effort: true # falla del clone no aborta el install (terceros: layout puede cambiar)
     source: { repo: anthropics/skills, ref: latest, method: clone, path: skills/skill-creator }
     install_modes: [full]
+
+# ── Starters (bundles curados de harnesses, componibles vía includes) ─────────
+# Entradas mínimas/placeholder. Curación real del contenido: C-30.
+# Composición: active-ia agrupa ux-ui + backend; sin duplicar harnesses compartidos.
+starters:
+  - id: active-ia
+    name: Active IA
+    description: Stack completo para proyectos de IA activa (compone ux-ui + backend).
+    includes: [ux-ui, backend]
+
+  - id: ux-ui
+    name: UX/UI
+    description: Placeholder para el stack de harnesses de UX/UI (curación en C-30).
+
+  - id: backend
+    name: Backend
+    description: Placeholder para el stack de harnesses de backend (curación en C-30).
