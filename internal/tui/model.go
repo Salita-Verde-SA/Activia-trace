@@ -125,6 +125,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // handleKey routes keyboard events to the active screen.
 func (m Model) handleKey(key tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Normalización cross-platform de la barra espaciadora. En Windows el driver
+	// de consola de bubbletea (key_windows.go: VK_SPACE → KeyRunes) entrega el
+	// espacio como KeyRunes con rune ' ', mientras que en unix el parser ANSI lo
+	// entrega como KeySpace. Sin esta normalización, en Windows el espacio cae en
+	// el case de navegación (tea.KeyUp, tea.KeyRunes) de ScreenAgents, que lo
+	// descarta, y el case tea.KeySpace queda inalcanzable: el toggle nunca
+	// dispara (y de paso el Enter queda bloqueado por el guard de selección).
+	// Unificamos a KeySpace para que cada pantalla maneje el espacio igual en
+	// ambas plataformas.
+	if key.Type == tea.KeyRunes && len(key.Runes) == 1 && key.Runes[0] == ' ' {
+		key.Type = tea.KeySpace
+		key.Runes = nil
+	}
+
 	switch m.Screen {
 
 	case ScreenWelcome:

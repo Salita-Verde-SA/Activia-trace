@@ -192,6 +192,44 @@ func TestAgentSpaceTogglesSelection(t *testing.T) {
 	}
 }
 
+// TestAgentWindowsSpaceTogglesSelection reproduces the Windows console driver
+// behavior: bubbletea's key_windows.go maps VK_SPACE to KeyRunes (rune ' ')
+// instead of KeySpace. Before the normalization in handleKey, this space was
+// swallowed by the navigation case (tea.KeyUp, tea.KeyRunes) and the toggle
+// never fired. This test sends the space exactly as Windows delivers it.
+func TestAgentWindowsSpaceTogglesSelection(t *testing.T) {
+	m := newModel(ModelDeps{
+		AvailableAgents: []model.Agent{model.AgentClaude, model.AgentOpenCode},
+	})
+	m.Screen = ScreenAgents
+	m.Cursor = 0
+
+	// Space as delivered by the Windows console driver: KeyRunes with rune ' '.
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+	state := updated.(Model)
+	if len(state.Selection.Agents) != 1 || state.Selection.Agents[0] != model.AgentClaude {
+		t.Errorf("Windows-style space did not toggle: Agents = %v, want [claude]", state.Selection.Agents)
+	}
+}
+
+// TestCustomPickerWindowsSpaceToggles verifies the same Windows space handling
+// works on the custom picker (which also toggles with the space bar).
+func TestCustomPickerWindowsSpaceToggles(t *testing.T) {
+	m := newModel(ModelDeps{})
+	m.Screen = ScreenCustomPicker
+	m.AvailableHarnesses = []model.Harness{
+		{ID: "engram"},
+		{ID: "context7"},
+	}
+	m.Cursor = 0
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+	state := updated.(Model)
+	if !isStringSelected(state.Selection.CustomHarnesses, "engram") {
+		t.Errorf("Windows-style space did not toggle harness: CustomHarnesses = %v, want [engram]", state.Selection.CustomHarnesses)
+	}
+}
+
 // TestQuitKey verifies that 'q' from the complete screen quits.
 func TestQuitKey(t *testing.T) {
 	m := newModel(ModelDeps{})
