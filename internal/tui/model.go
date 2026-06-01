@@ -65,6 +65,24 @@ type stepRow struct {
 	err    error
 }
 
+// modeOrder is the single source of truth for the order in which install modes
+// are presented on ScreenMode. ScreenMode (key handling and render) reads this
+// slice so the order can never drift between the two.
+var modeOrder = []model.InstallMode{model.ModeLite, model.ModeFull, model.ModeCustom}
+
+// defaultModeCursor returns the index into modeOrder of the mode pre-selected
+// when the user reaches ScreenMode. Full is the recommended baseline (sustrato
+// + fundación guiada), so the radio starts on it. Computed from modeOrder so a
+// reorder of the modes cannot leave a stale hardcoded index behind.
+func defaultModeCursor() int {
+	for i, mode := range modeOrder {
+		if mode == model.ModeFull {
+			return i
+		}
+	}
+	return 0
+}
+
 // newModel creates a Model with the provided dependencies.
 func newModel(deps ModelDeps) Model {
 	if deps.BuildPlanFn == nil {
@@ -148,7 +166,7 @@ func (m Model) handleKey(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 				break
 			}
 			m.Screen = ScreenMode
-			m.Cursor = 0
+			m.Cursor = defaultModeCursor() // Full por defecto
 		case tea.KeyEsc:
 			if s, ok := prevScreen(m.Screen); ok {
 				m.Screen = s
@@ -157,7 +175,7 @@ func (m Model) handleKey(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 	case ScreenMode:
-		modes := []model.InstallMode{model.ModeLite, model.ModeFull, model.ModeCustom}
+		modes := modeOrder
 		switch key.Type {
 		case tea.KeyUp:
 			if m.Cursor > 0 {
@@ -218,7 +236,7 @@ func (m Model) handleKey(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m.enterReview()
 		case tea.KeyEsc:
 			m.Screen = ScreenMode
-			m.Cursor = 0
+			m.Cursor = defaultModeCursor() // Full por defecto al volver al modo
 		}
 
 	case ScreenReview:
@@ -231,10 +249,11 @@ func (m Model) handleKey(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case tea.KeyEsc:
 			if m.Selection.Mode == model.ModeCustom {
 				m.Screen = ScreenCustomPicker
+				m.Cursor = 0
 			} else {
 				m.Screen = ScreenMode
+				m.Cursor = defaultModeCursor() // Full por defecto al volver al modo
 			}
-			m.Cursor = 0
 		}
 
 	case ScreenComplete:
@@ -405,7 +424,7 @@ func (m Model) viewAgents() string {
 }
 
 func (m Model) viewMode() string {
-	modes := []model.InstallMode{model.ModeLite, model.ModeFull, model.ModeCustom}
+	modes := modeOrder
 	var sb strings.Builder
 	sb.WriteString(titleStyle.Render("Choose install mode") + "\n\n")
 	for i, mode := range modes {
