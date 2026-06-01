@@ -58,13 +58,15 @@ func BuildPlan(cat Catalog, intent Intent, opts Options) (Plan, error) {
 	}
 
 	// 5. Build the Apply steps in topological order.
+	// Normalize the tier defensively so no intent zero-value can produce bypass behavior.
+	tier := intent.Tier.Normalize()
 	applySteps := make([]pipeline.Step, 0, len(resolved.OrderedIDs))
 	for _, id := range resolved.OrderedIDs {
 		h, ok := cat.ByID(id)
 		if !ok {
 			return empty, fmt.Errorf("install: harness %q not found in catalog", id)
 		}
-		step, err := buildHarnessStep(h, adapters, opts)
+		step, err := buildHarnessStep(h, adapters, opts, tier)
 		if err != nil {
 			return empty, fmt.Errorf("install: build step for harness %q: %w", id, err)
 		}
@@ -275,8 +277,9 @@ var restoreFn = func(m backup.Manifest) error {
 }
 
 // buildHarnessStep constructs the correct pipeline.Step for a single harness.
-// The "permissions" config harness is special: it uses the permissions installer.
-func buildHarnessStep(h model.Harness, adapters []AgentAdapter, opts Options) (pipeline.Step, error) {
+// The "permissions" config harness is special: it uses the permissions installer
+// and receives the permission tier from the install intent.
+func buildHarnessStep(h model.Harness, adapters []AgentAdapter, opts Options, tier model.PermissionTier) (pipeline.Step, error) {
 	switch h.Type {
 	case model.HarnessExternal:
 		return &externalStep{
@@ -308,6 +311,7 @@ func buildHarnessStep(h model.Harness, adapters []AgentAdapter, opts Options) (p
 				h:        h,
 				adapters: adapters,
 				homeDir:  opts.HomeDir,
+				tier:     tier,
 			}, nil
 		}
 		return &configStep{

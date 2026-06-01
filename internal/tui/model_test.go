@@ -71,9 +71,10 @@ func TestAtLeastOneAgentRequired(t *testing.T) {
 	}
 }
 
-// TestLiteSkipsCustomPicker verifies that Lite mode (cursor=0) goes from
-// Mode → Review, bypassing the custom picker.
-func TestLiteSkipsCustomPicker(t *testing.T) {
+// TestLiteSkipsCustomPickerGoesToPermissions verifies that Lite mode (cursor=0)
+// goes from Mode → ScreenPermissions (not ScreenCustomPicker) when a tier-capable
+// agent (claude) is selected. The permissions screen replaces the old direct-to-review.
+func TestLiteSkipsCustomPickerGoesToPermissions(t *testing.T) {
 	m := newModel(ModelDeps{})
 	m.Screen = ScreenMode
 	m.Selection.Agents = []model.Agent{model.AgentClaude}
@@ -85,13 +86,36 @@ func TestLiteSkipsCustomPicker(t *testing.T) {
 	if state.Screen == ScreenCustomPicker {
 		t.Errorf("Lite should skip custom picker, but got ScreenCustomPicker")
 	}
-	if state.Screen != ScreenReview {
-		t.Errorf("Screen = %v, want ScreenReview for Lite", state.Screen)
+	// With claude selected, Lite goes to ScreenPermissions, not directly ScreenReview.
+	if state.Screen != ScreenPermissions {
+		t.Errorf("Screen = %v, want ScreenPermissions for Lite+claude", state.Screen)
 	}
 }
 
-// TestFullSkipsCustomPicker is the Full-mode analogue.
-func TestFullSkipsCustomPicker(t *testing.T) {
+// TestLiteSkipsPermissionsWithNonTierCapableAgents verifies that Lite mode with
+// only non-tier-capable agents (gemini) goes Mode → Review (skips ScreenPermissions).
+func TestLiteSkipsPermissionsWithNonTierCapableAgents(t *testing.T) {
+	m := newModel(ModelDeps{})
+	m.Screen = ScreenMode
+	m.Selection.Agents = []model.Agent{model.AgentGemini}
+	m.Cursor = 0 // ModeLite is index 0
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	state := updated.(Model)
+
+	if state.Screen == ScreenCustomPicker {
+		t.Errorf("Lite should skip custom picker, but got ScreenCustomPicker")
+	}
+	if state.Screen == ScreenPermissions {
+		t.Errorf("Lite with only gemini should skip ScreenPermissions, but got ScreenPermissions")
+	}
+	if state.Screen != ScreenReview {
+		t.Errorf("Screen = %v, want ScreenReview for Lite+gemini (no tier-capable agents)", state.Screen)
+	}
+}
+
+// TestFullSkipsCustomPickerGoesToPermissions is the Full-mode analogue for tier-capable agents.
+func TestFullSkipsCustomPickerGoesToPermissions(t *testing.T) {
 	m := newModel(ModelDeps{})
 	m.Screen = ScreenMode
 	m.Selection.Agents = []model.Agent{model.AgentClaude}
@@ -103,8 +127,8 @@ func TestFullSkipsCustomPicker(t *testing.T) {
 	if state.Screen == ScreenCustomPicker {
 		t.Errorf("Full should skip custom picker, but got ScreenCustomPicker")
 	}
-	if state.Screen != ScreenReview {
-		t.Errorf("Screen = %v, want ScreenReview for Full", state.Screen)
+	if state.Screen != ScreenPermissions {
+		t.Errorf("Screen = %v, want ScreenPermissions for Full+claude", state.Screen)
 	}
 }
 

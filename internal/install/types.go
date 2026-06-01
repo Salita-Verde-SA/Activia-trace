@@ -41,6 +41,9 @@ type Intent struct {
 	Mode model.InstallMode
 	// Custom lists explicit harness IDs when Mode == ModeCustom.
 	Custom []string
+	// Tier is the permission tier the user chose (estricto, balanceado, bypass).
+	// Zero-value normalizes defensively to TierBalanceado (never TierBypass).
+	Tier model.PermissionTier
 }
 
 // Catalog is the read interface consumed by BuildPlan. It is satisfied by

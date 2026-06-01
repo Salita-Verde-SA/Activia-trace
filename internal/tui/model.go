@@ -217,7 +217,11 @@ func (m Model) handleKey(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.Screen = ScreenCustomPicker
 				m.Cursor = 0
 			} else {
-				// Lite/Full skip custom picker.
+				// Lite/Full: show ScreenPermissions if at least one tier-capable agent is selected.
+				// D8: if no tier-capable agent, skip directly to review.
+				if anyTierCapable(m.Selection.Agents) {
+					return m.enterPermissions(), nil
+				}
 				return m.enterReview()
 			}
 		case tea.KeyEsc:
@@ -247,11 +251,18 @@ func (m Model) handleKey(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 				}
 			}
 		case tea.KeyEnter:
+			// D8: only show ScreenPermissions when at least one tier-capable agent is selected.
+			if anyTierCapable(m.Selection.Agents) {
+				return m.enterPermissions(), nil
+			}
 			return m.enterReview()
 		case tea.KeyEsc:
 			m.Screen = ScreenMode
 			m.Cursor = defaultModeCursor() // Full por defecto al volver al modo
 		}
+
+	case ScreenPermissions:
+		return m.handlePermissionsKey(key)
 
 	case ScreenReview:
 		switch key.Type {
@@ -261,12 +272,17 @@ func (m Model) handleKey(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			return m.startInstall()
 		case tea.KeyEsc:
-			if m.Selection.Mode == model.ModeCustom {
+			// Go back: if tier-capable agents were selected, go back to ScreenPermissions.
+			// Otherwise go back to ScreenCustomPicker (Custom) or ScreenMode (Lite/Full).
+			if anyTierCapable(m.Selection.Agents) {
+				m.Screen = ScreenPermissions
+				m.Cursor = defaultTierCursor()
+			} else if m.Selection.Mode == model.ModeCustom {
 				m.Screen = ScreenCustomPicker
 				m.Cursor = 0
 			} else {
 				m.Screen = ScreenMode
-				m.Cursor = defaultModeCursor() // Full por defecto al volver al modo
+				m.Cursor = defaultModeCursor()
 			}
 		}
 
@@ -386,6 +402,8 @@ func (m Model) View() string {
 		return m.viewMode()
 	case ScreenCustomPicker:
 		return m.viewCustomPicker()
+	case ScreenPermissions:
+		return m.viewPermissions()
 	case ScreenReview:
 		return m.viewReview()
 	case ScreenInstalling:
