@@ -93,7 +93,7 @@ You load the skill and let IT handle the full workflow. You don't replicate skil
 
 ### Domain skills (apply phase)
 
-Before writing any code during apply, check if the project has a skill registry (`.agents/SKILLS.md` or equivalent). If it exists, read it and identify which domain skills match the change's tasks. Load ALL matching skill SKILL.md files before implementing — they contain project-specific patterns, conventions, and templates that must be followed.
+Before writing any code during apply, check if the project has a skill registry (`.atl/skill-registry.md`, `.agents/SKILLS.md`, or equivalent). If it exists, read it and identify which domain skills match the change's tasks. Load ALL matching skill SKILL.md files before implementing — they contain project-specific patterns, conventions, and templates that must be followed.
 
 ## Artifact Lifecycle
 

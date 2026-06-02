@@ -140,7 +140,7 @@ Execute the `{skill-name}` skill for change "{change-name}".
 
 ## Project Standards (auto-resolved)
 {Follow the Skill Resolver Protocol to resolve and inject compact rules here.
- Read the skill registry, match skills to the change's tasks, and paste the
+ Read the skill registry (`.atl/skill-registry.md`, or `.agents/SKILLS.md` if present), match skills to the change's tasks, and paste the
  compact rules blocks for each matching skill.
  If no skill registry exists, omit this section and note it in the prompt so
  the sub-agent can self-resolve from `.agents/SKILLS.md` if available.}
