@@ -94,12 +94,12 @@ Parse `applyRequires` and `artifacts` to understand what exists and what's neede
 
 ### For each action, delegate to a sub-agent:
 
-| User intent | Skill | Model |
-|-------------|-------|-------|
-| "explore", "think about", "investigate" | `openspec-explore` | sonnet |
-| "propose", "create a change", "new feature" | `openspec-propose` | opus |
-| "implement", "apply", "write code" | `openspec-apply-change` | sonnet |
-| "archive", "close", "done with" | `openspec-archive-change` | haiku |
+| User intent | Skill |
+|-------------|-------|
+| "explore", "think about", "investigate" | `openspec-explore` |
+| "propose", "create a change", "new feature" | `openspec-propose` |
+| "implement", "apply", "write code" | `openspec-apply-change` |
+| "archive", "close", "done with" | `openspec-archive-change` |
 
 **You delegate the skill's work to a sub-agent. You don't replicate skill logic inline.**
 
@@ -123,20 +123,6 @@ Each sub-agent starts with NO context. You must brief it completely:
 2. **Context**: Relevant artifact file paths (from `openspec status`), NOT content — the sub-agent reads them
 3. **Project info**: Tech stack, conventions (from `openspec/config.yaml` or engram)
 4. **Engram instruction**: Tell the sub-agent to save progress to engram
-
-### Important delegation rules
-
-- **Explore**: delegate when user enters explore mode — it's a thinking session
-- **Propose**: ALWAYS delegate — it creates multiple artifacts (proposal, design, tasks)
-- **Apply**: ALWAYS delegate — it reads context files + writes implementation code
-- **Archive**: delegate — it reads artifacts, checks completion, moves files
-
-## Engram × OPSX (orchestration wiring)
-
-The full Engram protocol (save triggers, search, session close, after-compaction) lives further below. This section is ONLY the OPSX-specific wiring the generic protocol does not cover:
-
-- **On start**: after recovering memory (`mem_context` / `mem_search "opsx"`), use that context to BRIEF your sub-agents accurately — each sub-agent starts with NO context of its own.
-- **After every completed OPSX action** (explore/propose/apply/archive): save with `topic_key: "opsx/{change-name}/{phase}"` and a title like `"OPSX: {action} completed for {change-name}"`, noting the recommended next action. This keeps each change's progress reconstructable across sessions and compactions.
 
 ## Artifact Lifecycle
 
@@ -173,8 +159,6 @@ openspec instructions apply --change "<name>" --json
 - NEVER do apply or propose work inline — ALWAYS delegate via Agent tool
 - If a change name is ambiguous, run `openspec list --json` and ask the user
 - If the user asks about the old `/sdd-*` commands, explain that OPSX replaced them
-- Save progress to engram after every completed phase
-
 <!-- jr-stack:sdd-model-assignments -->
 ## Model Assignments
 

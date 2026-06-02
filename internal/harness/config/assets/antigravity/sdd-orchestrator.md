@@ -152,8 +152,6 @@ Before ending a session, call `mem_session_summary` with:
 - Load the appropriate skill for each action — don't replicate skill logic inline
 - If the user asks about the old `/sdd-*` commands, explain that OPSX replaced them
 - You execute phases inline — do NOT try to delegate them to sub-agents
-- Save progress to engram after every completed phase
-
 <!-- jr-stack:sdd-model-assignments -->
 ## Model Assignments
 
