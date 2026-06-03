@@ -78,6 +78,7 @@ func (a fakeAdapter) SettingsPath(homeDir string) string              { return h
 func (a fakeAdapter) MCPConfigPath(homeDir, serverName string) string { return homeDir + "/mcp/" + serverName + ".json" }
 func (a fakeAdapter) MCPStrategy() external.MCPStrategy              { return external.StrategySeparateFile }
 func (a fakeAdapter) VariantKey() string                              { return string(a.agent) }
+func (a fakeAdapter) ConfigDelivery() model.ConfigDelivery            { return model.ConfigDeliveryInstructions }
 
 // buildOptions returns a minimal set of options for BuildPlan.
 func buildOptions(homeDir string, reg install.Registry, verify func() error) install.Options {

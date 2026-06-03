@@ -59,3 +59,10 @@ func (a *Adapter) MCPStrategy() external.MCPStrategy {
 func (a *Adapter) VariantKey() string {
 	return "claude"
 }
+
+// ConfigDelivery returns model.ConfigDeliveryInstructions — Claude Code reads a
+// flat instructions file (~/.claude/CLAUDE.md), so config harnesses inject
+// there.
+func (a *Adapter) ConfigDelivery() model.ConfigDelivery {
+	return model.ConfigDeliveryInstructions
+}

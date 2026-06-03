@@ -1,6 +1,7 @@
 package uninstall
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -86,6 +87,54 @@ var stalePurgeFn = func(path string) error {
 	return err
 }
 
+// primaryAgentRemovalFn removes the agent.<id> entry from a settings JSON file
+// (e.g. opencode.json), preserving all other user config. It is the mirror of
+// the install-time primary-agent registration. No-op when the file is missing,
+// malformed, or already has no such entry. It is a package-level variable so
+// tests can inject a fake.
+var primaryAgentRemovalFn = func(settingsPath, agentID string) error {
+	if settingsPath == "" {
+		return nil
+	}
+	raw, err := os.ReadFile(settingsPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("read settings file %q: %w", settingsPath, err)
+	}
+
+	var root map[string]any
+	if err := json.Unmarshal(raw, &root); err != nil {
+		// Malformed settings — leave it untouched rather than risk clobbering
+		// the user's file. Restore-from-snapshot remains the safety net.
+		return nil
+	}
+
+	agentSection, ok := root["agent"].(map[string]any)
+	if !ok {
+		return nil // nothing to remove
+	}
+	if _, present := agentSection[agentID]; !present {
+		return nil // no-op
+	}
+	delete(agentSection, agentID)
+	// Drop the agent object entirely if it is now empty, leaving no footprint.
+	if len(agentSection) == 0 {
+		delete(root, "agent")
+	}
+
+	encoded, err := json.MarshalIndent(root, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal settings %q: %w", settingsPath, err)
+	}
+	encoded = append(encoded, '\n')
+	if _, err := filemerge.WriteFileAtomic(settingsPath, encoded, 0o644); err != nil {
+		return fmt.Errorf("write settings %q: %w", settingsPath, err)
+	}
+	return nil
+}
+
 type markerRemovalStep struct {
 	h        model.Harness
 	adapters []AgentAdapter
@@ -107,6 +156,13 @@ func (s *markerRemovalStep) Run() error {
 		// uninstall leaves no orphaned blocks behind.
 		if err := stalePurgeFn(path); err != nil {
 			return fmt.Errorf("stale section purge for harness %q on agent %q: %w", s.h.ID, a.Agent(), err)
+		}
+		// Primary-agent delivery lives in the settings JSON, not the markdown
+		// instructions file — remove it there too.
+		if a.ConfigDelivery() == model.ConfigDeliveryPrimaryAgent {
+			if err := primaryAgentRemovalFn(a.SettingsPath(s.homeDir), s.h.ID); err != nil {
+				return fmt.Errorf("primary-agent removal for harness %q on agent %q: %w", s.h.ID, a.Agent(), err)
+			}
 		}
 	}
 	return nil

@@ -39,4 +39,9 @@ type Adapter interface {
 	// VariantKey returns the asset base key used to select variant-specific
 	// config assets (e.g. "claude", "opencode", "generic").
 	VariantKey() string
+
+	// ConfigDelivery reports how a config-type harness materializes for this
+	// agent: injected into the instructions file (default) or registered as a
+	// primary agent in the settings JSON.
+	ConfigDelivery() model.ConfigDelivery
 }

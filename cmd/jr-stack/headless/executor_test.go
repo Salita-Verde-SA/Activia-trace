@@ -64,6 +64,7 @@ func (a fakeExecAdapter) SettingsPath(homeDir string) string              { retu
 func (a fakeExecAdapter) MCPConfigPath(homeDir, s string) string          { return homeDir + "/mcp/" + s + ".json" }
 func (a fakeExecAdapter) MCPStrategy() extinstaller.MCPStrategy           { return extinstaller.StrategySeparateFile }
 func (a fakeExecAdapter) VariantKey() string                              { return string(a.agent) }
+func (a fakeExecAdapter) ConfigDelivery() model.ConfigDelivery            { return model.ConfigDeliveryInstructions }
 
 // fakeExecRegistry maps one agent.
 type fakeExecRegistry struct {

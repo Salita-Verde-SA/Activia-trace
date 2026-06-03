@@ -21,6 +21,7 @@ func (f fakeAdapter) SettingsPath(_ string) string               { return "" }
 func (f fakeAdapter) MCPConfigPath(_, _ string) string           { return "" }
 func (f fakeAdapter) MCPStrategy() external.MCPStrategy          { return external.StrategySeparateFile }
 func (f fakeAdapter) VariantKey() string                          { return string(f.agent) }
+func (f fakeAdapter) ConfigDelivery() model.ConfigDelivery        { return model.ConfigDeliveryInstructions }
 
 // Compile-time check: fakeAdapter satisfies agents.Adapter.
 var _ agents.Adapter = fakeAdapter{}

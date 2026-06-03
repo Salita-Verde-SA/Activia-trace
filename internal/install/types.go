@@ -64,6 +64,7 @@ type AgentAdapter interface {
 	MCPConfigPath(homeDir, serverName string) string
 	MCPStrategy() external.MCPStrategy
 	VariantKey() string
+	ConfigDelivery() model.ConfigDelivery
 }
 
 // Registry maps agents to their adapters. It is satisfied by *agents.Registry.
