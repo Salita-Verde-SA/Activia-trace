@@ -60,6 +60,7 @@ type fakeExecAdapter struct {
 func (a fakeExecAdapter) Agent() model.Agent                              { return a.agent }
 func (a fakeExecAdapter) InstructionsPath(homeDir string) string          { return homeDir + "/CLAUDE.md" }
 func (a fakeExecAdapter) SkillsDir(homeDir string) string                 { return homeDir + "/skills" }
+func (a fakeExecAdapter) CommandsDir(homeDir string) string               { return homeDir + "/commands" }
 func (a fakeExecAdapter) SettingsPath(homeDir string) string              { return homeDir + "/settings.json" }
 func (a fakeExecAdapter) MCPConfigPath(homeDir, s string) string          { return homeDir + "/mcp/" + s + ".json" }
 func (a fakeExecAdapter) MCPStrategy() extinstaller.MCPStrategy           { return extinstaller.StrategySeparateFile }
@@ -69,6 +70,7 @@ func (a fakeExecAdapter) PathsFor(base string, _ model.InstallTarget) model.Agen
 		InstructionsPath: base + "/CLAUDE.md",
 		SkillsDir:        base + "/skills",
 		SettingsPath:     base + "/settings.json",
+		CommandsDir:      base + "/commands",
 	}.WithMCPConfigFn(func(s string) string { return base + "/mcp/" + s + ".json" })
 }
 

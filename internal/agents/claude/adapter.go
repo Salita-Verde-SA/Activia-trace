@@ -35,6 +35,13 @@ func (a *Adapter) SkillsDir(homeDir string) string {
 	return filepath.Join(homeDir, ".claude", "skills")
 }
 
+// CommandsDir returns the path to Claude Code's slash-command directory.
+// Example: /home/user/.claude/commands
+// Added in C-31 (D1) — mirrors SkillsDir on the adapter interface.
+func (a *Adapter) CommandsDir(homeDir string) string {
+	return filepath.Join(homeDir, ".claude", "commands")
+}
+
 // SettingsPath returns the path to Claude Code's settings file.
 // Example: /home/user/.claude/settings.json
 func (a *Adapter) SettingsPath(homeDir string) string {
@@ -62,25 +69,43 @@ func (a *Adapter) VariantKey() string {
 
 // PathsFor returns the resolved AgentPaths for the given base directory and
 // install target. For Machine, the result is identical to the existing per-method
-// outputs (zero regression). For Project, the base uses the same .claude/
-// subdirectory layout but anchored to the project root instead of home.
+// outputs (zero regression). For Project, non-MCP paths use the same .claude/
+// subdirectory layout but the MCP path resolves to <root>/.mcp.json (D2).
 //
-// Claude project layout (D2):
-//   <root>/.claude/skills
-//   <root>/.claude/CLAUDE.md
-//   <root>/.claude/settings.json
-//   <root>/.claude/mcp/<server>.json
+// Claude layout by target:
+//   Machine: <homeDir>/.claude/...  + MCP: <homeDir>/.claude/mcp/<server>.json
+//   Project: <root>/.claude/...     + MCP: <root>/.mcp.json  (server name ignored)
+//
+// The MCP strategy is also resolved together with the path (D1) so the two
+// cannot contradict each other:
+//   Machine → MCPStrategySeparateFile (legacy, unchanged)
+//   Project → MCPStrategySingleFileMerge (all servers share one .mcp.json)
 func (a *Adapter) PathsFor(base string, t model.InstallTarget) model.AgentPaths {
-	// Claude uses the same .claude/ subdirectory layout for both machine and
-	// project targets. The only difference is the base directory.
-	// Machine: base = homeDir  → identical to the pre-C-27 per-method results.
-	// Project: base = projectRoot → writes under <root>/.claude/...
 	claudeDir := filepath.Join(base, ".claude")
-	return model.AgentPaths{
+	paths := model.AgentPaths{
 		InstructionsPath: filepath.Join(claudeDir, "CLAUDE.md"),
 		SkillsDir:        filepath.Join(claudeDir, "skills"),
 		SettingsPath:     filepath.Join(claudeDir, "settings.json"),
-	}.WithMCPConfigFn(func(serverName string) string {
-		return filepath.Join(claudeDir, "mcp", serverName+".json")
-	})
+		CommandsDir:      filepath.Join(claudeDir, "commands"),
+	}
+
+	switch t {
+	case model.Project:
+		// Project target (D2): a single .mcp.json at the repo root, independent
+		// of the server name. Strategy is single-file merge into mcpServers key.
+		return paths.
+			WithMCPConfigFn(func(_ string) string {
+				return filepath.Join(base, ".mcp.json")
+			}).
+			WithMCPStrategy(model.MCPStrategySingleFileMerge)
+	default:
+		// Machine target (zero-value): identical to pre-C-27 per-method results.
+		// Strategy is separate-file (one JSON file per server).
+		// (TBD) machine path correctness (~/.claude.json) is a separate follow-up.
+		return paths.
+			WithMCPConfigFn(func(serverName string) string {
+				return filepath.Join(claudeDir, "mcp", serverName+".json")
+			}).
+			WithMCPStrategy(model.MCPStrategySeparateFile)
+	}
 }

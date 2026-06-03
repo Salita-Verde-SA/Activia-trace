@@ -17,6 +17,7 @@ type fakeAdapter struct {
 func (f fakeAdapter) Agent() model.Agent                                              { return f.agent }
 func (f fakeAdapter) InstructionsPath(_ string) string                                { return "" }
 func (f fakeAdapter) SkillsDir(_ string) string                                       { return "" }
+func (f fakeAdapter) CommandsDir(_ string) string                                     { return "" }
 func (f fakeAdapter) SettingsPath(_ string) string                                    { return "" }
 func (f fakeAdapter) MCPConfigPath(_, _ string) string                                { return "" }
 func (f fakeAdapter) MCPStrategy() external.MCPStrategy                               { return external.StrategySeparateFile }

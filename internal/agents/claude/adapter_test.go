@@ -32,6 +32,31 @@ func TestClaudeAdapter_MCPStrategy(t *testing.T) {
 	}
 }
 
+// TestClaudeAdapter_CommandsDir_Machine asserts that the Claude adapter resolves
+// the command directory to <homeDir>/.claude/commands for the Machine target.
+// RED: fails until CommandsDir(homeDir) is added to the Claude adapter.
+func TestClaudeAdapter_CommandsDir_Machine(t *testing.T) {
+	a := claude.NewAdapter()
+	home := testHome
+	want := filepath.Join(home, ".claude", "commands")
+	if got := a.CommandsDir(home); got != want {
+		t.Errorf("CommandsDir(%q) = %q, want %q", home, got, want)
+	}
+}
+
+// TestClaudeAdapter_CommandsDir_ProjectTarget asserts that PathsFor(root, Project)
+// populates CommandsDir as <root>/.claude/commands.
+// RED: fails until CommandsDir is populated in PathsFor.
+func TestClaudeAdapter_CommandsDir_ProjectTarget(t *testing.T) {
+	a := claude.NewAdapter()
+	root := "/project/myapp"
+	want := filepath.Join(root, ".claude", "commands")
+	paths := a.PathsFor(root, model.Project)
+	if paths.CommandsDir != want {
+		t.Errorf("PathsFor(root, Project).CommandsDir = %q, want %q", paths.CommandsDir, want)
+	}
+}
+
 func TestClaudeAdapter_PathMethods(t *testing.T) {
 	a := claude.NewAdapter()
 	home := testHome

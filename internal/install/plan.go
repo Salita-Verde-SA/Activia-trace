@@ -31,7 +31,9 @@ func BuildPlan(cat Catalog, intent Intent, opts Options) (Plan, error) {
 		return empty, err
 	}
 
-	if len(selected) == 0 {
+	// When there are no harnesses to install, we may still have MCP steps
+	// from a starter (C-28). Only return early if there's truly nothing to do.
+	if len(selected) == 0 && (opts.Starter == nil || len(opts.Starter.MCPs) == 0) {
 		return Plan{OnProgress: opts.OnProgress}, nil
 	}
 
@@ -79,10 +81,17 @@ func BuildPlan(cat Catalog, intent Intent, opts Options) (Plan, error) {
 		applySteps = append(applySteps, step)
 	}
 
+	// 5b. Emit MCP write steps from Starter.MCPs[] (D5).
+	// One step per (MCP × focused-agent), each with a Rollback() (governance ALTO).
+	mcpSteps := buildMCPSteps(opts.Starter, adapters, effectiveBase, opts.Target)
+	applySteps = append(applySteps, mcpSteps...)
+
 	// 6. Collect all paths that Apply steps will write; build the snapshot step.
 	// Snapshot dir follows the same effective base (project root for Project target).
 	snapshotDir := filepath.Join(effectiveBase, ".jr-stack", "backups", "install")
 	writePaths := collectWritePaths(adapters, effectiveBase, opts.Target, resolved.OrderedIDs, cat)
+	// Also include MCP write paths from the starter (C-28 D5).
+	collectStarterMCPPaths(opts.Starter, adapters, effectiveBase, opts.Target, &writePaths)
 	dirHints := writePaths.DirHints
 	prepareSteps := []pipeline.Step{
 		&snapshotStep{
@@ -255,6 +264,11 @@ func collectWritePaths(adapters []AgentAdapter, effectiveBase string, target mod
 					addFile(resolvedMCPConfigPath(a, effectiveBase, target, h.ID))
 				}
 			}
+		case model.HarnessCommand:
+			for _, a := range adapters {
+				// CommandsDir is a directory — track as dir hint so rollback can RemoveAll.
+				addDir(resolvedCommandsDir(a, effectiveBase, target))
+			}
 		}
 		// permissions harness (id == "permissions") — settings paths.
 		if id == "permissions" {
@@ -265,6 +279,32 @@ func collectWritePaths(adapters []AgentAdapter, effectiveBase string, target mod
 	}
 
 	return result
+}
+
+// collectStarterMCPPaths appends the MCP config paths for all (MCP × adapter)
+// pairs from the starter into the given writePathsResult (deduplicating).
+// This ensures the snapshot captures these files before any MCP write steps run.
+func collectStarterMCPPaths(starter *model.Starter, adapters []AgentAdapter, base string, target model.InstallTarget, result *writePathsResult) {
+	if starter == nil || len(starter.MCPs) == 0 {
+		return
+	}
+	seen := make(map[string]struct{}, len(result.Paths))
+	for _, p := range result.Paths {
+		seen[p] = struct{}{}
+	}
+	for _, mcp := range starter.MCPs {
+		for _, adapter := range adapters {
+			p := adapter.PathsFor(base, target).MCPConfigPath(mcp.Name)
+			if p == "" {
+				continue
+			}
+			if _, ok := seen[p]; ok {
+				continue
+			}
+			seen[p] = struct{}{}
+			result.Paths = append(result.Paths, p)
+		}
+	}
 }
 
 // resolvedInstructionsPath returns the instructions file path for the given
@@ -305,6 +345,18 @@ func resolvedMCPConfigPath(a AgentAdapter, base string, t model.InstallTarget, s
 	return a.MCPConfigPath(base, serverName)
 }
 
+// resolvedCommandsDir returns the command directory path for the given adapter,
+// base directory, and install target. Mirrors resolvedSkillsDir exactly.
+// Machine: delegates to adapter.CommandsDir (machine-target method).
+// Project: uses PathsFor(base, Project).CommandsDir (project-specific layout).
+// Added in C-31 (D1 + §6.3).
+func resolvedCommandsDir(a AgentAdapter, base string, t model.InstallTarget) string {
+	if t == model.Project {
+		return a.PathsFor(base, t).CommandsDir
+	}
+	return a.CommandsDir(base)
+}
+
 // snapshotCreate is the backing function for creating snapshots. It is a
 // package-level variable so tests can inject a fake without reopening backup.
 var snapshotCreate = func(snapshotDir string, paths []string) (backup.Manifest, error) {
@@ -323,6 +375,36 @@ var snapshotCreateWithHints = func(snapshotDir string, paths []string, dirHints 
 // It is a package-level variable so tests can inject a fake.
 var restoreFn = func(m backup.Manifest) error {
 	return backup.RestoreService{}.Restore(m)
+}
+
+// buildMCPSteps constructs one mcpWriteStep per (MCP × adapter) pair from the
+// starter's MCPs slice (D5). When starter is nil or has no MCPs, returns nil.
+//
+// Each step is routed via the target-aware resolvedMCPConfigPath so the correct
+// per-agent, per-target path is used (e.g. <root>/.mcp.json for Claude project).
+// Each step carries a Rollback() (governance ALTO — writes into user project).
+func buildMCPSteps(starter *model.Starter, adapters []AgentAdapter, effectiveBase string, target model.InstallTarget) []pipeline.Step {
+	if starter == nil || len(starter.MCPs) == 0 {
+		return nil
+	}
+
+	steps := make([]pipeline.Step, 0, len(starter.MCPs)*len(adapters))
+	for _, mcp := range starter.MCPs {
+		for _, adapter := range adapters {
+			paths := adapter.PathsFor(effectiveBase, target)
+			configPath := paths.MCPConfigPath(mcp.Name)
+			strategy := paths.MCPStrategy
+
+			stepID := fmt.Sprintf("mcp:%s/%s", mcp.Name, adapter.Agent())
+			steps = append(steps, &mcpWriteStep{
+				id:         stepID,
+				mcp:        mcp,
+				configPath: configPath,
+				strategy:   strategy,
+			})
+		}
+	}
+	return steps
 }
 
 // buildHarnessStep constructs the correct pipeline.Step for a single harness.
@@ -369,6 +451,14 @@ func buildHarnessStep(h model.Harness, adapters []AgentAdapter, opts Options, ef
 			h:        h,
 			adapters: adapters,
 			homeDir:  effectiveBase,
+		}, nil
+
+	case model.HarnessCommand:
+		return &commandStep{
+			h:         h,
+			adapters:  adapters,
+			homeDir:   effectiveBase,
+			backupDir: filepath.Join(effectiveBase, ".jr-stack", "backups", "commands", h.ID),
 		}, nil
 
 	default:

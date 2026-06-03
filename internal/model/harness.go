@@ -14,12 +14,15 @@ const (
 	// HarnessExternal is a third-party binary or service we install/configure
 	// but do not own (e.g. Engram, OpenSpec CLI, Context7).
 	HarnessExternal HarnessType = "external"
+	// HarnessCommand is an embedded slash-command .md file written into each
+	// focused agent's command directory. Added in C-31 (TBD-2 option a).
+	HarnessCommand HarnessType = "command"
 )
 
 // IsValid reports whether t is a known harness type.
 func (t HarnessType) IsValid() bool {
 	switch t {
-	case HarnessSkill, HarnessConfig, HarnessExternal:
+	case HarnessSkill, HarnessConfig, HarnessExternal, HarnessCommand:
 		return true
 	default:
 		return false

@@ -74,6 +74,7 @@ type fakeAdapter struct {
 func (a fakeAdapter) Agent() model.Agent                              { return a.agent }
 func (a fakeAdapter) InstructionsPath(homeDir string) string          { return homeDir + "/instr.md" }
 func (a fakeAdapter) SkillsDir(homeDir string) string                 { return homeDir + "/skills" }
+func (a fakeAdapter) CommandsDir(homeDir string) string               { return homeDir + "/commands" }
 func (a fakeAdapter) SettingsPath(homeDir string) string              { return homeDir + "/settings.json" }
 func (a fakeAdapter) MCPConfigPath(homeDir, serverName string) string { return homeDir + "/mcp/" + serverName + ".json" }
 func (a fakeAdapter) MCPStrategy() external.MCPStrategy              { return external.StrategySeparateFile }
@@ -83,6 +84,7 @@ func (a fakeAdapter) PathsFor(base string, t model.InstallTarget) model.AgentPat
 		InstructionsPath: base + "/instr.md",
 		SkillsDir:        base + "/skills",
 		SettingsPath:     base + "/settings.json",
+		CommandsDir:      base + "/commands",
 	}.WithMCPConfigFn(func(serverName string) string {
 		return base + "/mcp/" + serverName + ".json"
 	})

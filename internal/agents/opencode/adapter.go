@@ -38,6 +38,16 @@ func (a *Adapter) SkillsDir(homeDir string) string {
 	return filepath.Join(homeDir, ".config", "opencode", "skills")
 }
 
+// CommandsDir returns the path to OpenCode's slash-command directory for the
+// machine (global) target. Machine layout uses ~/.config/opencode/ (XDG).
+// Example: /home/user/.config/opencode/commands
+// Added in C-31 (D1) — mirrors SkillsDir on the adapter interface.
+// For the project target, use PathsFor(base, Project).CommandsDir which
+// resolves to <root>/.opencode/commands (project layout differs from machine).
+func (a *Adapter) CommandsDir(homeDir string) string {
+	return filepath.Join(homeDir, ".config", "opencode", "commands")
+}
+
 // SettingsPath returns the path to OpenCode's settings file.
 // Example: /home/user/.config/opencode/opencode.json
 func (a *Adapter) SettingsPath(homeDir string) string {
@@ -87,9 +97,10 @@ func (a *Adapter) PathsFor(base string, t model.InstallTarget) model.AgentPaths 
 		InstructionsPath: filepath.Join(openCodeDir, "AGENTS.md"),
 		SkillsDir:        filepath.Join(openCodeDir, "skills"),
 		SettingsPath:     filepath.Join(openCodeDir, "opencode.json"),
+		CommandsDir:      filepath.Join(openCodeDir, "commands"),
 	}.WithMCPConfigFn(func(_ string) string {
 		// OpenCode merges MCP entries into opencode.json (StrategyMergeIntoSettings),
 		// so the MCP config path is always the settings file, regardless of server name.
 		return filepath.Join(openCodeDir, "opencode.json")
-	})
+	}).WithMCPStrategy(model.MCPStrategyMergeIntoSettings)
 }

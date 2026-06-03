@@ -125,6 +125,79 @@ func buildOverlay(h model.Harness, adapter AgentAdapter) map[string]any {
 	}
 }
 
+// buildMCPOverlay constructs the JSON overlay map for writing a local (stdio)
+// MCP server entry into a Claude project's .mcp.json file (D4).
+//
+// The overlay shape is:
+//
+//	{"mcpServers": {"<MCP.Name>": {"command": ..., "args": [...], "env": {...}}}}
+//
+// This is the overlay for the single-file Claude project strategy
+// (MCPStrategySingleFileMerge). The existing installMCP flow then backs up,
+// merges via filemerge.MergeJSONObjects, and writes atomically.
+//
+// No hardcoded server constants — the overlay key is always mcp.Name.
+// The "env" key is omitted when mcp.Env is nil (no spurious empty map).
+func buildMCPOverlay(mcp model.MCP) map[string]any {
+	entry := map[string]any{
+		"command": mcp.Command,
+		"args":    mcp.Args,
+	}
+	if len(mcp.Env) > 0 {
+		entry["env"] = mcp.Env
+	}
+	return map[string]any{
+		"mcpServers": map[string]any{
+			mcp.Name: entry,
+		},
+	}
+}
+
+// WriteMCPProjectEntry writes a local (stdio) MCP server entry into the given
+// config file path using the resolved project strategy. It backs up the file
+// if it already exists, then merges the new entry idempotently and writes
+// atomically.
+//
+// This is the write-path for the Claude project single-file strategy (D4, D5).
+// It reuses the same backup + MergeJSONObjects + WriteFileAtomic flow as
+// the legacy installMCP, so governance constraints are automatically satisfied.
+//
+// The strategy parameter currently only supports MCPStrategySingleFileMerge
+// (the Claude project case). Other strategies are not yet wired here.
+//
+// Returns (changed bool, err error). changed is true when the file was written
+// or updated, false when the entry was already present (idempotent re-run).
+func WriteMCPProjectEntry(
+	mcp model.MCP,
+	configPath string,
+	snapshotDir string,
+) (bool, error) {
+	// Backup existing file before touching it (governance ALTO).
+	if _, err := os.Stat(configPath); err == nil {
+		if err := snapshotterCreate(snapshotDir, []string{configPath}); err != nil {
+			return false, fmt.Errorf("backup %q before mcp write: %w", configPath, err)
+		}
+	}
+
+	overlay := buildMCPOverlay(mcp)
+	overlayJSON, err := json.Marshal(overlay)
+	if err != nil {
+		return false, fmt.Errorf("marshal mcp overlay for %q: %w", mcp.Name, err)
+	}
+
+	base := readExistingJSON(configPath)
+	merged, err := filemerge.MergeJSONObjects(base, overlayJSON)
+	if err != nil {
+		return false, fmt.Errorf("merge mcp config for %q: %w", mcp.Name, err)
+	}
+
+	wr, err := filemerge.WriteFileAtomic(configPath, merged, 0o644)
+	if err != nil {
+		return false, fmt.Errorf("write mcp config %q: %w", configPath, err)
+	}
+	return wr.Changed, nil
+}
+
 // readExistingJSON reads a JSON file, returning nil if it doesn't exist.
 func readExistingJSON(path string) []byte {
 	data, err := os.ReadFile(path)

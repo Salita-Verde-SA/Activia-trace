@@ -92,7 +92,7 @@ command            C-32 verify + E2E
 > - El epic cuelga del sustrato YA TERMINADO (C-01..C-25): reusa backup/filemerge/pipeline/verify.
 > - C-27 es **governance ALTO** (escribe config del usuario en el proyecto) → propone-y-espera-review.
 > - C-30 (publicar repos) es paralelizable con C-27/C-28/C-29, pero **debe** estar antes de C-32 (el E2E clona los repos reales).
-> - C-28 tiene incógnita abierta: verificar dónde escribe hoy el installer `external`/`method:mcp` antes de tocarlo.
+> - ~~C-28 tiene incógnita abierta: verificar dónde escribe hoy el installer `external`/`method:mcp` antes de tocarlo.~~ → **RESUELTO** (C-28 HECHO): la infra (`installMCP` con backup+merge+atomic) ya existía; el MCP project-scope de Claude va a `<root>/.mcp.json` en la raíz (verificado contra doc oficial), no a `.claude/mcp/`.
 
 ---
 
@@ -110,9 +110,9 @@ command            C-32 verify + E2E
 | 7 | C-14 | — | **HECHO** — verify + E2E (cierre del pipeline) |
 | 8 | C-26 | C-27, C-30 | **HECHO** — modelo de starters (base del epic starter packs) |
 | 9 | C-27, C-30 | C-28/C-29, C-32 | C-27 target proyecto (ALTO) ‖ C-30 publicar repos por starter |
-| 10 | C-28 | C-29 | mcp scope proyecto (.mcp.json) |
-| 11 | C-29 | C-31, C-32 | subcomando `jr-stack starter add` |
-| 12 | C-31, C-32 | — | slash-command ‖ verify + E2E starters (cierre del epic) |
+| 10 | C-28 | C-29 | **HECHO** — mcp scope proyecto (.mcp.json raíz para Claude) |
+| 11 | C-29 | C-31, C-32 | **HECHO** — subcomando `jr-stack starter add` |
+| 12 | C-31, C-32 | — | **C-31 HECHO** (slash-command) ‖ C-32 verify + E2E starters (cierre del epic) |
 
 **Camino crítico (instalador, HECHO)**: `C-01 → C-02 → C-04/C-05 → C-09 → C-10 → C-11a → C-11b → C-13 → C-14`.
 Es la cadena más larga: el merge/backup habilitan el installer de config
@@ -360,3 +360,48 @@ estrecha hacia la convergencia en C-11b (la TUI).
 - **Governance**: ALTO. Propuesta aprobada por el operador antes del apply. Cada step de escritura tiene su `Rollback()` vía el pipeline existente. Backup del proyecto antes de escribir usando `internal/backup` (C-17, dir-aware).
 - **Archivos nuevos**: `internal/model/installtarget.go`, `internal/model/installtarget_test.go`, `internal/model/agentpaths.go`, `internal/agents/claude/adapter_project_test.go`, `internal/agents/claude/adapter_regression_test.go`, `internal/agents/opencode/adapter_project_test.go`, `internal/agents/opencode/adapter_regression_test.go`, `internal/install/project_target_test.go`, `internal/install/machine_regression_test.go`, `internal/install/collect_write_paths_test.go`, `internal/install/project_rollback_test.go`.
 - **Archivos modificados**: `internal/model/agentpaths.go` (nuevo tipo de dominio), `internal/agents/interface.go` (método `PathsFor` + doc), `internal/agents/claude/adapter.go` (implementa `PathsFor`), `internal/agents/opencode/adapter.go` (implementa `PathsFor`), `internal/agents/registry_test.go` (fakeAdapter += PathsFor), `internal/install/types.go` (`AgentAdapter` += `PathsFor`; `Options` += `Target`/`ProjectRoot`), `internal/install/plan.go` (`BuildPlan` + `collectWritePaths` + `buildHarnessStep` target-aware; 4 helpers de resolución), `internal/install/testseams.go` (`SetSnapshotCreateWithHints`), `cmd/jr-stack/headless/executor_test.go` (fakeExecAdapter += PathsFor).
+
+### C-28 — MCP scope proyecto (escritura de `.mcp.json`)
+- **Estado**: HECHO (strict TDD; 24/24 tasks, `go test ./...` verde salvo `TestCompose_AllToggles` —falla PRE-EXISTENTE por golden desfasado de esta rama vs main, no causada por C-28, verificada con stash—; `go vet` limpio). Archivado `2026-06-03-c28-mcp-project-scope`.
+- **Scope**: Conectar `Starter.MCPs[]` al flujo de install y escribir la config MCP en el path project-scope correcto, target-aware. Foco Claude + OpenCode.
+  - **Bug de C-27 corregido**: el MCP project-scope de Claude se escribe en UN solo `<root>/.mcp.json` en la RAÍZ con shape `{"mcpServers":{...}}` (verificado contra doc oficial `code.claude.com/docs/en/mcp`), NO en `.claude/mcp/<server>.json`. `PathsFor(base, Project).MCPConfigPath` → `filepath.Join(base, ".mcp.json")`, ignora serverName.
+  - **Estrategia target-aware (D1)**: enum `model.MCPStrategy` (3 valores: `SeparateFile` zero-value/legacy máquina, `MergeIntoSettings` OpenCode, `SingleFileMerge` Claude proyecto) doblada DENTRO de `AgentPaths` (campo poblado por `PathsFor`), no un método aparte. Hace irrepresentable la combinación inconsistente path-archivo-único + estrategia-archivo-separado. Enum en `internal/model` para evitar ciclo `model`↔`external`.
+  - **`model.MCP` enriquecido (D3)**: `{Name, Command, Args, Env}` + `Validate()`. `Name` primero (back-compat C-26). Transporte remoto HTTP/SSE marcado TBD/fuera de scope.
+  - `buildMCPOverlay()` emite `{"mcpServers":{"<Name>":{command,args,env}}}` reusando backup + `filemerge.MergeJSONObjects` + `WriteFileAtomic` ya existentes en `mcp.go`.
+  - `Starter.MCPs[]` cableado en `plan.go` vía `buildMCPSteps()` + `collectStarterMCPPaths()`, espejando `buildHarnessStep`, cada step con `Rollback()`.
+  - **Bug cazado**: el early-return `len(selected)==0` no dejaba emitir MCP steps en planes starter-only (sin harnesses) — corregido.
+  - **OpenCode confirmado correcto**: `<root>/.opencode/opencode.json` + merge-into-settings, sin cambio de comportamiento (regression test agregado).
+- **TBD pendientes**: (1) path Machine de Claude (`~/.claude/mcp/<server>.json` vs `~/.claude.json` que sugiere la doc para local/user) — follow-up separado, NO tocado en C-28; (2) shape de transporte MCP remoto (HTTP/SSE).
+- **Dependencias**: C-26 (modelo + `model.MCP` placeholder), C-27 (`PathsFor` target-aware). Habilita: C-29 (subcomando `jr-stack starter add`).
+- **Governance**: ALTO. Diseño aprobado por el operador antes del apply. Cada step de escritura con `Rollback()`; backup antes de escribir.
+- **Archivos nuevos**: `internal/model/agentpaths_test.go`, `internal/install/plan_mcp_test.go`.
+- **Archivos modificados**: `internal/model/starter.go` (MCP enriquecido + `Validate`), `internal/model/agentpaths.go` (enum `MCPStrategy` + campo + `WithMCPStrategy`), `internal/agents/claude/adapter.go` (`PathsFor` Project → `.mcp.json` + `SingleFileMerge`), `internal/agents/opencode/adapter.go` (`WithMCPStrategy(MergeIntoSettings)`), `internal/harness/external/mcp.go` (`buildMCPOverlay` + `WriteMCPProjectEntry`), `internal/install/types.go` (`Options` += `Starter`), `internal/install/plan.go` (`buildMCPSteps` + `collectStarterMCPPaths` + fix early-return), `internal/install/steps.go` (`mcpWriteStep` + `writeMCPEntry`), `internal/install/testseams.go` (`SetMCPWriteFn`).
+
+### C-29 — Subcomando `jr-stack starter add`
+- **Estado**: HECHO (strict TDD; 33/33 tasks, `go test ./...` verde salvo `TestCompose_AllToggles` PRE-EXISTENTE; `go vet` limpio). Archivado `2026-06-03-c29-starter-add-command`.
+- **Scope**: Primera superficie de usuario del epic. Expone `jr-stack starter add <id> [--project <path>] [--dry-run] [--yes] [--agent <list>]`. NO construye maquinaria nueva — CABLEA el CLI al pipeline ya existente (C-26/C-27/C-28). Foco Claude + OpenCode.
+  - Nuevo `case "starter"` en el dispatch manual (`switch os.Args[1]`) de `cmd/jr-stack/main.go` — sin cobra, respeta el estilo de `case "install"`.
+  - **Default target = PROJECT** (a diferencia de `install` = Machine): un starter scaffoldea un proyecto. `--project` default a cwd, absolutizado, **FALLA si el path no existe** (nunca crea la raíz).
+  - **D4 (resuelve D1 diferido de C-27)**: adapter queda STATELESS. Se rechazó la alternativa B (`TargetRoot` inyectado). El handler setea `Options{Target, ProjectRoot}` una vez y `BuildPlan` hace el threading interno → el "threading incómodo" que motivaba alt B nunca se materializa. **No se toca el contrato del adapter.**
+  - **D3a (gap encontrado y tapado)**: `ResolveStarter` aplanaba solo harnesses, NO los MCPs → un starter con `includes` perdía MCPs anidados silenciosamente. Nuevo `catalog.ResolveStarterMCPs()` que une + dedup por `MCP.Name` (root gana en colisión).
+  - **Reuso (D5/D7)**: rutea por el headless existente extendiendo `ParsedFlags` con `Target`/`ProjectRoot`/`Starter` (aditivo, zero-value = Machine = cero regresión). Reusa snapshot + `Rollback()` por step + dependency gate + dry-run. El `--dry-run` no escribe NADA.
+- **TBDs resueltos**: `--agent` default = todos los focales registrados (claude+opencode); sin marcador de proyecto requerido (cualquier dir existente sirve — backup+rollback ya protege); colisión MCP = root-wins silencioso; D5 = extender `ParsedFlags`, no función hermana.
+- **Dependencias**: C-26, C-27, C-28. Habilita: C-31 (slash-command), C-32 (verify + E2E starters).
+- **Governance**: ALTO. Diseño aprobado por el operador antes del apply. Cada step de escritura con `Rollback()`; backup antes de escribir; `--dry-run` sin efectos.
+- **Archivos nuevos**: `internal/catalog/resolve_mcps_test.go`, `cmd/jr-stack/headless/starter_flags.go` (+`_test`), `cmd/jr-stack/headless/project_root_test.go`, `cmd/jr-stack/headless/starter_executor_test.go`, `cmd/jr-stack/starter_add.go` (+`_test`), `cmd/jr-stack/starter_dispatch.go`, `cmd/jr-stack/routing_test.go`.
+- **Archivos modificados**: `internal/catalog/catalog.go` (`ResolveStarterMCPs` + `AllStarters`), `cmd/jr-stack/headless/flags.go` (`ParsedFlags` += `Target`/`ProjectRoot`/`Starter`), `cmd/jr-stack/headless/executor.go` (cablea los campos a `install.Options`), `cmd/jr-stack/main.go` (`case "starter"`).
+
+### C-31 — Slash-command `starter add` (nuevo `HarnessType "command"`)
+- **Estado**: HECHO (strict TDD; 46/46 tasks, `go test ./...` verde salvo `TestCompose_AllToggles` PRE-EXISTENTE; `go vet` limpio; `openspec validate --strict` verde). Archivado `2026-06-03-c31-starter-slash-command`. Implementado en 2 sesiones (la 1ra cortó por límite a 9/46 en estado verde; la 2da reconcilió §3 y completó §4-§7).
+- **Scope**: Shipea un slash-command fino que envuelve `jr-stack starter add`. **Capacidad NUEVA**: el installer no shipeaba commands hasta ahora. Foco Claude + OpenCode.
+  - **Nuevo `model.HarnessType = "command"`** (4to tipo junto a skill/config/external) + `IsValid()` extendido + entrada `starter-add-command` en `harnesses.yaml` (validada por `catalog.Load()`). Decisión del operador (TBD-2 opción a) sobre el step standalone.
+  - **`CommandsDir` aditivo en el adapter** (D1): método `CommandsDir(homeDir)` en la interfaz + campo en `model.AgentPaths` poblado por `PathsFor(base, target)`, target-aware. Cero regresión (regression tests pinean paths byte-idénticos). Espeja C-27 exacto.
+  - **Bifurcación per-agente** (D2): el adapter resuelve solo el directorio (Claude `.claude/commands`; OpenCode máquina `.config/opencode/commands`, proyecto `.opencode/commands`); namespace+filename viven en el asset embebido por agente. Claude → `commands/jr/starter-add.md` invocado `/jr:starter-add` (frontmatter completo); OpenCode → `commands/jr-starter-add.md` invocado `/jr-starter-add` (flat, description-only).
+  - **`$ARGUMENTS`** (TBD-1, verificado contra doc oficial de AMBOS agentes: code.claude.com/docs/en/agent-sdk/slash-commands + opencode.ai/docs/commands) → una sola implementación, sin branching en los bodies. El body es un wrapper fino que ejecuta `jr-stack starter add $ARGUMENTS` (binario en PATH), sin reimplementar lógica.
+  - **Mecanismo de instalación** `internal/harness/command/` (D5): espeja `internal/harness/skill/` — embed read → resuelve dir vía adapter → escritura managed de archivo completo + skip por content-hash + backup antes de pisar. Embebido vía `assets.CommandsFS` (`//go:embed`, TBD-4).
+  - **Wiring pipeline** (governance ALTO): `resolvedCommandsDir` en `plan.go`; el dir entra a `collectWritePaths` (snapshot antes de escribir); `commandStep` ruteado en `buildHarnessStep` con `Rollback()` vía manifest. `--dry-run` no escribe.
+- **TBDs resueltos**: TBD-1 `$ARGUMENTS` (ambos); TBD-2 `HarnessType command`; TBD-3 siempre-shipeado para agentes focales; TBD-4 `CommandsFS` en `assets/assets.go`.
+- **Dependencias**: C-29 (subcomando `starter add`). Habilita: C-32 (verify + E2E starters).
+- **Governance**: ALTO (inyección en command-dir del usuario). Diseño aprobado por el operador antes del apply. Snapshot + `Rollback()` por step.
+- **Archivos nuevos**: `assets/commands/claude/jr/starter-add.md`, `assets/commands/opencode/jr-starter-add.md`, `assets/commands_test.go`, `internal/harness/command/{types,idempotent,installer,command_test}.go`, `internal/install/command_wiring_test.go`, `internal/install/command_integration_test.go`.
+- **Archivos modificados**: `assets/assets.go` (`CommandsFS`), `internal/model/harness.go` (`HarnessCommand` + `IsValid`), `internal/install/steps.go` (`commandStep` + `commandInstallFn` + `toCommandAdapters`), `internal/install/plan.go` (`resolvedCommandsDir` + ruteo `HarnessCommand`), `internal/install/types.go` (`WithEmbeddedCommandsFS`), `internal/install/testseams.go` (`SetCommandInstallFn`), `internal/catalog/harnesses.yaml` (`starter-add-command`), `internal/agents/{interface,claude/adapter,opencode/adapter}.go` (`CommandsDir`).

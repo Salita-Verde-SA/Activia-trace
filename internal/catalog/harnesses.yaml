@@ -84,6 +84,17 @@ harnesses:
     source: { repo: JuanCruzRobledo/skill-registry, ref: latest, method: clone }
     install_modes: [full]
 
+  # ── Slash-commands (embebidos en el binario) ─────────────────────────────
+  - id: starter-add-command
+    name: Starter Add Command
+    description: Slash-command /jr:starter-add (Claude) / /jr-starter-add (OpenCode) — wrapper thin sobre jr-stack starter add.
+    type: command
+    # Scoped to the two focused P0 agents only (Claude + OpenCode).
+    # Other agent variants are out of scope for C-31 (D3: focused-only).
+    agents: [claude, opencode]
+    # Lite + Full: the command surface is part of the minimal useful install.
+    install_modes: [lite, full]
+
   # ── Skills de terceros (se descargan con el stack) ────────────────────────
   - id: find-skill
     name: find-skill

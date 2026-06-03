@@ -2,23 +2,21 @@ package claude_test
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/JuanCruzRobledo/jr-stack/internal/agents/claude"
 	"github.com/JuanCruzRobledo/jr-stack/internal/model"
 )
 
-// TestClaudeAdapter_ProjectTarget verifies that the Claude adapter resolves
-// the correct paths when the install target is Project.
+// TestClaudeAdapter_ProjectTarget_Paths verifies that the Claude adapter resolves
+// the correct non-MCP paths when the install target is Project.
 //
 // Claude project layout (D2):
 //   <root>/.claude/skills
 //   <root>/.claude/CLAUDE.md
 //   <root>/.claude/settings.json
-//   <root>/.claude/mcp/<server>.json
-//
-// This is the same subdirectory layout as machine — only the base changes.
-func TestClaudeAdapter_ProjectTarget(t *testing.T) {
+func TestClaudeAdapter_ProjectTarget_Paths(t *testing.T) {
 	a := claude.NewAdapter()
 	root := "/project/myapp"
 
@@ -44,11 +42,6 @@ func TestClaudeAdapter_ProjectTarget(t *testing.T) {
 			got:  paths.SettingsPath,
 			want: filepath.Join(root, ".claude", "settings.json"),
 		},
-		{
-			name: "MCPConfigPath(context7)",
-			got:  paths.MCPConfigPath("context7"),
-			want: filepath.Join(root, ".claude", "mcp", "context7.json"),
-		},
 	}
 
 	for _, tt := range tests {
@@ -57,6 +50,56 @@ func TestClaudeAdapter_ProjectTarget(t *testing.T) {
 				t.Errorf("got %q, want %q", tt.got, tt.want)
 			}
 		})
+	}
+}
+
+// TestClaudeAdapter_ProjectTarget_MCPPath asserts that the Claude project-target
+// MCP path resolves to <root>/.mcp.json (D2), server name ignored.
+//
+// Spec: PathsFor(<root>, Project).MCPConfigPath("any-server") == <root>/.mcp.json
+// AND  the path must NOT contain a ".claude/mcp/" segment
+// AND  the path is identical regardless of the server name passed
+func TestClaudeAdapter_ProjectTarget_MCPPath(t *testing.T) {
+	a := claude.NewAdapter()
+	root := "/project/myapp"
+
+	paths := a.PathsFor(root, model.Project)
+
+	wantPath := filepath.Join(root, ".mcp.json")
+
+	t.Run("server_context7", func(t *testing.T) {
+		got := paths.MCPConfigPath("context7")
+		if got != wantPath {
+			t.Errorf("MCPConfigPath(context7) = %q, want %q", got, wantPath)
+		}
+	})
+
+	t.Run("server_other", func(t *testing.T) {
+		got := paths.MCPConfigPath("other-server")
+		if got != wantPath {
+			t.Errorf("MCPConfigPath(other-server) = %q, want %q", got, wantPath)
+		}
+	})
+
+	t.Run("no_claude_mcp_subdir", func(t *testing.T) {
+		got := paths.MCPConfigPath("context7")
+		if strings.Contains(filepath.ToSlash(got), ".claude/mcp/") {
+			t.Errorf("project MCP path must not contain .claude/mcp/, got %q", got)
+		}
+	})
+}
+
+// TestClaudeAdapter_ProjectTarget_MCPStrategy asserts that the project-target
+// resolved strategy is MCPStrategySingleFileMerge (D2, spec: single-file merge
+// into mcpServers).
+func TestClaudeAdapter_ProjectTarget_MCPStrategy(t *testing.T) {
+	a := claude.NewAdapter()
+	root := "/project/myapp"
+
+	paths := a.PathsFor(root, model.Project)
+
+	if paths.MCPStrategy != model.MCPStrategySingleFileMerge {
+		t.Errorf("project MCPStrategy = %v, want MCPStrategySingleFileMerge", paths.MCPStrategy)
 	}
 }
 

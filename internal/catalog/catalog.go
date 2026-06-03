@@ -194,6 +194,62 @@ func (c *Catalog) ForAgent(a model.Agent) []model.Harness {
 	return out
 }
 
+// ResolveStarterMCPs returns the TOTAL set of project-scope MCP entries for the
+// starter with the given id, aggregating across all transitively included
+// starters. The result is deduplicated by MCP.Name; on a collision the root
+// starter's entry takes precedence (explicit override). Order is stable:
+// included starters are visited depth-first (pre-order) so includes come first,
+// then the current starter's own MCPs override any that share a name.
+//
+// This mirrors the traversal order of ResolveStarter (which aggregates harnesses)
+// so that the two methods can be understood and maintained together.
+//
+// Returns an error if the id is unknown. Because Load() already validated the
+// includes graph (no cycles, no broken references), traversal always terminates.
+func (c *Catalog) ResolveStarterMCPs(id string) ([]model.MCP, error) {
+	if _, ok := c.starterIndex[id]; !ok {
+		return nil, fmt.Errorf("catalog: starter %q not found", id)
+	}
+
+	// Collect all MCPs in depth-first pre-order: includes first, then the
+	// current starter's own MCPs. This means the root starter's MCPs appear
+	// last in the list, which lets the dedup step below make them win.
+	var ordered []model.MCP
+
+	var collect func(sid string)
+	collect = func(sid string) {
+		s := c.starterIndex[sid]
+		for _, inc := range s.Includes {
+			collect(inc)
+		}
+		ordered = append(ordered, s.MCPs...)
+	}
+	collect(id)
+
+	// Deduplicate by name: scan in reverse (root's MCPs are at the end, so
+	// they are encountered first in a reverse scan) and keep the first
+	// occurrence of each name encountered. Then reverse the kept slice to
+	// restore stable forward order.
+	seenName := make(map[string]bool, len(ordered))
+	kept := make([]model.MCP, 0, len(ordered))
+	for i := len(ordered) - 1; i >= 0; i-- {
+		if !seenName[ordered[i].Name] {
+			seenName[ordered[i].Name] = true
+			kept = append(kept, ordered[i])
+		}
+	}
+	for i, j := 0, len(kept)-1; i < j; i, j = i+1, j-1 {
+		kept[i], kept[j] = kept[j], kept[i]
+	}
+	return kept, nil
+}
+
+// AllStarters returns all starters in the catalog in catalog order.
+// Used by the "starter add" handler to build the available-starters error message.
+func (c *Catalog) AllStarters() []model.Starter {
+	return c.Starters
+}
+
 // StarterByID returns the starter with the given id and a found flag.
 func (c *Catalog) StarterByID(id string) (model.Starter, bool) {
 	s, ok := c.starterIndex[id]

@@ -4,11 +4,24 @@ import "fmt"
 
 // MCP represents a project-scope MCP entry in a starter.
 //
-// (TBD) The exact fields (Command, Args, Transport, etc.) are decided in C-28
-// when .mcp.json writing is implemented. For now this type carries only the
-// name so the field can transport the datum without inventing the final shape.
+// The shape covers the local (stdio) server entry needed to emit a Claude
+// .mcp.json record: Name (the server key), Command, Args, Env.
+// Name is first for C-26 back-compat (YAML key order + zero-value compat).
+//
+// Decisions made in C-28:
+//   - Name is the server key under mcpServers in .mcp.json.
+//   - Command, Args, Env carry the stdio entry (fully typed, self-documenting).
+//   - MCPStrategy enum lives here in internal/model (not in external) to avoid
+//     the model↔external import cycle (D1a). external.MCPStrategy is kept for
+//     the legacy machine-target adapter.MCPStrategy() method.
+//
+// (TBD) Remote/HTTP/SSE transport shape (type:"http", url, etc.) is deferred.
+// A future Transport/URL field can be added additively without breaking this struct.
 type MCP struct {
-	Name string `yaml:"name"`
+	Name    string            `yaml:"name"`
+	Command string            `yaml:"command,omitempty"`
+	Args    []string          `yaml:"args,omitempty"`
+	Env     map[string]string `yaml:"env,omitempty"`
 }
 
 // Starter is a curated, composable bundle of harnesses and project-scope MCPs.
@@ -22,15 +35,30 @@ type MCP struct {
 //   - Description: optional longer description.
 //   - Harnesses:   list of harness IDs from the catalog that this starter directly bundles.
 //   - Includes:    list of other starter IDs this starter composes (composable via includes).
-//   - MCPs:        placeholder list of project-scope MCPs. Writing .mcp.json is C-28.
-//                  (TBD) shape will be enriched in C-28 without breaking this model.
+//   - MCPs:        project-scope MCP entries. Each MCP carries a local (stdio) server entry
+//                  written to the correct per-agent, per-target path (C-28).
+//                  (TBD) Remote/HTTP/SSE transport shape deferred — see MCP comment.
 type Starter struct {
 	ID          string   `yaml:"id"`
 	Name        string   `yaml:"name"`
 	Description string   `yaml:"description,omitempty"`
 	Harnesses   []string `yaml:"harnesses,omitempty"`
 	Includes    []string `yaml:"includes,omitempty"`
-	MCPs        []MCP    `yaml:"mcps,omitempty"` // (TBD) shape — see MCP comment above
+	MCPs        []MCP    `yaml:"mcps,omitempty"`
+}
+
+// Validate performs field-level validation on this MCP's own fields.
+// Name and Command are required for a local (stdio) entry.
+// It does NOT validate that the Command binary exists on disk (that is the
+// installer's responsibility). Returns an error naming the offending field.
+func (m MCP) Validate() error {
+	if m.Name == "" {
+		return fmt.Errorf("mcp: missing required field 'name'")
+	}
+	if m.Command == "" {
+		return fmt.Errorf("mcp %q: missing required field 'command'", m.Name)
+	}
+	return nil
 }
 
 // Validate performs field-level validation on this Starter's own fields.

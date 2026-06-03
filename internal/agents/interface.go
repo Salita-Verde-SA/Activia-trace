@@ -25,6 +25,13 @@ type Adapter interface {
 	// SkillsDir returns the path to the agent's skills directory.
 	SkillsDir(homeDir string) string
 
+	// CommandsDir returns the path to the agent's slash-command directory
+	// for the machine (global) target. An empty string signals that this
+	// agent does not support commands and the command installer should skip it.
+	// For the project target, use PathsFor(base, Project).CommandsDir.
+	// Added in C-31 (D1) — mirrors SkillsDir.
+	CommandsDir(homeDir string) string
+
 	// SettingsPath returns the absolute path to the agent's settings file
 	// (e.g. ~/.claude/settings.json, ~/.config/opencode/opencode.json).
 	SettingsPath(homeDir string) string

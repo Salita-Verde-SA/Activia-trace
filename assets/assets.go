@@ -19,3 +19,24 @@ import "embed"
 //
 //go:embed all:skills
 var SkillsFS embed.FS
+
+// CommandsFS holds the embedded slash-command .md files for each focused agent.
+// Added in C-31 (TBD-4) — extends assets.go consistent with SkillsFS.
+//
+// Structure: commands/<agentVariantKey>/<path>.md
+//
+//   Claude  : commands/claude/jr/starter-add.md
+//               → invoked as /jr:starter-add inside Claude Code
+//               → full frontmatter (name/description/category/tags)
+//   OpenCode: commands/opencode/jr-starter-add.md
+//               → invoked as /jr-starter-add inside OpenCode
+//               → flat frontmatter (description only)
+//
+// The command body is a thin wrapper that runs `jr-stack starter add $ARGUMENTS`
+// via the agent's bash execution. It does not reimplement any starter logic.
+//
+// To add a new command variant: create the .md file under
+// commands/<variantKey>/... and extend the command installer accordingly.
+//
+//go:embed all:commands
+var CommandsFS embed.FS

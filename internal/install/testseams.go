@@ -106,3 +106,19 @@ func SetRestoreFn(fn func(m backup.Manifest) error) (restore func()) {
 	restoreFn = fn
 	return func() { restoreFn = old }
 }
+
+// SetMCPWriteFn replaces the mcpWriteFn for testing (C-28).
+// Injected fake avoids real filesystem writes during plan-only tests.
+func SetMCPWriteFn(fn func(mcp model.MCP, configPath string, strategy model.MCPStrategy) error) (restore func()) {
+	old := mcpWriteFn
+	mcpWriteFn = fn
+	return func() { mcpWriteFn = old }
+}
+
+// SetCommandInstallFn replaces commandInstallFn for testing (C-31).
+// Injected fake avoids real filesystem writes during pipeline-only tests.
+func SetCommandInstallFn(fn func(adapters []AgentAdapter, homeDir, backupDir string) error) (restore func()) {
+	old := commandInstallFn
+	commandInstallFn = fn
+	return func() { commandInstallFn = old }
+}

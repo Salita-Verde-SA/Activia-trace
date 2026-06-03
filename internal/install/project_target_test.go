@@ -24,6 +24,9 @@ func (a projectAdapter) InstructionsPath(homeDir string) string {
 func (a projectAdapter) SkillsDir(homeDir string) string {
 	return filepath.Join(homeDir, ".claude", "skills")
 }
+func (a projectAdapter) CommandsDir(homeDir string) string {
+	return filepath.Join(homeDir, ".claude", "commands")
+}
 func (a projectAdapter) SettingsPath(homeDir string) string {
 	return filepath.Join(homeDir, ".claude", "settings.json")
 }
@@ -39,6 +42,7 @@ func (a projectAdapter) PathsFor(base string, t model.InstallTarget) model.Agent
 		InstructionsPath: filepath.Join(dir, "CLAUDE.md"),
 		SkillsDir:        filepath.Join(dir, "skills"),
 		SettingsPath:     filepath.Join(dir, "settings.json"),
+		CommandsDir:      filepath.Join(dir, "commands"),
 	}.WithMCPConfigFn(func(serverName string) string {
 		return filepath.Join(dir, "mcp", serverName+".json")
 	})

@@ -381,3 +381,57 @@ func TestValidate_RejectsBadCatalogs(t *testing.T) {
 		})
 	}
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// C-31: HarnessCommand catalog entry
+// ─────────────────────────────────────────────────────────────────────────────
+
+// TestC31_StarterAddCommand_InEmbeddedCatalog asserts that the embedded catalog
+// contains the "starter-add-command" harness with type "command", validates
+// successfully, and is scoped to Claude + OpenCode (focused agents only).
+// HARD RULE: catalog.Load() must validate without error (invalid catalog = loud fail).
+func TestC31_StarterAddCommand_InEmbeddedCatalog(t *testing.T) {
+	c, err := Load()
+	if err != nil {
+		t.Fatalf("Load() returned error on embedded catalog (catalog must be valid): %v", err)
+	}
+
+	h, ok := c.ByID("starter-add-command")
+	if !ok {
+		t.Fatal("harness 'starter-add-command' not found in embedded catalog")
+	}
+
+	if h.Type != model.HarnessCommand {
+		t.Errorf("harness type = %q, want %q", h.Type, model.HarnessCommand)
+	}
+
+	// Must be scoped to the focused agents only (Claude + OpenCode).
+	if !h.SupportsAgent(model.AgentClaude) {
+		t.Error("starter-add-command must support AgentClaude")
+	}
+	if !h.SupportsAgent(model.AgentOpenCode) {
+		t.Error("starter-add-command must support AgentOpenCode")
+	}
+	// Must NOT support other agents (focused-only).
+	for _, other := range []model.Agent{model.AgentGemini, model.AgentCodex, model.AgentCursor} {
+		if h.SupportsAgent(other) {
+			t.Errorf("starter-add-command must NOT support %q (focused agents only)", other)
+		}
+	}
+}
+
+// TestC31_CommandHarnessType_IsValidInCatalogYAML asserts that a catalog entry
+// with type: command passes validation (HarnessCommand.IsValid() returns true).
+func TestC31_CommandHarnessType_IsValidInCatalogYAML(t *testing.T) {
+	raw := `harnesses:
+  - id: my-command
+    name: My Command
+    type: command
+    install_modes: [lite, full]
+    agents: [claude, opencode]`
+
+	_, err := parse([]byte(raw))
+	if err != nil {
+		t.Errorf("catalog.parse() rejected a valid 'command' type harness: %v", err)
+	}
+}

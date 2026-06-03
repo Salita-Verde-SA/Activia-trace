@@ -45,6 +45,21 @@ type ParsedFlags struct {
 	// install.WithEmbeddedSkillsFS into opts before calling install.BuildPlan.
 	// Tests leave it nil to use the default install.BuildPlan directly.
 	BuildPlanFn func(cat install.Catalog, intent install.Intent, opts install.Options) (install.Plan, error)
+
+	// ── C-29 starter add fields ───────────────────────────────────────────────
+
+	// Target selects whether harness writes go to the machine home or to a
+	// project root. Zero-value is model.Machine, preserving the pre-C-29
+	// behavior for all existing install call sites.
+	Target model.InstallTarget
+
+	// ProjectRoot is the project directory used when Target == model.Project.
+	// Ignored when Target is Machine (zero-value).
+	ProjectRoot string
+
+	// Starter is an optional starter whose MCPs should be written into the
+	// project config. When nil, no MCP write steps are emitted.
+	Starter *model.Starter
 }
 
 // ParseInstallFlags parses the raw argument list for the "install" sub-command.
