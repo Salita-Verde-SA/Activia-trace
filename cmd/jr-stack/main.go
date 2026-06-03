@@ -42,6 +42,22 @@ func main() {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
+	case "starter":
+		cat, err := catalog.Load()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: load catalog: %v\n", err)
+			os.Exit(1)
+		}
+		reg, err := agents.NewDefaultRegistry()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: create agent registry: %v\n", err)
+			os.Exit(1)
+		}
+		regWrapper := agentRegistryAdapter{r: reg}
+		exitCode := runStarterDispatch(os.Args[2:], cat, regWrapper, os.Stderr)
+		if exitCode != 0 {
+			os.Exit(exitCode)
+		}
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %q\n", os.Args[1])
 		os.Exit(1)

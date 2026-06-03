@@ -32,6 +32,47 @@ func TestOpenCodeAdapter_MCPStrategy(t *testing.T) {
 	}
 }
 
+// TestOpenCodeAdapter_CommandsDir_Machine asserts that the OpenCode adapter
+// resolves the machine-target command directory to
+// <homeDir>/.config/opencode/commands (NOT .opencode/).
+// RED: fails until CommandsDir(homeDir) is added to the OpenCode adapter.
+func TestOpenCodeAdapter_CommandsDir_Machine(t *testing.T) {
+	a := opencode.NewAdapter()
+	home := testHome
+	want := filepath.Join(home, ".config", "opencode", "commands")
+	if got := a.CommandsDir(home); got != want {
+		t.Errorf("CommandsDir(%q) = %q, want %q", home, got, want)
+	}
+}
+
+// TestOpenCodeAdapter_CommandsDir_DiffersbyTarget asserts that:
+//   - Project target → <root>/.opencode/commands
+//   - Machine target → <home>/.config/opencode/commands  (different!)
+//
+// RED: fails until CommandsDir is populated in PathsFor.
+func TestOpenCodeAdapter_CommandsDir_DiffersbyTarget(t *testing.T) {
+	a := opencode.NewAdapter()
+	root := "/project/myapp"
+	home := testHome
+
+	projectPaths := a.PathsFor(root, model.Project)
+	machinePaths := a.PathsFor(home, model.Machine)
+
+	wantProject := filepath.Join(root, ".opencode", "commands")
+	wantMachine := filepath.Join(home, ".config", "opencode", "commands")
+
+	if projectPaths.CommandsDir != wantProject {
+		t.Errorf("PathsFor(root, Project).CommandsDir = %q, want %q", projectPaths.CommandsDir, wantProject)
+	}
+	if machinePaths.CommandsDir != wantMachine {
+		t.Errorf("PathsFor(home, Machine).CommandsDir = %q, want %q", machinePaths.CommandsDir, wantMachine)
+	}
+	// Assert they actually differ (per spec).
+	if projectPaths.CommandsDir == machinePaths.CommandsDir {
+		t.Errorf("Project and Machine CommandsDir should differ but both = %q", projectPaths.CommandsDir)
+	}
+}
+
 func TestOpenCodeAdapter_PathMethods(t *testing.T) {
 	a := opencode.NewAdapter()
 	home := testHome

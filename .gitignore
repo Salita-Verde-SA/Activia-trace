@@ -1,4 +1,5 @@
-# Binaries
+# Binaries (incluye los cross-platform que emiten los build scripts:
+# jr-stack_linux_amd64, jr-stack_windows_amd64.exe, jr-stack_darwin_arm64, etc.)
 /jr-stack
 /jr-stack_*
 *.exe

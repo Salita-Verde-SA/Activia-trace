@@ -60,10 +60,19 @@ type AgentAdapter interface {
 	Agent() model.Agent
 	InstructionsPath(homeDir string) string
 	SkillsDir(homeDir string) string
+	// CommandsDir returns the path to the agent's slash-command directory
+	// for the machine (global) target. An empty string signals skip.
+	// Added in C-31 (D1), mirrors SkillsDir.
+	CommandsDir(homeDir string) string
 	SettingsPath(homeDir string) string
 	MCPConfigPath(homeDir, serverName string) string
 	MCPStrategy() external.MCPStrategy
 	VariantKey() string
+	// PathsFor returns target-aware resolved paths for the given base dir and
+	// install target. Added in C-27 to route project installs without hardcoding
+	// agent-specific layout in the pipeline.
+	PathsFor(base string, t model.InstallTarget) model.AgentPaths
+
 	ConfigDelivery() model.ConfigDelivery
 }
 
@@ -74,8 +83,16 @@ type Registry interface {
 
 // Options carries the dependencies and configuration for BuildPlan.
 type Options struct {
-	// HomeDir is the user's home directory, passed to adapters for path resolution.
+	// HomeDir is the user's home directory, passed to adapters for machine-target
+	// path resolution and as the default base when Target is unspecified.
 	HomeDir string
+	// Target selects whether harness writes go to the machine (home) or to a
+	// project root. The zero-value is Machine, preserving the pre-C-27 behaviour
+	// for all existing call sites (zero regression).
+	Target model.InstallTarget
+	// ProjectRoot is the project directory used when Target == Project.
+	// It is ignored when Target is Machine (zero-value).
+	ProjectRoot string
 	// Registry maps agents to their concrete adapters.
 	Registry Registry
 	// Profile is the detected platform profile for the current machine.
@@ -86,6 +103,11 @@ type Options struct {
 	// VerifyHook is an optional function executed after a successful Apply stage.
 	// A nil hook is a no-op.
 	VerifyHook func() error
+	// Starter is an optional starter whose MCPs should be written into the
+	// project config for each focused agent. When nil or the MCPs slice is
+	// empty, no MCP write steps are emitted.
+	// (D5 — wiring from C-28)
+	Starter *model.Starter
 	// OnProgress receives progress events during installation.
 	// When nil no progress events are emitted.
 	OnProgress pipeline.ProgressFunc
@@ -103,6 +125,13 @@ type Options struct {
 func WithEmbeddedSkillsFS(opts Options, f fs.FS) Options {
 	opts.embeddedSkillsFS = f
 	return opts
+}
+
+// WithEmbeddedCommandsFS sets the embedded commands FS for command-harness
+// installation. Pass assets.CommandsFS from the binary entry point.
+// Added in C-31.
+func WithEmbeddedCommandsFS(f fs.FS) {
+	embeddedCommandsFS = f
 }
 
 // WithCmdRunner returns a copy of opts with the given CmdRunner set.

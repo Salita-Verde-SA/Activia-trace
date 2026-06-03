@@ -71,21 +71,34 @@ type fakeAdapter struct {
 	agent model.Agent
 }
 
-func (a fakeAdapter) Agent() model.Agent                              { return a.agent }
-func (a fakeAdapter) InstructionsPath(homeDir string) string          { return homeDir + "/instr.md" }
-func (a fakeAdapter) SkillsDir(homeDir string) string                 { return homeDir + "/skills" }
-func (a fakeAdapter) SettingsPath(homeDir string) string              { return homeDir + "/settings.json" }
-func (a fakeAdapter) MCPConfigPath(homeDir, serverName string) string { return homeDir + "/mcp/" + serverName + ".json" }
-func (a fakeAdapter) MCPStrategy() external.MCPStrategy              { return external.StrategySeparateFile }
-func (a fakeAdapter) VariantKey() string                              { return string(a.agent) }
-func (a fakeAdapter) ConfigDelivery() model.ConfigDelivery            { return model.ConfigDeliveryInstructions }
+func (a fakeAdapter) Agent() model.Agent                     { return a.agent }
+func (a fakeAdapter) InstructionsPath(homeDir string) string { return homeDir + "/instr.md" }
+func (a fakeAdapter) SkillsDir(homeDir string) string        { return homeDir + "/skills" }
+func (a fakeAdapter) CommandsDir(homeDir string) string      { return homeDir + "/commands" }
+func (a fakeAdapter) SettingsPath(homeDir string) string     { return homeDir + "/settings.json" }
+func (a fakeAdapter) MCPConfigPath(homeDir, serverName string) string {
+	return homeDir + "/mcp/" + serverName + ".json"
+}
+func (a fakeAdapter) MCPStrategy() external.MCPStrategy { return external.StrategySeparateFile }
+func (a fakeAdapter) VariantKey() string                { return string(a.agent) }
+func (a fakeAdapter) PathsFor(base string, t model.InstallTarget) model.AgentPaths {
+	return model.AgentPaths{
+		InstructionsPath: base + "/instr.md",
+		SkillsDir:        base + "/skills",
+		SettingsPath:     base + "/settings.json",
+		CommandsDir:      base + "/commands",
+	}.WithMCPConfigFn(func(serverName string) string {
+		return base + "/mcp/" + serverName + ".json"
+	})
+}
+func (a fakeAdapter) ConfigDelivery() model.ConfigDelivery { return model.ConfigDeliveryInstructions }
 
 // buildOptions returns a minimal set of options for BuildPlan.
 func buildOptions(homeDir string, reg install.Registry, verify func() error) install.Options {
 	return install.Options{
-		HomeDir:     homeDir,
-		Registry:    reg,
-		VerifyHook:  verify,
+		HomeDir:    homeDir,
+		Registry:   reg,
+		VerifyHook: verify,
 	}
 }
 

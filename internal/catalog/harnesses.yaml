@@ -84,6 +84,17 @@ harnesses:
     source: { repo: JuanCruzRobledo/skill-registry, ref: latest, method: clone }
     install_modes: [full]
 
+  # ── Slash-commands (embebidos en el binario) ─────────────────────────────
+  - id: starter-add-command
+    name: Starter Add Command
+    description: Slash-command /jr:starter-add (Claude) / /jr-starter-add (OpenCode) — wrapper thin sobre jr-stack starter add.
+    type: command
+    # Scoped to the two focused P0 agents only (Claude + OpenCode).
+    # Other agent variants are out of scope for C-31 (D3: focused-only).
+    agents: [claude, opencode]
+    # Lite + Full: the command surface is part of the minimal useful install.
+    install_modes: [lite, full]
+
   # ── Skills de terceros (se descargan con el stack) ────────────────────────
   - id: find-skill
     name: find-skill
@@ -103,3 +114,20 @@ harnesses:
     best_effort: true # falla del clone no aborta el install (terceros: layout puede cambiar)
     source: { repo: anthropics/skills, ref: latest, method: clone, path: skills/skill-creator }
     install_modes: [full]
+
+# ── Starters (bundles curados de harnesses, componibles vía includes) ─────────
+# Entradas mínimas/placeholder. Curación real del contenido: C-30.
+# Composición: active-ia agrupa ux-ui + backend; sin duplicar harnesses compartidos.
+starters:
+  - id: active-ia
+    name: Active IA
+    description: Stack completo para proyectos de IA activa (compone ux-ui + backend).
+    includes: [ux-ui, backend]
+
+  - id: ux-ui
+    name: UX/UI
+    description: Placeholder para el stack de harnesses de UX/UI (curación en C-30).
+
+  - id: backend
+    name: Backend
+    description: Placeholder para el stack de harnesses de backend (curación en C-30).

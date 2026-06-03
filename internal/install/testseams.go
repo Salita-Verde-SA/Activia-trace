@@ -29,6 +29,25 @@ func SetSnapshotCreate(fn func(dir string, paths []string) (backup.Manifest, err
 	}
 }
 
+// SetSnapshotCreateWithHints replaces the snapshotCreateWithHints function for
+// testing. Unlike SetSnapshotCreate, this preserves the dir hints parameter so
+// tests can inspect which paths were recorded as directory hints (DirHints).
+// This is the preferred seam for tests that exercise DirHint behaviour (e.g.
+// skill harnesses must be recorded as DirHints for dir-aware rollback).
+func SetSnapshotCreateWithHints(fn func(dir string, paths []string, dirHints map[string]bool) (backup.Manifest, error)) (restore func()) {
+	oldCreate := snapshotCreate
+	oldWithHints := snapshotCreateWithHints
+	snapshotCreateWithHints = fn
+	// Also override the non-hints variant so simple Set calls still use the same fn.
+	snapshotCreate = func(dir string, paths []string) (backup.Manifest, error) {
+		return fn(dir, paths, nil)
+	}
+	return func() {
+		snapshotCreate = oldCreate
+		snapshotCreateWithHints = oldWithHints
+	}
+}
+
 // SetExternalInstallFn replaces externalInstallFn for testing.
 func SetExternalInstallFn(fn func(
 	ctx context.Context,
@@ -86,4 +105,20 @@ func SetRestoreFn(fn func(m backup.Manifest) error) (restore func()) {
 	old := restoreFn
 	restoreFn = fn
 	return func() { restoreFn = old }
+}
+
+// SetMCPWriteFn replaces the mcpWriteFn for testing (C-28).
+// Injected fake avoids real filesystem writes during plan-only tests.
+func SetMCPWriteFn(fn func(mcp model.MCP, configPath string, strategy model.MCPStrategy) error) (restore func()) {
+	old := mcpWriteFn
+	mcpWriteFn = fn
+	return func() { mcpWriteFn = old }
+}
+
+// SetCommandInstallFn replaces commandInstallFn for testing (C-31).
+// Injected fake avoids real filesystem writes during pipeline-only tests.
+func SetCommandInstallFn(fn func(adapters []AgentAdapter, homeDir, backupDir string) error) (restore func()) {
+	old := commandInstallFn
+	commandInstallFn = fn
+	return func() { commandInstallFn = old }
 }

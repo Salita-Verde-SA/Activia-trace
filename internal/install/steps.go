@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 
 	"github.com/JuanCruzRobledo/jr-stack/internal/backup"
 	extinstaller "github.com/JuanCruzRobledo/jr-stack/internal/harness/external"
 	cfginstaller "github.com/JuanCruzRobledo/jr-stack/internal/harness/config"
 	perminstaller "github.com/JuanCruzRobledo/jr-stack/internal/harness/config/permissions"
 	skillinstaller "github.com/JuanCruzRobledo/jr-stack/internal/harness/skill"
+	cmdinstaller "github.com/JuanCruzRobledo/jr-stack/internal/harness/command"
 	"github.com/JuanCruzRobledo/jr-stack/internal/model"
 	"github.com/JuanCruzRobledo/jr-stack/internal/pipeline"
 	"github.com/JuanCruzRobledo/jr-stack/internal/system"
@@ -225,6 +227,63 @@ func (s *permissionsStep) Rollback() error {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// mcpWriteStep — writes a single model.MCP to the agent's project
+// config path and merges it idempotently (C-28 D5).
+// Governance ALTO: backup before write + Rollback() restores snapshot.
+// ─────────────────────────────────────────────────────────────────
+
+// writeMCPEntry writes a project-scoped MCP entry to the given config path
+// using the resolved strategy. For MCPStrategySingleFileMerge (Claude project),
+// it delegates to external.WriteMCPProjectEntry which handles backup + merge.
+// The snapshotDir is derived from the configPath's parent directory.
+func writeMCPEntry(mcp model.MCP, configPath string, strategy model.MCPStrategy) error {
+	switch strategy {
+	case model.MCPStrategySingleFileMerge, model.MCPStrategyMergeIntoSettings:
+		// Both project merge strategies use the same write path:
+		// backup + MergeJSONObjects + WriteFileAtomic.
+		snapshotDir := filepath.Join(filepath.Dir(configPath), ".jr-stack", "backups", "mcp", mcp.Name)
+		_, err := extinstaller.WriteMCPProjectEntry(mcp, configPath, snapshotDir)
+		return err
+	default:
+		// MCPStrategySeparateFile (machine target) is handled by the existing
+		// harness-based installMCP flow, not by starter MCP wiring.
+		return fmt.Errorf("writeMCPEntry: strategy %d not supported for starter MCPs", strategy)
+	}
+}
+
+// mcpWriteFn is the backing function for writing a project MCP entry.
+// It is a package-level variable so tests can inject a fake.
+var mcpWriteFn = func(
+	mcp model.MCP,
+	configPath string,
+	strategy model.MCPStrategy,
+) error {
+	return writeMCPEntry(mcp, configPath, strategy)
+}
+
+type mcpWriteStep struct {
+	id         string
+	mcp        model.MCP
+	configPath string
+	strategy   model.MCPStrategy
+	manifest   *backup.Manifest
+}
+
+func (s *mcpWriteStep) ID() string                    { return s.id }
+func (s *mcpWriteStep) setManifest(m *backup.Manifest) { s.manifest = m }
+
+func (s *mcpWriteStep) Run() error {
+	return mcpWriteFn(s.mcp, s.configPath, s.strategy)
+}
+
+func (s *mcpWriteStep) Rollback() error {
+	if s.manifest == nil {
+		return nil
+	}
+	return restoreFn(*s.manifest)
+}
+
+// ─────────────────────────────────────────────────────────────────
 // Adapter coercion helpers
 // ─────────────────────────────────────────────────────────────────
 
@@ -262,4 +321,58 @@ func toPermissionsAdapters(adapters []AgentAdapter) []perminstaller.PermissionsA
 		out[i] = a
 	}
 	return out
+}
+
+// toCommandAdapters narrows the full AgentAdapter to command.AgentAdapter.
+func toCommandAdapters(adapters []AgentAdapter) []cmdinstaller.AgentAdapter {
+	out := make([]cmdinstaller.AgentAdapter, len(adapters))
+	for i, a := range adapters {
+		out[i] = a
+	}
+	return out
+}
+
+// ─────────────────────────────────────────────────────────────────
+// commandStep — materializes a slash-command file per focused agent.
+// Added in C-31 (HarnessCommand / TBD-2 option a).
+// Governance ALTO: backup before write + Rollback() via snapshot manifest.
+// ─────────────────────────────────────────────────────────────────
+
+// commandInstallFn is the backing function for command installation.
+// It is a package-level variable so tests can inject a fake without real writes.
+var commandInstallFn = func(
+	adapters []AgentAdapter,
+	homeDir, backupDir string,
+) error {
+	ins := cmdinstaller.NewInstaller(embeddedCommandsFS)
+	cmdAdapters := toCommandAdapters(adapters)
+	_, err := ins.Install(cmdAdapters, homeDir, backupDir)
+	return err
+}
+
+// embeddedCommandsFS is the fs.FS for command assets. It is set via
+// WithEmbeddedCommandsFS so the production binary passes assets.CommandsFS.
+// When nil, commandInstallFn falls back to an empty FS (nothing installed).
+var embeddedCommandsFS fs.FS
+
+type commandStep struct {
+	h        model.Harness
+	adapters []AgentAdapter
+	homeDir  string
+	backupDir string
+	manifest *backup.Manifest
+}
+
+func (s *commandStep) ID() string                    { return "command:" + s.h.ID }
+func (s *commandStep) setManifest(m *backup.Manifest) { s.manifest = m }
+
+func (s *commandStep) Run() error {
+	return commandInstallFn(s.adapters, s.homeDir, s.backupDir)
+}
+
+func (s *commandStep) Rollback() error {
+	if s.manifest == nil {
+		return nil
+	}
+	return restoreFn(*s.manifest)
 }

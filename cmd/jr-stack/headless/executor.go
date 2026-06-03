@@ -37,9 +37,12 @@ func RunHeadless(params ParsedFlags, cat install.Catalog, reg install.Registry, 
 	// (An empty OS would produce a double-underscore filename like
 	// "engram_1.16.1__amd64.tar.gz" and result in HTTP 404.)
 	opts := install.Options{
-		HomeDir:  params.HomeDir,
-		Registry: reg,
-		Profile:  system.PlatformProfile{OS: runtime.GOOS},
+		HomeDir:     params.HomeDir,
+		Target:      params.Target,
+		ProjectRoot: params.ProjectRoot,
+		Starter:     params.Starter,
+		Registry:    reg,
+		Profile:     system.PlatformProfile{OS: runtime.GOOS},
 	}
 
 	// Wire verify hook.
