@@ -10,6 +10,8 @@ package catalog
 
 import (
 	"testing"
+
+	"github.com/JuanCruzRobledo/jr-stack/internal/model"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -443,6 +445,47 @@ func TestC30_CuratedSkillHarnesses_OwnPointAtMonorepo(t *testing.T) {
 		}
 		if h.Source.Path == "" {
 			t.Errorf("own/fork skill %q: source.path is empty, want skills/%s", id, id)
+		}
+	}
+}
+
+// TestC30_CuratedSkillHarnesses_AllAreStarterOnly asserts that all 30 curated
+// C-30 skills have Scope==ScopeStarterOnly (C-32 annotation requirement).
+//
+// Added in C-32: spec.md "Requirement: C-30 skills are annotated starter-only".
+func TestC30_CuratedSkillHarnesses_AllAreStarterOnly(t *testing.T) {
+	c, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	allCuratedIDs := []string{
+		// propias puras (8)
+		"fastapi-domain-service", "alembic-migrations", "zustand-store-pattern",
+		"react19-form-pattern", "dashboard-crud-page", "ws-frontend-subscription",
+		"help-system-content", "monorepo-scaffold",
+		// forks expandidos (6)
+		"postgresql-table-design", "tailwind-design-system", "typescript-advanced-types",
+		"interface-design", "clean-architecture", "fastapi-code-review",
+		// terceros base/transversal (6)
+		"test-driven-development", "systematic-debugging", "requesting-code-review",
+		"receiving-code-review", "code-review-excellence", "agile-product-owner",
+		// terceros backend (7)
+		"fastapi-templates", "python-testing-patterns", "postgresql-optimization",
+		"api-security-best-practices", "multi-stage-dockerfile", "redis-best-practices",
+		"websocket-engineer",
+		// terceros frontend/ux-ui (3)
+		"vercel-react-best-practices", "playwright-best-practices", "pwa-development",
+	}
+
+	for _, id := range allCuratedIDs {
+		h, ok := c.ByID(id)
+		if !ok {
+			t.Errorf("curated skill harness %q not found in catalog", id)
+			continue
+		}
+		if h.Scope != model.ScopeStarterOnly {
+			t.Errorf("curated skill %q: Scope = %q, want %q", id, h.Scope, model.ScopeStarterOnly)
 		}
 	}
 }

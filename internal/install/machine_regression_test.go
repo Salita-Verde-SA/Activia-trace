@@ -96,7 +96,11 @@ func TestBuildPlanMachineTarget_PathsUnderHomeDir(t *testing.T) {
 	}
 
 	// No Target → Machine (zero-value). Paths must be under homeDir.
-	plan, err := install.BuildPlan(cat, intent, buildOptions(homeDir, reg, nil))
+	// NoSelfInstall=true: this test is not about self-install, it checks
+	// harness paths only — exclude the user-system bin dir from assertions.
+	opts := buildOptions(homeDir, reg, nil)
+	opts.NoSelfInstall = true
+	plan, err := install.BuildPlan(cat, intent, opts)
 	if err != nil {
 		t.Fatalf("BuildPlan() error = %v", err)
 	}

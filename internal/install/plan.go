@@ -37,9 +37,13 @@ func BuildPlan(cat Catalog, intent Intent, opts Options) (Plan, error) {
 		return Plan{OnProgress: opts.OnProgress}, nil
 	}
 
-	// 2. Collect all harnesses for the dependency resolver.
-	allHarnesses := make(map[string]model.Harness, len(cat.ForMode(model.ModeCustom)))
-	for _, h := range cat.ForMode(model.ModeCustom) {
+	// 2. Build the complete catalog index for the dependency resolver.
+	// AllHarnesses() applies no scope or mode filter so that starter-only
+	// harnesses selected upstream by SelectHarnesses (via ByID in Custom mode)
+	// are resolvable here. Scope enforcement stays at SelectHarnesses/ForMode.
+	all := cat.AllHarnesses()
+	allHarnesses := make(map[string]model.Harness, len(all))
+	for _, h := range all {
 		allHarnesses[h.ID] = h
 	}
 
@@ -88,12 +92,29 @@ func BuildPlan(cat Catalog, intent Intent, opts Options) (Plan, error) {
 	mcpSteps := buildMCPSteps(opts.Starter, adapters, effectiveBase, opts.Target)
 	applySteps = append(applySteps, mcpSteps...)
 
+	// 5c. Append the self-install step AFTER harness + MCP steps (D3), gated by
+	// the flag. The step copies the running binary into the PATH bin dir; when
+	// NoSelfInstall is true (CI / reproducible builds) we skip it entirely.
+	if !opts.NoSelfInstall {
+		applySteps = append(applySteps, &selfInstallStep{
+			sourcePath: opts.SelfInstallBinaryPath,
+			onProgress: opts.OnProgress,
+			// goos: empty → runtime.GOOS resolved at Run() time. Tests inject
+			// via NewSelfInstallStep or the selfInstallBinaryInstallDirFn seam.
+		})
+	}
+
 	// 6. Collect all paths that Apply steps will write; build the snapshot step.
 	// Snapshot dir follows the same effective base (project root for Project target).
 	snapshotDir := filepath.Join(effectiveBase, ".jr-stack", "backups", "install")
 	writePaths := collectWritePaths(adapters, effectiveBase, opts.Target, resolved.OrderedIDs, cat)
 	// Also include MCP write paths from the starter (C-28 D5).
 	collectStarterMCPPaths(opts.Starter, adapters, effectiveBase, opts.Target, &writePaths)
+	// Include the self-install target binary path so it is snapshotted before
+	// the step writes it (governance ALTO — binary in user bin dir).
+	if !opts.NoSelfInstall {
+		collectSelfInstallPath(opts.Profile.OS, &writePaths)
+	}
 	dirHints := writePaths.DirHints
 	prepareSteps := []pipeline.Step{
 		&snapshotStep{
@@ -357,6 +378,28 @@ func resolvedCommandsDir(a AgentAdapter, base string, t model.InstallTarget) str
 		return a.PathsFor(base, t).CommandsDir
 	}
 	return a.CommandsDir(base)
+}
+
+// collectSelfInstallPath appends the self-install target binary path to the
+// writePathsResult so the snapshot captures it before the step writes.
+// It uses the injected selfInstallBinaryInstallDirFn seam (testable) and the
+// platform-specific filename.
+func collectSelfInstallPath(goos string, result *writePathsResult) {
+	if goos == "" {
+		goos = "linux" // safe default; real OS resolved at Run() time
+	}
+	dir := selfInstallBinaryInstallDirFn(goos)
+	target := filepath.Join(dir, binaryFilename(goos))
+	if target == "" {
+		return
+	}
+	// Deduplicate: only add if not already present.
+	for _, p := range result.Paths {
+		if p == target {
+			return
+		}
+	}
+	result.Paths = append(result.Paths, target)
 }
 
 // snapshotCreate is the backing function for creating snapshots. It is a

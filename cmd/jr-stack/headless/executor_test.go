@@ -52,6 +52,8 @@ func (f *fakeExecCatalog) ForAgent(a model.Agent) []model.Harness {
 	return out
 }
 
+func (f *fakeExecCatalog) AllHarnesses() []model.Harness { return f.harnesses }
+
 // fakeExecAdapter satisfies both install.AgentAdapter and verify.Adapter.
 type fakeExecAdapter struct {
 	agent model.Agent

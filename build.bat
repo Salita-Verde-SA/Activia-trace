@@ -28,6 +28,10 @@ echo Listo. Binarios en la raiz del repo:
 dir /b jr-stack_*
 echo.
 echo Tip: para otras arquitecturas (ej. ARM), cambia GOARCH=arm64 o agrega una linea.
+echo.
+echo Siguiente paso: copia el binario a un directorio en tu PATH y ejecuta:
+echo   jr-stack install
+echo Esto instala los harnesses Y registra el binario en tu PATH automaticamente.
 endlocal
 goto :eof
 

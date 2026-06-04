@@ -122,3 +122,44 @@ func SetCommandInstallFn(fn func(adapters []AgentAdapter, homeDir, backupDir str
 	commandInstallFn = fn
 	return func() { commandInstallFn = old }
 }
+
+// GetEmbeddedCommandsFS returns the current value of the package-level
+// embeddedCommandsFS variable. Used by real-wiring tests (C-32) to assert
+// that the binary entry point called WithEmbeddedCommandsFS before dispatch.
+// This is the minimal observation point for the D2 wiring test.
+func GetEmbeddedCommandsFS() fs.FS {
+	return embeddedCommandsFS
+}
+
+// ResetEmbeddedCommandsFS sets embeddedCommandsFS back to nil.
+// Call this at the start of each real-wiring test to ensure a clean state,
+// since the global persists across test runs in the same binary.
+func ResetEmbeddedCommandsFS() {
+	embeddedCommandsFS = nil
+}
+
+// ─────────────────────────────────────────────────────────────────
+// selfInstallStep seam setters (D6 — binary-self-install)
+// ─────────────────────────────────────────────────────────────────
+
+// SetExecPathFn replaces execPathFn (os.Executable) for testing.
+// Returns a restore function; always defer the restore.
+func SetExecPathFn(fn func() (string, error)) (restore func()) {
+	old := execPathFn
+	execPathFn = fn
+	return func() { execPathFn = old }
+}
+
+// SetSelfInstallBinaryInstallDirFn replaces selfInstallBinaryInstallDirFn for testing.
+func SetSelfInstallBinaryInstallDirFn(fn func(goos string) string) (restore func()) {
+	old := selfInstallBinaryInstallDirFn
+	selfInstallBinaryInstallDirFn = fn
+	return func() { selfInstallBinaryInstallDirFn = old }
+}
+
+// SetAddToUserPathFn replaces selfInstallAddToUserPathFn for testing.
+func SetAddToUserPathFn(fn func(dir string) error) (restore func()) {
+	old := selfInstallAddToUserPathFn
+	selfInstallAddToUserPathFn = fn
+	return func() { selfInstallAddToUserPathFn = old }
+}

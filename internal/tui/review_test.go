@@ -47,6 +47,8 @@ func (f *fakeCatalog) ForAgent(a model.Agent) []model.Harness {
 	return out
 }
 
+func (f *fakeCatalog) AllHarnesses() []model.Harness { return f.harnesses }
+
 // fakeRegistry satisfies install.Registry for testing.
 type fakeRegistry struct{}
 

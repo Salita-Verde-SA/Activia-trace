@@ -26,7 +26,8 @@ var httpClient = &http.Client{Timeout: 5 * time.Minute}
 var githubBaseURL = "https://github.com"
 
 // binaryInstallDirFn resolves where binaries are installed; replaceable in tests.
-var binaryInstallDirFn = binaryInstallDir
+// The default delegates to system.BinaryInstallDir (D1 — shared home).
+var binaryInstallDirFn = system.BinaryInstallDir
 
 // addToUserPath persists the install dir onto the user PATH; replaceable in tests.
 var addToUserPath = system.AddToUserPath
@@ -220,42 +221,6 @@ func githubToken() string {
 	return os.Getenv("GH_TOKEN")
 }
 
-// binaryInstallDir returns the directory where extracted binaries should land.
-func binaryInstallDir(goos string) string {
-	if goos == "windows" {
-		localAppData := os.Getenv("LOCALAPPDATA")
-		if localAppData == "" {
-			home, _ := os.UserHomeDir()
-			localAppData = filepath.Join(home, "AppData", "Local")
-		}
-		return filepath.Join(localAppData, "jr-stack", "bin")
-	}
-
-	candidate := "/usr/local/bin"
-	if isWritableDir(candidate) {
-		return candidate
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "/usr/local/bin"
-	}
-	return filepath.Join(home, ".local", "bin")
-}
-
-func isWritableDir(dir string) bool {
-	info, err := os.Stat(dir)
-	if err != nil || !info.IsDir() {
-		return false
-	}
-	tmp, err := os.CreateTemp(dir, ".jr-stack-write-test-*")
-	if err != nil {
-		return false
-	}
-	tmp.Close()
-	os.Remove(tmp.Name())
-	return true
-}
 
 func downloadAndExtractTarGz(url, binaryName, outPath string) error {
 	req, err := http.NewRequest(http.MethodGet, url, nil)

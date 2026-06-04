@@ -56,6 +56,12 @@ func (f *fakeCatalog) ForAgent(a model.Agent) []model.Harness {
 	return out
 }
 
+// AllHarnesses returns the complete harness list with no filter.
+// Satisfies install.Catalog for tests that need the full resolution universe.
+func (f *fakeCatalog) AllHarnesses() []model.Harness {
+	return f.harnesses
+}
+
 // fakeRegistry returns a fixed adapter for every agent.
 type fakeRegistry struct {
 	adapters map[model.Agent]install.AgentAdapter

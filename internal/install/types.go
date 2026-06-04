@@ -52,6 +52,10 @@ type Catalog interface {
 	ByID(id string) (model.Harness, bool)
 	ForMode(m model.InstallMode) []model.Harness
 	ForAgent(a model.Agent) []model.Harness
+	// AllHarnesses returns every harness in the catalog with NO scope or mode
+	// filter. It is the resolution universe for the planner's dependency index.
+	// Distinct from ForMode, which applies scope-based selection semantics.
+	AllHarnesses() []model.Harness
 }
 
 // AgentAdapter is the superset interface needed by the install steps.
@@ -111,6 +115,15 @@ type Options struct {
 	// OnProgress receives progress events during installation.
 	// When nil no progress events are emitted.
 	OnProgress pipeline.ProgressFunc
+	// NoSelfInstall, when true, skips the self-install step so the running
+	// binary is NOT copied into the PATH bin dir. Default (false) = self-install ON.
+	// Use --no-self-install for CI / reproducible builds (D3).
+	NoSelfInstall bool
+	// SelfInstallBinaryPath is an optional override for the source binary path
+	// used by the self-install step. When empty, the step resolves via os.Executable.
+	// Callers (main.go) may resolve os.Executable once at the entry point and inject it
+	// here; tests inject a temp path (D3).
+	SelfInstallBinaryPath string
 	// embeddedSkillsFS is the fs.FS for the "embed" skill install method.
 	// It is set via WithEmbeddedSkillsFS; nil means clone only.
 	embeddedSkillsFS fs.FS

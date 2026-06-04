@@ -40,6 +40,8 @@ func (f cmdFakeCatalog) ForAgent(agent model.Agent) []model.Harness {
 	return out
 }
 
+func (f cmdFakeCatalog) AllHarnesses() []model.Harness { return f.harnesses }
+
 // TestCollectSelectedHarnessesMatchesCanonical verifies the C-24 unification:
 // the verify-hook selection path (collectSelectedHarnesses) resolves the SAME
 // set as the canonical install.SelectHarnesses, including the forced

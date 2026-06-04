@@ -126,6 +126,7 @@ harnesses:
     name: FastAPI Domain Service
     description: Patrón de servicio de dominio con FastAPI (arquitectura por capas).
     type: skill
+    scope: starter-only
     source: { repo: JuanCruzRobledo/jr-skills, ref: latest, method: clone, path: skills/fastapi-domain-service }
     install_modes: [full]
 
@@ -133,6 +134,7 @@ harnesses:
     name: Alembic Migrations
     description: Gestión de migraciones de base de datos con Alembic + SQLAlchemy.
     type: skill
+    scope: starter-only
     source: { repo: JuanCruzRobledo/jr-skills, ref: latest, method: clone, path: skills/alembic-migrations }
     install_modes: [full]
 
@@ -140,6 +142,7 @@ harnesses:
     name: Zustand Store Pattern
     description: Patrón de store global con Zustand para React.
     type: skill
+    scope: starter-only
     source: { repo: JuanCruzRobledo/jr-skills, ref: latest, method: clone, path: skills/zustand-store-pattern }
     install_modes: [full]
 
@@ -147,6 +150,7 @@ harnesses:
     name: React 19 Form Pattern
     description: Patrón de formularios con React 19 (Server Actions + useFormState).
     type: skill
+    scope: starter-only
     source: { repo: JuanCruzRobledo/jr-skills, ref: latest, method: clone, path: skills/react19-form-pattern }
     install_modes: [full]
 
@@ -154,6 +158,7 @@ harnesses:
     name: Dashboard CRUD Page
     description: Página de dashboard con operaciones CRUD completas.
     type: skill
+    scope: starter-only
     source: { repo: JuanCruzRobledo/jr-skills, ref: latest, method: clone, path: skills/dashboard-crud-page }
     install_modes: [full]
 
@@ -161,6 +166,7 @@ harnesses:
     name: WebSocket Frontend Subscription
     description: Patrón de suscripción WebSocket en el frontend (React + reconnect).
     type: skill
+    scope: starter-only
     source: { repo: JuanCruzRobledo/jr-skills, ref: latest, method: clone, path: skills/ws-frontend-subscription }
     install_modes: [full]
 
@@ -168,6 +174,7 @@ harnesses:
     name: Help System Content
     description: Patrón de contenido para sistemas de ayuda in-app.
     type: skill
+    scope: starter-only
     source: { repo: JuanCruzRobledo/jr-skills, ref: latest, method: clone, path: skills/help-system-content }
     install_modes: [full]
 
@@ -175,6 +182,7 @@ harnesses:
     name: Monorepo Scaffold
     description: Scaffold de monorepo (Turborepo / pnpm workspaces).
     type: skill
+    scope: starter-only
     source: { repo: JuanCruzRobledo/jr-skills, ref: latest, method: clone, path: skills/monorepo-scaffold }
     install_modes: [full]
 
@@ -183,6 +191,7 @@ harnesses:
     name: PostgreSQL Table Design
     description: Diseño de tablas PostgreSQL (fork expandido de wshobson/agents).
     type: skill
+    scope: starter-only
     source: { repo: JuanCruzRobledo/jr-skills, ref: latest, method: clone, path: skills/postgresql-table-design }
     install_modes: [full]
 
@@ -190,6 +199,7 @@ harnesses:
     name: Tailwind Design System
     description: Sistema de diseño basado en Tailwind CSS (fork expandido).
     type: skill
+    scope: starter-only
     source: { repo: JuanCruzRobledo/jr-skills, ref: latest, method: clone, path: skills/tailwind-design-system }
     install_modes: [full]
 
@@ -197,6 +207,7 @@ harnesses:
     name: TypeScript Advanced Types
     description: Tipos avanzados de TypeScript — generics, utility types, branded types (fork expandido).
     type: skill
+    scope: starter-only
     source: { repo: JuanCruzRobledo/jr-skills, ref: latest, method: clone, path: skills/typescript-advanced-types }
     install_modes: [full]
 
@@ -204,6 +215,7 @@ harnesses:
     name: Interface Design
     description: Patrón de diseño de interfaces UI (fork expandido).
     type: skill
+    scope: starter-only
     source: { repo: JuanCruzRobledo/jr-skills, ref: latest, method: clone, path: skills/interface-design }
     install_modes: [full]
 
@@ -211,6 +223,7 @@ harnesses:
     name: Clean Architecture
     description: Arquitectura limpia por capas (fork expandido — capa de dominio + aplicación + infra).
     type: skill
+    scope: starter-only
     source: { repo: JuanCruzRobledo/jr-skills, ref: latest, method: clone, path: skills/clean-architecture }
     install_modes: [full]
 
@@ -218,6 +231,7 @@ harnesses:
     name: FastAPI Code Review
     description: Checklist de code review para APIs FastAPI (fork expandido de wshobson/agents).
     type: skill
+    scope: starter-only
     source: { repo: JuanCruzRobledo/jr-skills, ref: latest, method: clone, path: skills/fastapi-code-review }
     install_modes: [full]
 
@@ -226,6 +240,7 @@ harnesses:
     name: Test-Driven Development
     description: Ciclo TDD — red/green/refactor (obra/superpowers).
     type: skill
+    scope: starter-only
     third_party: true
     best_effort: true
     source: { repo: obra/superpowers, ref: latest, method: clone, path: skills/test-driven-development }
@@ -235,6 +250,7 @@ harnesses:
     name: Systematic Debugging
     description: Metodología de debugging sistemático (obra/superpowers).
     type: skill
+    scope: starter-only
     third_party: true
     best_effort: true
     source: { repo: obra/superpowers, ref: latest, method: clone, path: skills/systematic-debugging }
@@ -244,6 +260,7 @@ harnesses:
     name: Requesting Code Review
     description: Guía para solicitar code reviews efectivos (obra/superpowers).
     type: skill
+    scope: starter-only
     third_party: true
     best_effort: true
     source: { repo: obra/superpowers, ref: latest, method: clone, path: skills/requesting-code-review }
@@ -253,6 +270,7 @@ harnesses:
     name: Receiving Code Review
     description: Guía para recibir y procesar code reviews (obra/superpowers).
     type: skill
+    scope: starter-only
     third_party: true
     best_effort: true
     source: { repo: obra/superpowers, ref: latest, method: clone, path: skills/receiving-code-review }
@@ -262,6 +280,7 @@ harnesses:
     name: Code Review Excellence
     description: Excelencia en code review — cómo dar reviews de calidad (wshobson/agents).
     type: skill
+    scope: starter-only
     third_party: true
     best_effort: true
     source: { repo: wshobson/agents, ref: latest, method: clone, path: skills/code-review-excellence }
@@ -271,6 +290,7 @@ harnesses:
     name: Agile Product Owner
     description: Rol y responsabilidades del Product Owner ágil (alirezarezvani/claude-skills).
     type: skill
+    scope: starter-only
     third_party: true
     best_effort: true
     source: { repo: alirezarezvani/claude-skills, ref: latest, method: clone, path: skills/agile-product-owner }
@@ -281,6 +301,7 @@ harnesses:
     name: FastAPI Templates
     description: Templates de proyecto FastAPI (wshobson/agents).
     type: skill
+    scope: starter-only
     third_party: true
     best_effort: true
     source: { repo: wshobson/agents, ref: latest, method: clone, path: skills/fastapi-templates }
@@ -290,6 +311,7 @@ harnesses:
     name: Python Testing Patterns
     description: Patrones de testing en Python con pytest (wshobson/agents).
     type: skill
+    scope: starter-only
     third_party: true
     best_effort: true
     source: { repo: wshobson/agents, ref: latest, method: clone, path: skills/python-testing-patterns }
@@ -299,6 +321,7 @@ harnesses:
     name: PostgreSQL Optimization
     description: Optimización de consultas y esquema PostgreSQL (github/awesome-copilot).
     type: skill
+    scope: starter-only
     third_party: true
     best_effort: true
     source: { repo: github/awesome-copilot, ref: latest, method: clone, path: skills/postgresql-optimization }
@@ -308,6 +331,7 @@ harnesses:
     name: API Security Best Practices
     description: Prácticas de seguridad para APIs REST (sickn33/antigravity-awesome-skills).
     type: skill
+    scope: starter-only
     third_party: true
     best_effort: true
     source: { repo: sickn33/antigravity-awesome-skills, ref: latest, method: clone, path: skills/api-security-best-practices }
@@ -317,6 +341,7 @@ harnesses:
     name: Multi-Stage Dockerfile
     description: Dockerfiles multi-etapa optimizados (github/awesome-copilot).
     type: skill
+    scope: starter-only
     third_party: true
     best_effort: true
     source: { repo: github/awesome-copilot, ref: latest, method: clone, path: skills/multi-stage-dockerfile }
@@ -326,6 +351,7 @@ harnesses:
     name: Redis Best Practices
     description: Mejores prácticas para Redis (Mindrally/skills — upstream confirmado, raíz del repo).
     type: skill
+    scope: starter-only
     third_party: true
     best_effort: true
     source: { repo: Mindrally/skills, ref: latest, method: clone, path: redis-best-practices }
@@ -335,6 +361,7 @@ harnesses:
     name: WebSocket Engineer
     description: Ingeniería de WebSockets full-stack (Jeffallan/claude-skills — upstream confirmado v1.1.0+).
     type: skill
+    scope: starter-only
     third_party: true
     best_effort: true
     source: { repo: Jeffallan/claude-skills, ref: latest, method: clone, path: skills/websocket-engineer }
@@ -345,6 +372,7 @@ harnesses:
     name: Vercel React Best Practices
     description: Mejores prácticas de React según Vercel (vercel-labs/agent-skills).
     type: skill
+    scope: starter-only
     third_party: true
     best_effort: true
     source: { repo: vercel-labs/agent-skills, ref: latest, method: clone, path: skills/vercel-react-best-practices }
@@ -354,6 +382,7 @@ harnesses:
     name: Playwright Best Practices
     description: Mejores prácticas de testing E2E con Playwright (currents-dev/playwright-skills).
     type: skill
+    scope: starter-only
     third_party: true
     best_effort: true
     source: { repo: currents-dev/playwright-skills, ref: latest, method: clone, path: skills/playwright-best-practices }
@@ -365,6 +394,7 @@ harnesses:
       Desarrollo de Progressive Web Apps (alinaqi/claude-bootstrap — upstream confirmado).
       WATCH: usa arquitectura modular con base.md; clonar el subdir puede dejar la skill incompleta.
     type: skill
+    scope: starter-only
     third_party: true
     best_effort: true
     source: { repo: alinaqi/claude-bootstrap, ref: latest, method: clone, path: skills/pwa-development }

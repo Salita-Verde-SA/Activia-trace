@@ -60,6 +60,18 @@ type ParsedFlags struct {
 	// Starter is an optional starter whose MCPs should be written into the
 	// project config. When nil, no MCP write steps are emitted.
 	Starter *model.Starter
+
+	// ── binary-self-install ───────────────────────────────────────────────────
+
+	// NoSelfInstall, when true, skips the self-install step so the running
+	// binary is NOT copied into the PATH bin dir. Default (false) = self-install ON.
+	// Set by --no-self-install for CI / reproducible builds (D3).
+	NoSelfInstall bool
+
+	// BinaryPath is the resolved path of the running binary (os.Executable result),
+	// forwarded to install.Options.SelfInstallBinaryPath. Set by main.go at entry,
+	// empty means the self-install step resolves it via os.Executable internally.
+	BinaryPath string
 }
 
 // ParseInstallFlags parses the raw argument list for the "install" sub-command.
@@ -79,14 +91,15 @@ func ParseInstallFlags(args []string) (ParsedFlags, error) {
 	fs.SetOutput(os.Stderr)
 
 	var (
-		headless bool
-		mode     string
-		agent    string
-		custom   string
-		dryRun   bool
-		yes      bool
-		yShort   bool
-		home     string
+		headless      bool
+		mode          string
+		agent         string
+		custom        string
+		dryRun        bool
+		yes           bool
+		yShort        bool
+		home          string
+		noSelfInstall bool
 	)
 
 	fs.BoolVar(&headless, "headless", false, "non-interactive install; implied by --mode or --agent")
@@ -97,6 +110,7 @@ func ParseInstallFlags(args []string) (ParsedFlags, error) {
 	fs.BoolVar(&yes, "yes", false, "confirm without prompt")
 	fs.BoolVar(&yShort, "y", false, "alias for --yes")
 	fs.StringVar(&home, "home", "", "override home directory (default: os.UserHomeDir())")
+	fs.BoolVar(&noSelfInstall, "no-self-install", false, "skip copying the running binary into the PATH bin dir (CI / reproducible builds)")
 
 	if err := fs.Parse(args); err != nil {
 		return ParsedFlags{}, err
@@ -171,10 +185,11 @@ func ParseInstallFlags(args []string) (ParsedFlags, error) {
 	}
 
 	return ParsedFlags{
-		TUI:    false,
-		DryRun: dryRun,
-		Yes:    yes,
-		HomeDir: homeDir,
+		TUI:           false,
+		DryRun:        dryRun,
+		Yes:           yes,
+		HomeDir:       homeDir,
+		NoSelfInstall: noSelfInstall,
 		Intent: install.Intent{
 			Mode:   installMode,
 			Agents: agents,

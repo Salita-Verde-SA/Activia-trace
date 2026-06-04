@@ -207,6 +207,8 @@ func (f *fakeTUICatalog) ForAgent(a model.Agent) []model.Harness {
 	return out
 }
 
+func (f *fakeTUICatalog) AllHarnesses() []model.Harness { return f.harnesses }
+
 // ensure errors package is used (used in gate implementation later)
 var _ = errors.New
 

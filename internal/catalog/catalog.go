@@ -75,6 +75,15 @@ func (c *Catalog) validate() error {
 				return fmt.Errorf("catalog: harness %q has invalid mode %q", h.ID, m)
 			}
 		}
+		// Rule 2 (C-32): a starter-only harness must not list lite in install_modes.
+		// A starter-only skill cannot be part of the global Lite minimum.
+		if h.IsStarterOnly() {
+			for _, m := range h.InstallModes {
+				if m == model.ModeLite {
+					return fmt.Errorf("catalog: harness %q is starter-only but lists install_mode %q — starter-only skills cannot be part of the Lite minimum", h.ID, model.ModeLite)
+				}
+			}
+		}
 		switch h.Type {
 		case model.HarnessSkill:
 			if h.Source == nil || h.Source.Repo == "" {
@@ -97,7 +106,37 @@ func (c *Catalog) validate() error {
 			}
 		}
 	}
-	return c.validateStarters()
+	if err := c.validateStarters(); err != nil {
+		return err
+	}
+	// Rule 1 (C-32): every starter-only harness must be referenced by at least
+	// one starter. Run AFTER validateStarters() so the includes graph is proven
+	// free of cycles and broken references (safe to call ResolveStarter).
+	return c.validateStarterOnlyReferences()
+}
+
+// validateStarterOnlyReferences checks that every harness with Scope==ScopeStarterOnly
+// is reachable from at least one starter (directly or via includes). An orphaned
+// starter-only harness is a catalog error: it can never be installed.
+func (c *Catalog) validateStarterOnlyReferences() error {
+	// Build the union set of all harness ids referenced across all starters.
+	referenced := make(map[string]bool)
+	for _, s := range c.Starters {
+		harnesses, err := c.ResolveStarter(s.ID)
+		if err != nil {
+			// validateStarters() already checked this; should not happen.
+			return fmt.Errorf("catalog: unexpected error resolving starter %q: %w", s.ID, err)
+		}
+		for _, h := range harnesses {
+			referenced[h.ID] = true
+		}
+	}
+	for _, h := range c.Harnesses {
+		if h.IsStarterOnly() && !referenced[h.ID] {
+			return fmt.Errorf("catalog: harness %q has scope starter-only but is not referenced by any starter", h.ID)
+		}
+	}
+	return nil
 }
 
 // validateStarters checks all starters in the catalog:
@@ -170,12 +209,27 @@ func (c *Catalog) ByID(id string) (model.Harness, bool) {
 	return h, ok
 }
 
+// AllHarnesses returns every harness in the catalog in catalog order, applying
+// no scope filter and no install-mode filter. It is the resolution universe for
+// the planner's dependency-resolution index: the planner must be able to look up
+// any harness that SelectHarnesses may have placed into the selected set, including
+// starter-only harnesses that ForMode purposely excludes.
+//
+// This is intentionally distinct from ForMode: ForMode is a selection accessor
+// (which harnesses are eligible for a given mode?); AllHarnesses is a resolution
+// accessor (what is the complete dependency graph?).
+func (c *Catalog) AllHarnesses() []model.Harness {
+	return c.Harnesses
+}
+
 // ForMode returns the harnesses that belong to the given install mode, in
-// catalog order.
+// catalog order. Starter-only harnesses (Scope==ScopeStarterOnly) are excluded
+// from every mode: their only installation path is `jr-stack starter add`.
+// InMode semantics are unchanged — the scope filter is applied here, not in InMode.
 func (c *Catalog) ForMode(m model.InstallMode) []model.Harness {
 	var out []model.Harness
 	for _, h := range c.Harnesses {
-		if h.InMode(m) {
+		if !h.IsStarterOnly() && h.InMode(m) {
 			out = append(out, h)
 		}
 	}

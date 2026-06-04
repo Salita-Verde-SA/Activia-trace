@@ -23,7 +23,25 @@ import (
 	"github.com/JuanCruzRobledo/jr-stack/internal/verify"
 )
 
+// wireEmbeddedFS pushes the bundled embedded filesystems into the install
+// package globals before any dispatch takes place.
+//
+// Call this ONCE at the very start of main(), before any install/starter/TUI
+// dispatch branch. The globals are read at plan-execution time (not at
+// BuildPlan time), so a single set here covers all three entry paths:
+// TUI install, headless install, and starter add.
+//
+// C-32 fix: adds the missing WithEmbeddedCommandsFS call that caused
+// "command installer: commandsFS is nil" at runtime. See design.md D1.
+func wireEmbeddedFS() {
+	install.WithEmbeddedCommandsFS(assets.CommandsFS)
+}
+
 func main() {
+	// Wire the embedded filesystems into the install package globals FIRST,
+	// before any dispatch. See wireEmbeddedFS for details (C-32 fix).
+	wireEmbeddedFS()
+
 	// Sin argumentos (caso típico: doble-click del .exe en Windows) → lanzar el
 	// flujo interactivo. JR Stack es methodology-first para usuario final: el
 	// doble-click debe ABRIR la TUI, no imprimir un usage y cerrarse. runInstall
@@ -104,6 +122,16 @@ func runInstall(args []string) error {
 	if !parsed.TUI {
 		// Use the home dir from the parsed flags (may have been --home overridden).
 		parsed.HomeDir = resolveHomeDir(parsed.HomeDir, reg)
+
+		// Resolve the running binary path once at the entry point (D3).
+		// The self-install step uses this to know which binary to copy.
+		// If resolution fails, leave it empty — the step falls back to os.Executable
+		// internally (with graceful degradation on error).
+		if parsed.BinaryPath == "" {
+			if binPath, err := os.Executable(); err == nil {
+				parsed.BinaryPath = binPath
+			}
+		}
 
 		// Wire the verify hook (same logic as the TUI BuildPlanFn below).
 		if parsed.VerifyHookFn == nil {

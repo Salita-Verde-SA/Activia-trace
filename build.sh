@@ -65,3 +65,8 @@ desktop_shortcut() {
 echo
 echo "== Acceso directo en el escritorio =="
 desktop_shortcut || true
+
+echo
+echo "Siguiente paso: copia el binario compilado a un directorio en tu PATH y ejecuta:"
+echo "  jr-stack install"
+echo "Esto instala los harnesses Y registra el binario en tu PATH automaticamente."

@@ -107,12 +107,28 @@ type External struct {
 	URL    string `yaml:"url,omitempty"`  // for download/mcp transports
 }
 
+// ScopeKind expresses where a harness materializes.
+type ScopeKind string
+
+const (
+	// ScopeGlobal is the zero-value: harness is part of the machine-global
+	// install plan. All harnesses without an explicit scope are global.
+	ScopeGlobal ScopeKind = "global"
+	// ScopeStarterOnly marks a harness that ONLY materializes scope-project
+	// via `jr-stack starter add`. It must never appear in the global install
+	// plan (ForMode must exclude it).
+	ScopeStarterOnly ScopeKind = "starter-only"
+)
+
 // Harness is a single installable/configurable module of the stack.
 type Harness struct {
 	ID           string        `yaml:"id"`
 	Name         string        `yaml:"name"`
 	Description  string        `yaml:"description,omitempty"`
 	Type         HarnessType   `yaml:"type"`
+	// Scope controls where this harness materializes. Omitting the field (the
+	// zero value "") is equivalent to ScopeGlobal — backward-compatible.
+	Scope        ScopeKind     `yaml:"scope,omitempty"`
 	ThirdParty   bool          `yaml:"third_party,omitempty"` // not owned by us, bundled
 	Source       *Source       `yaml:"source,omitempty"`      // skill harnesses
 	External     *External     `yaml:"external,omitempty"`    // external harnesses
@@ -125,6 +141,10 @@ type Harness struct {
 	// (the pipeline does not abort and roll back). Defaults to false.
 	BestEffort bool `yaml:"best_effort,omitempty"`
 }
+
+// IsStarterOnly reports whether the harness is exclusively a starter-add
+// harness and must not appear in the global install plan.
+func (h Harness) IsStarterOnly() bool { return h.Scope == ScopeStarterOnly }
 
 // InMode reports whether this harness belongs to the given install mode.
 // ModeCustom matches every harness (the user picks individually).

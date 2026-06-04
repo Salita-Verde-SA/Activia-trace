@@ -144,10 +144,14 @@ func TestBuildPlanProjectTarget_PathsUnderProjectRoot(t *testing.T) {
 		Mode:   model.ModeLite,
 	}
 	opts := install.Options{
-		HomeDir:     homeDir,
-		ProjectRoot: projectRoot,
-		Target:      model.Project,
-		Registry:    reg,
+		HomeDir:       homeDir,
+		ProjectRoot:   projectRoot,
+		Target:        model.Project,
+		Registry:      reg,
+		// NoSelfInstall=true: this test checks harness paths only.
+		// The self-install target lives in the user's system bin dir
+		// (independent of projectRoot) and would fail this assertion.
+		NoSelfInstall: true,
 	}
 
 	plan, err := install.BuildPlan(cat, intent, opts)

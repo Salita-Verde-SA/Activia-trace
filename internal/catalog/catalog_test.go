@@ -170,6 +170,18 @@ func TestForMode_LiteIsSubsetOfFull(t *testing.T) {
 			t.Errorf("lite harness %q is not included in full mode", h.ID)
 		}
 	}
+
+	// C-32: no starter-only harness must appear in lite or full.
+	for _, h := range lite {
+		if h.IsStarterOnly() {
+			t.Errorf("lite mode: harness %q is starter-only and must not appear in the global install plan", h.ID)
+		}
+	}
+	for _, h := range full {
+		if h.IsStarterOnly() {
+			t.Errorf("full mode: harness %q is starter-only and must not appear in the global install plan", h.ID)
+		}
+	}
 }
 
 func TestForMode_JROrchestratorIsFullOnly(t *testing.T) {
@@ -195,13 +207,56 @@ func TestForMode_JROrchestratorIsFullOnly(t *testing.T) {
 	}
 }
 
-func TestForMode_CustomReturnsAll(t *testing.T) {
+// TestForMode_CustomReturnsOnlyGlobal asserts that custom mode returns only the
+// 13 foundation-global harnesses — NOT the 30 starter-only C-30 skills.
+// C-32: replaces TestForMode_CustomReturnsAll (which incorrectly expected all 43).
+func TestForMode_CustomReturnsOnlyGlobal(t *testing.T) {
 	c, err := Load()
 	if err != nil {
 		t.Fatalf("Load(): %v", err)
 	}
-	if got := len(c.ForMode(model.ModeCustom)); got != len(c.Harnesses) {
-		t.Errorf("custom mode returned %d harnesses, want all %d", got, len(c.Harnesses))
+	const wantFoundationGlobal = 13
+	got := c.ForMode(model.ModeCustom)
+	if len(got) != wantFoundationGlobal {
+		t.Errorf("custom mode returned %d harnesses, want %d foundation-global", len(got), wantFoundationGlobal)
+	}
+	for _, h := range got {
+		if h.IsStarterOnly() {
+			t.Errorf("custom mode: harness %q is starter-only and must not appear in custom mode", h.ID)
+		}
+	}
+}
+
+// TestForMode_ExcludesStarterOnlyHarnesses asserts that ForMode excludes
+// starter-only harnesses from all modes (lite, full, custom).
+// C-32: core invariant test — covers all three modes with count assertions.
+func TestForMode_ExcludesStarterOnlyHarnesses(t *testing.T) {
+	c, err := Load()
+	if err != nil {
+		t.Fatalf("Load(): %v", err)
+	}
+
+	cases := []struct {
+		mode      model.InstallMode
+		wantCount int
+	}{
+		{model.ModeLite, 6},
+		{model.ModeFull, 13},
+		{model.ModeCustom, 13},
+	}
+
+	for _, tc := range cases {
+		harnesses := c.ForMode(tc.mode)
+		// No starter-only harness must appear.
+		for _, h := range harnesses {
+			if h.IsStarterOnly() {
+				t.Errorf("ForMode(%q): harness %q has Scope=starter-only and must not appear in the global install plan", tc.mode, h.ID)
+			}
+		}
+		// Count must match expected foundation-global count.
+		if len(harnesses) != tc.wantCount {
+			t.Errorf("ForMode(%q): got %d harnesses, want %d", tc.mode, len(harnesses), tc.wantCount)
+		}
 	}
 }
 
@@ -433,5 +488,99 @@ func TestC31_CommandHarnessType_IsValidInCatalogYAML(t *testing.T) {
 	_, err := parse([]byte(raw))
 	if err != nil {
 		t.Errorf("catalog.parse() rejected a valid 'command' type harness: %v", err)
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// C-32: harness-scope-model — catalog.Load validation rules
+// ─────────────────────────────────────────────────────────────────────────────
+
+// TestCatalogLoad_StarterOnlyMustBeReferenced asserts that a starter-only harness
+// that is NOT referenced by any starter fails catalog.Load with an error naming
+// the harness id (Rule 1).
+//
+// RED: fails because Rule 1 does not exist yet in validate().
+func TestCatalogLoad_StarterOnlyMustBeReferenced(t *testing.T) {
+	// An orphaned starter-only harness: not referenced by any starter.
+	orphanYAML := `harnesses:
+  - id: orphan-skill
+    name: Orphan Skill
+    type: skill
+    scope: starter-only
+    source: { repo: some/repo, method: clone }
+    install_modes: [full]
+starters:
+  - id: my-starter
+    name: My Starter
+    harnesses: []`
+
+	_, err := parse([]byte(orphanYAML))
+	if err == nil {
+		t.Fatal("expected error for orphaned starter-only harness, got nil")
+	}
+	if !strings.Contains(err.Error(), "orphan-skill") {
+		t.Errorf("error %q does not name the offending harness %q", err.Error(), "orphan-skill")
+	}
+
+	// Triangulation: a starter-only harness that IS referenced loads clean.
+	referencedYAML := `harnesses:
+  - id: curated-skill
+    name: Curated Skill
+    type: skill
+    scope: starter-only
+    source: { repo: some/repo, method: clone }
+    install_modes: [full]
+starters:
+  - id: my-starter
+    name: My Starter
+    harnesses: [curated-skill]`
+
+	if _, err := parse([]byte(referencedYAML)); err != nil {
+		t.Errorf("unexpected error for referenced starter-only harness: %v", err)
+	}
+}
+
+// TestCatalogLoad_StarterOnlyWithLiteModeIsInvalid asserts that a harness with
+// scope: starter-only and install_modes including lite fails catalog.Load with
+// an error naming the harness id (Rule 2).
+//
+// RED: fails because Rule 2 does not exist yet in validate().
+func TestCatalogLoad_StarterOnlyWithLiteModeIsInvalid(t *testing.T) {
+	// A starter-only harness that lists lite — contradiction.
+	liteStarterOnlyYAML := `harnesses:
+  - id: bad-skill
+    name: Bad Skill
+    type: skill
+    scope: starter-only
+    source: { repo: some/repo, method: clone }
+    install_modes: [lite, full]
+starters:
+  - id: my-starter
+    name: My Starter
+    harnesses: [bad-skill]`
+
+	_, err := parse([]byte(liteStarterOnlyYAML))
+	if err == nil {
+		t.Fatal("expected error for starter-only harness with lite mode, got nil")
+	}
+	if !strings.Contains(err.Error(), "bad-skill") {
+		t.Errorf("error %q does not name the offending harness %q", err.Error(), "bad-skill")
+	}
+
+	// Triangulation: a starter-only harness with only [full] loads clean.
+	fullOnlyYAML := `harnesses:
+  - id: good-skill
+    name: Good Skill
+    type: skill
+    scope: starter-only
+    source: { repo: some/repo, method: clone }
+    install_modes: [full]
+starters:
+  - id: my-starter
+    name: My Starter
+    harnesses: [good-skill]`
+
+	if _, err := parse([]byte(fullOnlyYAML)); err != nil {
+		t.Errorf("unexpected error for starter-only harness with [full] only: %v", err)
 	}
 }
