@@ -1,10 +1,81 @@
 package model
 
-import "testing"
+import (
+	"strings"
+	"testing"
+
+	"gopkg.in/yaml.v3"
+)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // C-32: harness-scope-model — ScopeKind / IsStarterOnly()
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// External.MCP field — round-trip and validation
+// ─────────────────────────────────────────────────────────────────────────────
+
+// TestExternalMCP_YAMLRoundTrip asserts that an External struct with a nested
+// MCP field correctly round-trips through YAML marshal/unmarshal.
+// The MCP field uses model.MCP (Name, Command, Args) and the yaml tag "mcp".
+func TestExternalMCP_YAMLRoundTrip(t *testing.T) {
+	raw := `
+method: homebrew
+pkg: gentleman-programming/tap/engram
+repo: Gentleman-Programming/engram
+mcp:
+  name: engram
+  command: engram
+  args:
+    - mcp
+`
+	var ext External
+	if err := yaml.Unmarshal([]byte(raw), &ext); err != nil {
+		t.Fatalf("yaml.Unmarshal failed: %v", err)
+	}
+	if ext.MCP == nil {
+		t.Fatal("External.MCP is nil after unmarshal; field may be missing or mis-tagged")
+	}
+	if ext.MCP.Name != "engram" {
+		t.Errorf("MCP.Name = %q, want %q", ext.MCP.Name, "engram")
+	}
+	if ext.MCP.Command != "engram" {
+		t.Errorf("MCP.Command = %q, want %q", ext.MCP.Command, "engram")
+	}
+	if len(ext.MCP.Args) != 1 || ext.MCP.Args[0] != "mcp" {
+		t.Errorf("MCP.Args = %v, want [mcp]", ext.MCP.Args)
+	}
+}
+
+// TestExternalMCP_OmitEmptyWhenNil asserts that when External.MCP is nil the
+// "mcp" key is absent from the marshaled YAML (omitempty behaviour).
+func TestExternalMCP_OmitEmptyWhenNil(t *testing.T) {
+	ext := External{Method: "homebrew", Pkg: "gentleman-programming/tap/engram"}
+	out, err := yaml.Marshal(ext)
+	if err != nil {
+		t.Fatalf("yaml.Marshal failed: %v", err)
+	}
+	if contains(string(out), "mcp:") {
+		t.Errorf("marshaled YAML should not contain 'mcp:' when MCP is nil, got:\n%s", out)
+	}
+}
+
+// TestExternalMCP_ValidateReused asserts that the existing MCP.Validate() is
+// reused: an External.MCP with a missing Command fails validation via Validate().
+func TestExternalMCP_ValidateReused(t *testing.T) {
+	ext := External{
+		Method: "homebrew",
+		Pkg:    "gentleman-programming/tap/engram",
+		MCP:    &MCP{Name: "engram", Command: ""},
+	}
+	if err := ext.MCP.Validate(); err == nil {
+		t.Error("expected validation error for MCP with empty Command, got nil")
+	}
+}
+
+func contains(s, sub string) bool {
+	return strings.Contains(s, sub)
+}
 
 // TestModel_ScopeKind_ZeroValueIsGlobal asserts that:
 //  1. A Harness with no Scope set (zero value) returns IsStarterOnly()==false.

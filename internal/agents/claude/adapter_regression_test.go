@@ -10,10 +10,14 @@ import (
 )
 
 // TestClaudeAdapter_ZeroRegression_MachinePathsForMCP asserts that PathsFor
-// with Machine target still returns the legacy machine MCP path and that the
-// resolved strategy from AgentPaths for the machine target is SeparateFile.
-// This is the zero-regression guard for C-28: changing project must not
-// touch machine.
+// with Machine target returns the correct post-fix machine MCP path
+// (~/.claude.json) and strategy (MCPStrategySingleFileMerge). This test was
+// originally a guard for C-28 (project target must not affect machine); it now
+// also serves as the authoritative guard for the machine-target MCP fix that
+// corrects the dead ~/.claude/mcp/ path.
+//
+// Claude Code reads user-scope MCP servers from ~/.claude.json under a top-level
+// "mcpServers" key. There is no ~/.claude/mcp/ auto-discovery.
 func TestClaudeAdapter_ZeroRegression_MachinePathsForMCP(t *testing.T) {
 	a := claude.NewAdapter()
 	home := "/home/regressuser"
@@ -21,22 +25,22 @@ func TestClaudeAdapter_ZeroRegression_MachinePathsForMCP(t *testing.T) {
 	paths := a.PathsFor(home, model.Machine)
 
 	t.Run("MachineTargetMCPPath", func(t *testing.T) {
-		want := filepath.Join(home, ".claude", "mcp", "context7.json")
+		want := filepath.Join(home, ".claude.json")
 		got := paths.MCPConfigPath("context7")
 		if got != want {
 			t.Errorf("Machine PathsFor MCPConfigPath = %q, want %q", got, want)
 		}
 	})
 
-	t.Run("MachineTargetStrategy_SeparateFile", func(t *testing.T) {
-		if paths.MCPStrategy != model.MCPStrategySeparateFile {
-			t.Errorf("Machine MCPStrategy = %v, want MCPStrategySeparateFile", paths.MCPStrategy)
+	t.Run("MachineTargetStrategy_SingleFileMerge", func(t *testing.T) {
+		if paths.MCPStrategy != model.MCPStrategySingleFileMerge {
+			t.Errorf("Machine MCPStrategy = %v, want MCPStrategySingleFileMerge", paths.MCPStrategy)
 		}
 	})
 
-	t.Run("MachineLegacyMCPStrategy_Unchanged", func(t *testing.T) {
-		if got := a.MCPStrategy(); got != external.StrategySeparateFile {
-			t.Errorf("MCPStrategy() = %v, want StrategySeparateFile", got)
+	t.Run("MachineLegacyMCPStrategy_IsMergeIntoSettings", func(t *testing.T) {
+		if got := a.MCPStrategy(); got != external.StrategyMergeIntoSettings {
+			t.Errorf("MCPStrategy() = %v, want StrategyMergeIntoSettings", got)
 		}
 	})
 }
@@ -69,8 +73,8 @@ func TestClaudeAdapter_ZeroRegression_C31_PathsForFields(t *testing.T) {
 		}
 	})
 	t.Run("Machine_MCPStrategy", func(t *testing.T) {
-		if got := a.PathsFor(home, model.Machine).MCPStrategy; got != model.MCPStrategySeparateFile {
-			t.Errorf("Machine PathsFor MCPStrategy = %v, want SeparateFile", got)
+		if got := a.PathsFor(home, model.Machine).MCPStrategy; got != model.MCPStrategySingleFileMerge {
+			t.Errorf("Machine PathsFor MCPStrategy = %v, want SingleFileMerge", got)
 		}
 	})
 	t.Run("Project_InstructionsPath", func(t *testing.T) {
@@ -142,15 +146,20 @@ func TestClaudeAdapter_ZeroRegression_MachineMethodsUnchanged(t *testing.T) {
 	})
 
 	t.Run("MCPConfigPath", func(t *testing.T) {
-		want := filepath.Join(home, ".claude", "mcp", "context7.json")
+		// Post-fix: MCPConfigPath returns ~/.claude.json regardless of server name.
+		// Claude Code reads user-scope MCP servers from ~/.claude.json, not from
+		// the old ~/.claude/mcp/<server>.json path which it never auto-discovers.
+		want := filepath.Join(home, ".claude.json")
 		if got := a.MCPConfigPath(home, "context7"); got != want {
 			t.Errorf("MCPConfigPath(%q, %q) = %q, want %q", home, "context7", got, want)
 		}
 	})
 
 	t.Run("MCPStrategy", func(t *testing.T) {
-		if got := a.MCPStrategy(); got != external.StrategySeparateFile {
-			t.Errorf("MCPStrategy() = %v, want StrategySeparateFile", got)
+		// Post-fix: MCPStrategy returns StrategyMergeIntoSettings so that the
+		// install flow merges into ~/.claude.json under the "mcpServers" key.
+		if got := a.MCPStrategy(); got != external.StrategyMergeIntoSettings {
+			t.Errorf("MCPStrategy() = %v, want StrategyMergeIntoSettings", got)
 		}
 	})
 

@@ -48,17 +48,21 @@ func (a *Adapter) SettingsPath(homeDir string) string {
 	return filepath.Join(homeDir, ".claude", "settings.json")
 }
 
-// MCPConfigPath returns the path where an MCP server config file should be
-// written for Claude Code. Claude uses one JSON file per server.
-// Example: /home/user/.claude/mcp/context7.json
-func (a *Adapter) MCPConfigPath(homeDir, serverName string) string {
-	return filepath.Join(homeDir, ".claude", "mcp", serverName+".json")
+// MCPConfigPath returns the path to Claude Code's user-scope MCP config file.
+// Claude Code reads user-scope MCP servers from the top-level "mcpServers" key
+// in ~/.claude.json — there is no ~/.claude/mcp/ auto-discovery. The serverName
+// argument is ignored because all servers share the single ~/.claude.json file.
+// Example: /home/user/.claude.json
+func (a *Adapter) MCPConfigPath(homeDir, _ string) string {
+	return filepath.Join(homeDir, ".claude.json")
 }
 
-// MCPStrategy returns external.StrategySeparateFile — Claude Code writes one
-// JSON file per MCP server under ~/.claude/mcp/<server>.json.
+// MCPStrategy returns external.StrategyMergeIntoSettings — Claude Code reads
+// user-scope MCP servers from the top-level "mcpServers" key in ~/.claude.json,
+// so new entries are merged into that single shared file rather than written to
+// per-server files under ~/.claude/mcp/ (which Claude Code does not read).
 func (a *Adapter) MCPStrategy() external.MCPStrategy {
-	return external.StrategySeparateFile
+	return external.StrategyMergeIntoSettings
 }
 
 // VariantKey returns "claude", used to select the claude/ asset directory in
@@ -68,18 +72,22 @@ func (a *Adapter) VariantKey() string {
 }
 
 // PathsFor returns the resolved AgentPaths for the given base directory and
-// install target. For Machine, the result is identical to the existing per-method
-// outputs (zero regression). For Project, non-MCP paths use the same .claude/
-// subdirectory layout but the MCP path resolves to <root>/.mcp.json (D2).
+// install target. For Project, non-MCP paths use the .claude/ subdirectory
+// layout and the MCP path resolves to <root>/.mcp.json (D2). For Machine,
+// non-MCP paths are identical to the existing per-method outputs; the MCP path
+// resolves to <base>/.claude.json (the single shared user-scope file that
+// Claude Code actually reads under the top-level "mcpServers" key).
 //
 // Claude layout by target:
-//   Machine: <homeDir>/.claude/...  + MCP: <homeDir>/.claude/mcp/<server>.json
-//   Project: <root>/.claude/...     + MCP: <root>/.mcp.json  (server name ignored)
 //
-// The MCP strategy is also resolved together with the path (D1) so the two
-// cannot contradict each other:
-//   Machine → MCPStrategySeparateFile (legacy, unchanged)
-//   Project → MCPStrategySingleFileMerge (all servers share one .mcp.json)
+//	Machine: <base>/.claude/...  + MCP: <base>/.claude.json  (SingleFileMerge)
+//	Project: <root>/.claude/...  + MCP: <root>/.mcp.json     (SingleFileMerge)
+//
+// The MCP strategy is resolved together with the path (D1) so the two cannot
+// contradict each other. Both targets now use MCPStrategySingleFileMerge:
+//
+//	Machine → MCPStrategySingleFileMerge, target file ~/.claude.json
+//	Project → MCPStrategySingleFileMerge, target file <root>/.mcp.json
 func (a *Adapter) PathsFor(base string, t model.InstallTarget) model.AgentPaths {
 	claudeDir := filepath.Join(base, ".claude")
 	paths := model.AgentPaths{
@@ -99,14 +107,15 @@ func (a *Adapter) PathsFor(base string, t model.InstallTarget) model.AgentPaths 
 			}).
 			WithMCPStrategy(model.MCPStrategySingleFileMerge)
 	default:
-		// Machine target (zero-value): identical to pre-C-27 per-method results.
-		// Strategy is separate-file (one JSON file per server).
-		// (TBD) machine path correctness (~/.claude.json) is a separate follow-up.
+		// Machine target: Claude Code reads user-scope MCP servers from the
+		// top-level "mcpServers" key in ~/.claude.json. There is no
+		// ~/.claude/mcp/ auto-discovery. All servers share the single file;
+		// the server name is ignored when resolving the path.
 		return paths.
-			WithMCPConfigFn(func(serverName string) string {
-				return filepath.Join(claudeDir, "mcp", serverName+".json")
+			WithMCPConfigFn(func(_ string) string {
+				return filepath.Join(base, ".claude.json")
 			}).
-			WithMCPStrategy(model.MCPStrategySeparateFile)
+			WithMCPStrategy(model.MCPStrategySingleFileMerge)
 	}
 }
 

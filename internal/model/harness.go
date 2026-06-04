@@ -105,6 +105,11 @@ type External struct {
 	Pkg    string `yaml:"pkg,omitempty"`  // package/formula/module identifier (brew formula, npm pkg)
 	Repo   string `yaml:"repo,omitempty"` // GitHub owner/repo for binary download fallback (distinct from Pkg)
 	URL    string `yaml:"url,omitempty"`  // for download/mcp transports
+	// MCP is an optional local (stdio) MCP server to register into each agent's
+	// config after the binary is installed (applicable to homebrew/npm/download
+	// methods). Nil means no MCP registration. Reuses model.MCP (Name, Command,
+	// Args, Env) — Name and Command are required (validated via MCP.Validate).
+	MCP *MCP `yaml:"mcp,omitempty"`
 }
 
 // ScopeKind expresses where a harness materializes.
