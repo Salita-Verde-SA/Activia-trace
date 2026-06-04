@@ -99,11 +99,14 @@ func buildOverlay(h model.Harness, adapter AgentAdapter) map[string]any {
 				},
 			}
 		}
-		// Generic merge-into-settings: standard mcpServers key.
+		// Generic merge-into-settings: standard mcpServers key with type discriminator.
+		// Claude Code (and any future generic agent) requires "type":"http" to
+		// recognise the entry as a remote HTTP MCP server in ~/.claude.json.
 		return map[string]any{
 			"mcpServers": map[string]any{
 				h.ID: map[string]any{
-					"url": mcpURL,
+					"type": "http",
+					"url":  mcpURL,
 				},
 			},
 		}
@@ -151,6 +154,147 @@ func buildMCPOverlay(mcp model.MCP) map[string]any {
 			mcp.Name: entry,
 		},
 	}
+}
+
+// buildStdioOverlay constructs the JSON overlay map for registering a local
+// (stdio) MCP server into a machine-target agent config. Unlike buildOverlay
+// (which handles remote URL servers) and buildMCPOverlay (which handles the
+// Claude project single-file strategy), this function produces the per-strategy
+// shape for machine-target registration after a binary install.
+//
+// Shape by strategy:
+//
+//   - StrategySeparateFile:
+//     {"command":..., "args":[...], "env":{...}}  ← bare server object; the FILE is the server
+//
+//   - StrategyMergeIntoSettings, agent == OpenCode:
+//     {"mcp": {"<name>": {"type":"local","command":...,"args":[...],"enabled":true}}}
+//
+//   - StrategyMergeIntoSettings (generic, e.g. Claude → ~/.claude.json):
+//     {"mcpServers": {"<name>": {"type":"stdio","command":...,"args":[...]}}}
+//
+// The "env" key is omitted when mcp.Env is nil (no spurious empty map).
+// No hardcoded server-name constants — the overlay key is always mcp.Name.
+func buildStdioOverlay(mcp model.MCP, adapter AgentAdapter) map[string]any {
+	entry := map[string]any{
+		"command": mcp.Command,
+		"args":    mcp.Args,
+	}
+	if len(mcp.Env) > 0 {
+		entry["env"] = mcp.Env
+	}
+
+	switch adapter.MCPStrategy() {
+	case StrategyMergeIntoSettings:
+		if adapter.Agent() == model.AgentOpenCode {
+			// OpenCode local server format: type:"local" + enabled flag.
+			localEntry := map[string]any{
+				"type":    "local",
+				"command": mcp.Command,
+				"args":    mcp.Args,
+				"enabled": true,
+			}
+			if len(mcp.Env) > 0 {
+				localEntry["env"] = mcp.Env
+			}
+			return map[string]any{
+				"mcp": map[string]any{
+					mcp.Name: localEntry,
+				},
+			}
+		}
+		// Generic merge-into-settings: standard mcpServers key with type discriminator.
+		// Claude Code (and any future generic agent) requires "type":"stdio" to
+		// recognise the entry as a local stdio MCP server in ~/.claude.json.
+		entry["type"] = "stdio"
+		return map[string]any{
+			"mcpServers": map[string]any{
+				mcp.Name: entry,
+			},
+		}
+
+	case StrategySeparateFile:
+		// Standalone server file: the file IS the server config object.
+		return entry
+
+	default:
+		return map[string]any{
+			"mcpServers": map[string]any{
+				mcp.Name: entry,
+			},
+		}
+	}
+}
+
+// registerStdioMCP registers a local (stdio) MCP server into each adapter's
+// machine-target config path. It mirrors the installMCP flow (backup + JSON
+// merge + atomic write) but uses buildStdioOverlay instead of buildOverlay so
+// the resulting overlay is a stdio server entry rather than a remote URL entry.
+//
+// harnessID is used only to build a per-agent backup directory name.
+//
+// Returns a Result with ConfigFiles listing paths that were written or changed,
+// and AlreadyInstalled=true when every adapter's config was already up-to-date.
+//
+// Governance ALTO: backup is taken before touching any existing file. Reuses
+// snapshotterCreate (replaceable in tests) and filemerge.MergeJSONObjects
+// + filemerge.WriteFileAtomic for idempotent merge, exactly like installMCP.
+func registerStdioMCP(
+	mcp model.MCP,
+	adapters []AgentAdapter,
+	homeDir string,
+	harnessID string,
+) (Result, error) {
+	if len(adapters) == 0 {
+		return Result{AlreadyInstalled: true}, nil
+	}
+
+	var configFiles []string
+	allAlready := true
+
+	for _, adapter := range adapters {
+		configPath := adapter.MCPConfigPath(homeDir, mcp.Name)
+		if configPath == "" {
+			continue
+		}
+
+		// Backup existing file before touching it (governance ALTO).
+		if _, err := os.Stat(configPath); err == nil {
+			snapshotDir := filepath.Join(homeDir, ".jr-stack", "backups",
+				fmt.Sprintf("%s-%s-mcp", harnessID, adapter.Agent()))
+			if err := snapshotterCreate(snapshotDir, []string{configPath}); err != nil {
+				return Result{}, fmt.Errorf("backup %q before stdio mcp injection: %w", configPath, err)
+			}
+		}
+
+		overlay := buildStdioOverlay(mcp, adapter)
+		overlayJSON, err := json.Marshal(overlay)
+		if err != nil {
+			return Result{}, fmt.Errorf("marshal stdio mcp overlay for %s: %w", adapter.Agent(), err)
+		}
+
+		baseJSON := readExistingJSON(configPath)
+
+		merged, err := filemerge.MergeJSONObjects(baseJSON, overlayJSON)
+		if err != nil {
+			return Result{}, fmt.Errorf("merge stdio mcp config for %s: %w", adapter.Agent(), err)
+		}
+
+		wr, err := filemerge.WriteFileAtomic(configPath, merged, 0o644)
+		if err != nil {
+			return Result{}, fmt.Errorf("write stdio mcp config %q: %w", configPath, err)
+		}
+
+		if wr.Changed {
+			allAlready = false
+			configFiles = append(configFiles, configPath)
+		}
+	}
+
+	return Result{
+		ConfigFiles:      configFiles,
+		AlreadyInstalled: allAlready && len(configFiles) == 0,
+	}, nil
 }
 
 // WriteMCPProjectEntry writes a local (stdio) MCP server entry into the given

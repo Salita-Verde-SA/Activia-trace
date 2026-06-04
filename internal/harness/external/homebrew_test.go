@@ -451,6 +451,36 @@ func TestInstallHomebrew_UsesBrewWhenAvailable(t *testing.T) {
 	}
 }
 
+// ── TestRunBrew_EngamTapFormula: brew install uses full tap path, binary name is "engram" ─
+//
+// Engram must be installed via the tap formula "gentleman-programming/tap/engram",
+// NOT the bare "engram" (which does not exist in homebrew-core).
+// runBrew must call `brew install gentleman-programming/tap/engram` and resolve
+// the binary name as filepath.Base("gentleman-programming/tap/engram") == "engram".
+func TestRunBrew_EngramTapFormula(t *testing.T) {
+	fr := &fakeRunner{output: []byte("ok")}
+	defer withFakeRunner(fr)()
+	defer withFakeLookPath(func(name string) (string, error) {
+		return "/usr/local/bin/" + name, nil
+	})()
+
+	const tapFormula = "gentleman-programming/tap/engram"
+	result, err := runBrew(nil, tapFormula)
+	if err != nil {
+		t.Fatalf("runBrew failed: %v", err)
+	}
+
+	// 1. brew must be called with the full tap formula (not the bare "engram").
+	if len(fr.capturedArgs) == 0 || fr.capturedArgs[len(fr.capturedArgs)-1] != tapFormula {
+		t.Errorf("brew args = %v, want last arg %q", fr.capturedArgs, tapFormula)
+	}
+
+	// 2. BinaryPath must contain "engram" (filepath.Base of the tap path).
+	if !strings.Contains(result.BinaryPath, "engram") {
+		t.Errorf("BinaryPath = %q should contain 'engram' (Base of tap formula)", result.BinaryPath)
+	}
+}
+
 // ── archive helpers ───────────────────────────────────────────────────────
 
 func buildTarGz(t *testing.T, filename string, content []byte) []byte {

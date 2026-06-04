@@ -18,7 +18,11 @@ harnesses:
     name: Engram
     description: Memoria persistente local (SQLite + FTS) vía MCP.
     type: external
-    external: { method: homebrew, pkg: engram, repo: Gentleman-Programming/engram }
+    external:
+      method: homebrew
+      pkg: gentleman-programming/tap/engram
+      repo: Gentleman-Programming/engram
+      mcp: { name: engram, command: engram, args: [mcp] }
     install_modes: [lite, full]
 
   - id: context7

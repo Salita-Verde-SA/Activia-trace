@@ -99,6 +99,13 @@ func (c *Catalog) validate() error {
 			if h.External == nil || h.External.Method == "" {
 				return fmt.Errorf("catalog: external harness %q needs an external.method", h.ID)
 			}
+			// Validate the optional MCP stdio spec when present. A malformed
+			// catalog is a build/release error — fail loudly.
+			if h.External.MCP != nil {
+				if err := h.External.MCP.Validate(); err != nil {
+					return fmt.Errorf("catalog: external harness %q mcp: %w", h.ID, err)
+				}
+			}
 		}
 		for _, dep := range h.DependsOn {
 			if _, ok := c.index[dep]; !ok {

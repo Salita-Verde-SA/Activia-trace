@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -121,6 +122,120 @@ func TestC22_ThirdPartySkillsUseCloneWithPath(t *testing.T) {
 		if h.Source.Path == "" {
 			t.Errorf("harness %q: Source.Path is empty, want a subdir path", id)
 		}
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Part 1 — Engram brew tap formula
+// ─────────────────────────────────────────────────────────────────────────────
+
+// TestEngram_BrewTapFormula asserts that the embedded catalog specifies the
+// full Homebrew TAP path for engram ("gentleman-programming/tap/engram"),
+// NOT the bare "engram" that does not exist in homebrew-core.
+// filepath.Base of the tap path must still resolve to "engram" (the binary name).
+func TestEngram_BrewTapFormula(t *testing.T) {
+	c, err := Load()
+	if err != nil {
+		t.Fatalf("Load(): %v", err)
+	}
+	h, ok := c.ByID("engram")
+	if !ok {
+		t.Fatal("engram harness not found in catalog")
+	}
+	if h.External == nil {
+		t.Fatal("engram: External is nil")
+	}
+	const wantPkg = "gentleman-programming/tap/engram"
+	if h.External.Pkg != wantPkg {
+		t.Errorf("engram External.Pkg = %q, want %q (bare 'engram' is not in homebrew-core; the tap formula is required)", h.External.Pkg, wantPkg)
+	}
+	// Binary name must still be "engram" (filepath.Base of the tap path).
+	// This is what runBrew uses to resolve the installed binary after brew install.
+	if got := filepath.Base(h.External.Pkg); got != "engram" {
+		t.Errorf("filepath.Base(Pkg) = %q, want %q", got, "engram")
+	}
+}
+
+// TestEngram_HasMCPEntry asserts that the embedded catalog engram harness
+// declares an MCP stdio entry with name="engram", command="engram", args=["mcp"].
+// This is required so jr-stack can register the Engram MCP server into each
+// agent's config after installing the binary — without this, the binary is
+// on disk but the agent cannot communicate with it.
+func TestEngram_HasMCPEntry(t *testing.T) {
+	c, err := Load()
+	if err != nil {
+		t.Fatalf("Load(): %v", err)
+	}
+	h, ok := c.ByID("engram")
+	if !ok {
+		t.Fatal("engram harness not found in catalog")
+	}
+	if h.External == nil {
+		t.Fatal("engram: External is nil")
+	}
+	if h.External.MCP == nil {
+		t.Fatal("engram External.MCP is nil; engram requires an MCP stdio entry to be registered into agent configs")
+	}
+	m := h.External.MCP
+	if m.Name != "engram" {
+		t.Errorf("MCP.Name = %q, want %q", m.Name, "engram")
+	}
+	if m.Command != "engram" {
+		t.Errorf("MCP.Command = %q, want %q", m.Command, "engram")
+	}
+	if len(m.Args) != 1 || m.Args[0] != "mcp" {
+		t.Errorf("MCP.Args = %v, want [mcp]", m.Args)
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Part 2c — Catalog validation: External.MCP is validated on Load
+// ─────────────────────────────────────────────────────────────────────────────
+
+// TestCatalogValidation_ExternalMCP_EmptyCommandFails asserts that a catalog
+// with an external harness whose mcp block has an empty command fails Load.
+// A malformed catalog is a loud fail (build/release error — project convention).
+func TestCatalogValidation_ExternalMCP_EmptyCommandFails(t *testing.T) {
+	malformed := `harnesses:
+  - id: bad-external
+    name: Bad External
+    type: external
+    external:
+      method: homebrew
+      pkg: some/tap/tool
+      mcp:
+        name: tool
+        command: ""
+    install_modes: [lite]`
+
+	_, err := parse([]byte(malformed))
+	if err == nil {
+		t.Fatal("expected error for external harness with mcp.command empty, got nil")
+	}
+	if !strings.Contains(err.Error(), "command") {
+		t.Errorf("error %q should mention 'command', the failing field", err.Error())
+	}
+}
+
+// TestCatalogValidation_ExternalMCP_WellFormedPasses asserts that an external
+// harness with a valid mcp block loads cleanly.
+func TestCatalogValidation_ExternalMCP_WellFormedPasses(t *testing.T) {
+	valid := `harnesses:
+  - id: good-external
+    name: Good External
+    type: external
+    external:
+      method: homebrew
+      pkg: some/tap/tool
+      mcp:
+        name: tool
+        command: tool
+        args:
+          - mcp
+    install_modes: [lite]`
+
+	if _, err := parse([]byte(valid)); err != nil {
+		t.Errorf("unexpected error for valid external mcp block: %v", err)
 	}
 }
 

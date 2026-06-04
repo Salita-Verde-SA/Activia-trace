@@ -26,9 +26,12 @@ func TestClaudeAdapter_VariantKey(t *testing.T) {
 }
 
 func TestClaudeAdapter_MCPStrategy(t *testing.T) {
+	// Post-fix: Claude Code reads user-scope MCP servers from ~/.claude.json under
+	// a top-level "mcpServers" key. There is no ~/.claude/mcp/ auto-discovery.
+	// Strategy is StrategyMergeIntoSettings (merge into the shared file).
 	a := claude.NewAdapter()
-	if got := a.MCPStrategy(); got != external.StrategySeparateFile {
-		t.Errorf("MCPStrategy() = %v, want StrategySeparateFile", got)
+	if got := a.MCPStrategy(); got != external.StrategyMergeIntoSettings {
+		t.Errorf("MCPStrategy() = %v, want StrategyMergeIntoSettings", got)
 	}
 }
 
@@ -82,9 +85,11 @@ func TestClaudeAdapter_PathMethods(t *testing.T) {
 			want: filepath.Join(home, ".claude", "settings.json"),
 		},
 		{
+			// Post-fix: MCPConfigPath returns ~/.claude.json regardless of server name.
+			// The serverName arg is ignored since all servers share the single file.
 			name: "MCPConfigPath",
 			got:  a.MCPConfigPath(home, "context7"),
-			want: filepath.Join(home, ".claude", "mcp", "context7.json"),
+			want: filepath.Join(home, ".claude.json"),
 		},
 	}
 
