@@ -60,6 +60,30 @@ func TestCompose_AllToggles(t *testing.T) {
 	}
 }
 
+// TestCompose_AllToggles_opencode verifies that with all toggles active the
+// composed output for the opencode variant is deterministic and matches the golden file.
+func TestCompose_AllToggles_opencode(t *testing.T) {
+	toggles := []string{"delegation", "model-routing", "engram", "tdd", "governance"}
+	got, err := config.Compose(toggles, "opencode")
+	if err != nil {
+		t.Fatalf("Compose error: %v", err)
+	}
+	if got == "" {
+		t.Fatal("Compose returned empty string")
+	}
+
+	name := "compose_all_toggles_opencode"
+	if *update {
+		writeGolden(t, name, got)
+		t.Logf("updated golden %s", name)
+		return
+	}
+	want := loadGolden(t, name)
+	if got != want {
+		t.Errorf("Compose output does not match golden.\ngot len=%d want len=%d", len(got), len(want))
+	}
+}
+
 // TestCompose_Deterministic verifies that toggle order does NOT change output.
 func TestCompose_Deterministic(t *testing.T) {
 	toggles1 := []string{"tdd", "governance", "engram", "delegation", "model-routing"}
