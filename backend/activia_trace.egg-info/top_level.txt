@@ -1,0 +1,9 @@
+api
+app
+core
+integrations
+models
+repositories
+schemas
+services
+workers
