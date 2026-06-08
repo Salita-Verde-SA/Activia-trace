@@ -4,13 +4,20 @@ from models.tenant import Tenant
 from models.user import Usuario
 from models.session import Session
 from models.recovery_token import RecoveryToken
-from .user import Usuario, Rol, RolPermiso, Permiso, RolUsuario, UsuarioRol
+from models.rbac import Rol, RolPermiso, Permiso, UsuarioRol
 from .mensajeria_interna import HiloMensajeInterno, MensajeInterno, hilo_usuario_table
 from models.audit import AuditLog
 from models.estructura import Carrera, Cohorte, Materia
 from models.asignacion import Asignacion
-from models.tareas import Tarea, ComentarioTarea, EstadoTarea, PrioridadTarea
-from models.liquidaciones import SalarioBase, SalarioPlus, Liquidacion, Factura, EstadoLiquidacion
+from models.programas import ProgramaMateria, FechaAcademica, TipoFechaAcademica
+from models.evaluaciones import Evaluacion, ReservaEvaluacion, ResultadoEvaluacion
+from models.encuentros import SlotEncuentro, InstanciaEncuentro, Guardia
+from models.liquidaciones import SalarioBase, SalarioPlus, Factura, Liquidacion
+from models.tareas import Tarea, ComentarioTarea
+from models.avisos import Aviso, AcknowledgmentAviso
+from models.comunicacion import Comunicacion
+from models.calificacion import Calificacion
+from models.padron import VersionPadron, EntradaPadron
 
 __all__ = [
     "Base",

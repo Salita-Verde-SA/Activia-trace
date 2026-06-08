@@ -31,8 +31,8 @@ def upgrade() -> None:
         sa.Column('meet_url', sa.String(length=255), nullable=True),
         sa.Column('vig_desde', sa.Date(), nullable=True),
         sa.Column('vig_hasta', sa.Date(), nullable=True),
-        sa.ForeignKeyConstraint(['asignacion_id'], ['asignaciones.id'], ),
-        sa.ForeignKeyConstraint(['materia_id'], ['materias.id'], ),
+        sa.ForeignKeyConstraint(['asignacion_id'], ['asignacion.id'], ),
+        sa.ForeignKeyConstraint(['materia_id'], ['materia.id'], ),
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_slots_encuentros_id'), 'slots_encuentros', ['id'], unique=False)
@@ -53,7 +53,7 @@ def upgrade() -> None:
         sa.Column('meet_url', sa.String(length=255), nullable=True),
         sa.Column('video_url', sa.String(length=255), nullable=True),
         sa.Column('comentario', sa.Text(), nullable=True),
-        sa.ForeignKeyConstraint(['materia_id'], ['materias.id'], ),
+        sa.ForeignKeyConstraint(['materia_id'], ['materia.id'], ),
         sa.ForeignKeyConstraint(['slot_id'], ['slots_encuentros.id'], ),
         sa.PrimaryKeyConstraint('id')
     )
@@ -75,10 +75,10 @@ def upgrade() -> None:
         sa.Column('estado', sa.Enum('PENDIENTE', 'REALIZADA', 'CANCELADA', name='estadoguardia'), nullable=False),
         sa.Column('comentarios', sa.Text(), nullable=True),
         sa.Column('creada_at', sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(['asignacion_id'], ['asignaciones.id'], ),
-        sa.ForeignKeyConstraint(['carrera_id'], ['carreras.id'], ),
-        sa.ForeignKeyConstraint(['cohorte_id'], ['cohortes.id'], ),
-        sa.ForeignKeyConstraint(['materia_id'], ['materias.id'], ),
+        sa.ForeignKeyConstraint(['asignacion_id'], ['asignacion.id'], ),
+        sa.ForeignKeyConstraint(['carrera_id'], ['carrera.id'], ),
+        sa.ForeignKeyConstraint(['cohorte_id'], ['cohorte.id'], ),
+        sa.ForeignKeyConstraint(['materia_id'], ['materia.id'], ),
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_guardias_id'), 'guardias', ['id'], unique=False)

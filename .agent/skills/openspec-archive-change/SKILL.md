@@ -91,6 +91,16 @@ Archive a completed change in the experimental workflow.
    - Whether specs were synced (if applicable)
    - Note about any warnings (incomplete artifacts/tasks)
 
+7. **Push to GitHub**
+
+   If the user has not opted out of git tracking, run the following commands to commit the archived change and sync it to the remote repository:
+   ```bash
+   git add .
+   git commit -m "chore(opsx): archive change <change-name> and sync specs"
+   git push
+   ```
+   Add a note to the summary indicating that the changes were pushed.
+
 **Output On Success**
 
 ```
@@ -100,6 +110,7 @@ Archive a completed change in the experimental workflow.
 **Schema:** <schema-name>
 **Archived to:** openspec/changes/archive/YYYY-MM-DD-<name>/
 **Specs:** ✓ Synced to main specs (or "No delta specs" or "Sync skipped")
+**Git:** ✓ Changes pushed to GitHub
 
 All artifacts complete. All tasks complete.
 ```
@@ -112,3 +123,4 @@ All artifacts complete. All tasks complete.
 - Show clear summary of what happened
 - If sync is requested, use openspec-sync-specs approach (agent-driven)
 - If delta specs exist, always run the sync assessment and show the combined summary before prompting
+- Ensure git push succeeds, or gracefully warn the user if it fails.

@@ -36,7 +36,7 @@ class ReservaEvaluacion(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id = Column(UUID(as_uuid=True), index=True, nullable=False)
     evaluacion_id = Column(UUID(as_uuid=True), ForeignKey("evaluaciones.id"), nullable=False)
-    alumno_id = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False)
+    alumno_id = Column(UUID(as_uuid=True), ForeignKey("usuario.id"), nullable=False)
     fecha_hora = Column(DateTime, nullable=False)
     estado = Column(Enum(EstadoReserva, name="estado_reserva_enum"), nullable=False, default=EstadoReserva.ACTIVA)
 
@@ -49,7 +49,7 @@ class ResultadoEvaluacion(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id = Column(UUID(as_uuid=True), index=True, nullable=False)
     evaluacion_id = Column(UUID(as_uuid=True), ForeignKey("evaluaciones.id"), nullable=False)
-    alumno_id = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False)
+    alumno_id = Column(UUID(as_uuid=True), ForeignKey("usuario.id"), nullable=False)
     nota_final = Column(String, nullable=False)
 
     evaluacion = relationship("Evaluacion", back_populates="resultados")

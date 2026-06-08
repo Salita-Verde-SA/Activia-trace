@@ -28,8 +28,8 @@ class SlotEncuentro(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4, index=True)
     tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    asignacion_id = Column(UUID(as_uuid=True), ForeignKey("asignaciones.id"), nullable=False, index=True)
-    materia_id = Column(UUID(as_uuid=True), ForeignKey("materias.id"), nullable=False, index=True)
+    asignacion_id = Column(UUID(as_uuid=True), ForeignKey("asignacion.id"), nullable=False, index=True)
+    materia_id = Column(UUID(as_uuid=True), ForeignKey("materia.id"), nullable=False, index=True)
     titulo = Column(String(255), nullable=False)
     hora = Column(Time, nullable=False)
     dia_semana = Column(Enum(DiaSemana), nullable=True) # Nulo si es fecha única
@@ -45,8 +45,8 @@ class InstanciaEncuentro(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4, index=True)
     tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    slot_id = Column(UUID(as_uuid=True), ForeignKey("slots_encuentros.id"), nullable=True, index=True)
-    materia_id = Column(UUID(as_uuid=True), ForeignKey("materias.id"), nullable=False, index=True)
+    slot_id = Column(UUID(as_uuid=True), ForeignKey("slots_encuentros.id"), nullable=False)
+    materia_id = Column(UUID(as_uuid=True), ForeignKey("materia.id"), nullable=False, index=True)
     fecha = Column(Date, nullable=False)
     hora = Column(Time, nullable=False)
     titulo = Column(String(255), nullable=False)
@@ -60,10 +60,10 @@ class Guardia(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4, index=True)
     tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    asignacion_id = Column(UUID(as_uuid=True), ForeignKey("asignaciones.id"), nullable=False, index=True)
-    materia_id = Column(UUID(as_uuid=True), ForeignKey("materias.id"), nullable=False, index=True)
-    carrera_id = Column(UUID(as_uuid=True), ForeignKey("carreras.id"), nullable=True)
-    cohorte_id = Column(UUID(as_uuid=True), ForeignKey("cohortes.id"), nullable=True)
+    asignacion_id = Column(UUID(as_uuid=True), ForeignKey("asignacion.id"), nullable=False, index=True)
+    materia_id = Column(UUID(as_uuid=True), ForeignKey("materia.id"), nullable=False, index=True)
+    carrera_id = Column(UUID(as_uuid=True), ForeignKey("carrera.id"), nullable=True)
+    cohorte_id = Column(UUID(as_uuid=True), ForeignKey("cohorte.id"), nullable=True)
     dia = Column(Enum(DiaSemana), nullable=False)
     horario = Column(String(50), nullable=False) # ej: "14:00-14:45"
     estado = Column(Enum(EstadoGuardia), nullable=False, default=EstadoGuardia.PENDIENTE)

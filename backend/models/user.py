@@ -3,7 +3,7 @@ from core.crypto import EncryptedString
 from models.base import Base
 from models.mixins import TenantMixin, TimestampMixin, SoftDeleteMixin
 import uuid
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
 class Usuario(Base, TenantMixin, TimestampMixin, SoftDeleteMixin):
@@ -25,7 +25,7 @@ class Usuario(Base, TenantMixin, TimestampMixin, SoftDeleteMixin):
     cuil = Column(EncryptedString, nullable=True)
     cbu = Column(EncryptedString, nullable=True)
     alias_cbu = Column(EncryptedString, nullable=True)
-    asignaciones = relationship('Asignacion', back_populates='usuario', cascade='all, delete-orphan')
+    asignaciones = relationship('Asignacion', cascade='all, delete-orphan', foreign_keys='Asignacion.usuario_id')
     hilos_participa = relationship('HiloMensajeInterno', secondary='hilo_usuario', back_populates='participantes')
     
     # Datos de negocio

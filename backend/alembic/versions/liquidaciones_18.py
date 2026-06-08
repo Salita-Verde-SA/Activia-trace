@@ -19,8 +19,9 @@ def upgrade() -> None:
     # Agregar clave_plus a materia
     op.add_column('materia', sa.Column('clave_plus', sa.String(length=50), nullable=True))
 
-    # Crear estado_liquidacion_enum
+    # Crear enums
     sa.Enum('ABIERTA', 'CERRADA', name='estado_liquidacion_enum').create(op.get_bind())
+    sa.Enum('ALUMNO', 'TUTOR', 'PROFESOR', 'COORDINADOR', 'NEXO', 'ADMIN', 'FINANZAS', name='rol_usuario_enum').create(op.get_bind())
 
     # Crear salarios_base
     op.create_table('salarios_base',

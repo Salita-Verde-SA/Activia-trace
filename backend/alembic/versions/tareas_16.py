@@ -38,8 +38,8 @@ def upgrade() -> None:
         sa.Column('contexto_id', postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column('fecha_creacion', sa.DateTime(timezone=True), nullable=False),
         sa.Column('fecha_actualizacion', sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(['asignado_a'], ['usuarios.id'], ),
-        sa.ForeignKeyConstraint(['asignado_por'], ['usuarios.id'], ),
+        sa.ForeignKeyConstraint(['asignado_a'], ['usuario.id'], ),
+        sa.ForeignKeyConstraint(['asignado_por'], ['usuario.id'], ),
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_tareas_tenant_id'), 'tareas', ['tenant_id'], unique=False)
@@ -55,7 +55,7 @@ def upgrade() -> None:
         sa.Column('texto', sa.Text(), nullable=False),
         sa.Column('fecha_hora', sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(['tarea_id'], ['tareas.id'], ),
-        sa.ForeignKeyConstraint(['usuario_id'], ['usuarios.id'], ),
+        sa.ForeignKeyConstraint(['usuario_id'], ['usuario.id'], ),
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_comentarios_tareas_tenant_id'), 'comentarios_tareas', ['tenant_id'], unique=False)

@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy import Column, String, DateTime, Enum, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from core.database import Base
+from models.base import Base
 from datetime import datetime, timezone
 
 class EstadoTarea(str, enum.Enum):
@@ -27,8 +27,8 @@ class Tarea(Base):
     prioridad = Column(Enum(PrioridadTarea, name="prioridad_tarea_enum"), nullable=False, default=PrioridadTarea.MEDIUM)
     estado = Column(Enum(EstadoTarea, name="estado_tarea_enum"), nullable=False, default=EstadoTarea.PENDIENTE)
     
-    asignado_a = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False, index=True)
-    asignado_por = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False)
+    asignado_a = Column(UUID(as_uuid=True), ForeignKey("usuario.id"), nullable=False, index=True)
+    asignado_por = Column(UUID(as_uuid=True), ForeignKey("usuario.id"), nullable=False)
     contexto_id = Column(UUID(as_uuid=True), nullable=True)
     
     fecha_creacion = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
@@ -42,7 +42,7 @@ class ComentarioTarea(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id = Column(UUID(as_uuid=True), index=True, nullable=False)
     tarea_id = Column(UUID(as_uuid=True), ForeignKey("tareas.id"), nullable=False)
-    usuario_id = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False)
+    usuario_id = Column(UUID(as_uuid=True), ForeignKey("usuario.id"), nullable=False)
     texto = Column(Text, nullable=False)
     fecha_hora = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 

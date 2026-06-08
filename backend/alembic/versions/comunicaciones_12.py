@@ -28,7 +28,7 @@ def upgrade() -> None:
     sa.Column('aprobado', sa.Boolean(), nullable=False, server_default='false'),
     sa.Column('fecha_envio', sa.DateTime(timezone=True), nullable=True),
     sa.Column('error_msg', sa.Text(), nullable=True),
-    sa.CheckConstraint("estado != 'Error' OR error_msg IS NOT NULL", name='chk_error_msg_if_error'),
+    sa.CheckConstraint("estado != 'ERROR' OR error_msg IS NOT NULL", name='chk_error_msg_if_error'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_comunicaciones_estado'), 'comunicaciones', ['estado'], unique=False)

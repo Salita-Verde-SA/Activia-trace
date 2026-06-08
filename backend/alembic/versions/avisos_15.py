@@ -52,7 +52,7 @@ def upgrade() -> None:
         sa.Column('usuario_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('fecha_hora', sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(['aviso_id'], ['avisos.id'], ),
-        sa.ForeignKeyConstraint(['usuario_id'], ['usuarios.id'], ),
+        sa.ForeignKeyConstraint(['usuario_id'], ['usuario.id'], ),
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_acknowledgments_avisos_tenant_id'), 'acknowledgments_avisos', ['tenant_id'], unique=False)
