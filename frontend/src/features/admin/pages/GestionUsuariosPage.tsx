@@ -1,0 +1,121 @@
+import { useState } from 'react';
+import { useUsuarios } from '../../hooks/useUsuarios';
+import { Usuario } from '../../types';
+import { AddUserForm, EditRolesModal } from '../components/usuarios/AddUserForm';
+
+export function GestionUsuariosPage() {
+  const [filterEmail, setFilterEmail] = useState('');
+  const [filterRol, setFilterRol] = useState('');
+  const { usuariosQuery } = useUsuarios({ email: filterEmail, rol: filterRol });
+  
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingUser, setEditingUser] = useState<Usuario | null>(null);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Gestión de Usuarios</h1>
+          <p className="mt-1 text-sm text-gray-500">Administración de usuarios del tenant y sus roles globales.</p>
+        </div>
+        <button
+          onClick={() => setIsAdding(true)}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Nuevo Usuario
+        </button>
+      </div>
+
+      <div className="flex space-x-4 bg-gray-50 p-4 border rounded">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Email</label>
+          <input
+            type="text"
+            value={filterEmail}
+            onChange={(e) => setFilterEmail(e.target.value)}
+            placeholder="Buscar por email..."
+            className="mt-1 block w-64 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Rol</label>
+          <select
+            value={filterRol}
+            onChange={(e) => setFilterRol(e.target.value)}
+            className="mt-1 block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          >
+            <option value="">Todos</option>
+            <option value="ALUMNO">Alumno</option>
+            <option value="TUTOR">Tutor</option>
+            <option value="PROFESOR">Profesor</option>
+            <option value="COORDINADOR">Coordinador</option>
+            <option value="ADMIN">Admin</option>
+            <option value="FINANZAS">Finanzas</option>
+          </select>
+        </div>
+      </div>
+
+      {isAdding && <AddUserForm onClose={() => setIsAdding(false)} />}
+      
+      {editingUser && (
+        <EditRolesModal 
+          usuario={editingUser} 
+          onClose={() => setEditingUser(null)} 
+        />
+      )}
+
+      {usuariosQuery.isLoading ? (
+        <div className="p-4 text-center text-gray-500">Cargando usuarios...</div>
+      ) : (
+        <div className="overflow-x-auto border rounded-lg bg-white shadow">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roles</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {usuariosQuery.data?.map(usuario => (
+                <tr key={usuario.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {usuario.nombre} {usuario.apellido}
+                    {usuario.legajo && <span className="block text-xs text-gray-500">Legajo: {usuario.legajo}</span>}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{usuario.email}</td>
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    <div className="flex flex-wrap gap-1">
+                      {usuario.roles?.map(rol => (
+                        <span key={rol} className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                          {rol}
+                        </span>
+                      ))}
+                      {(!usuario.roles || usuario.roles.length === 0) && (
+                        <span className="text-gray-400 italic text-xs">Sin roles</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button 
+                      onClick={() => setEditingUser(usuario)}
+                      className="text-blue-600 hover:text-blue-900"
+                    >
+                      Editar Roles
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {usuariosQuery.data?.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-4 text-center text-gray-500">No se encontraron usuarios.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}

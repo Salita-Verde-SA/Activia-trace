@@ -8,9 +8,11 @@ export const Sidebar = ({ isOpen, closeSidebar }: { isOpen: boolean, closeSideba
   // Basic filtering based on roles (mocked for now)
   const menuItems = [
     { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['ALUMNO', 'PROFESOR', 'COORDINADOR', 'ADMIN'] },
-    { name: 'Estructura Académica', path: '/estructura', icon: <BookOpen className="w-5 h-5" />, roles: ['ADMIN'] },
-    { name: 'Usuarios', path: '/usuarios', icon: <Users className="w-5 h-5" />, roles: ['ADMIN', 'COORDINADOR'] },
-    { name: 'Configuración', path: '/config', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
+    { name: 'Estructura Académica', path: '/admin/estructura', icon: <BookOpen className="w-5 h-5" />, roles: ['ADMIN'] },
+    { name: 'Usuarios', path: '/admin/usuarios', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
+    { name: 'Auditoría', path: '/admin/auditoria', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
+    { name: 'Grilla Salarial', path: '/finanzas/salarios', icon: <Settings className="w-5 h-5" />, roles: ['FINANZAS', 'ADMIN'] },
+    { name: 'Liquidaciones', path: '/finanzas/liquidaciones', icon: <Settings className="w-5 h-5" />, roles: ['FINANZAS', 'ADMIN'] },
   ];
 
   const visibleItems = menuItems.filter(item => 

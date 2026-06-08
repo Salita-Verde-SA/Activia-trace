@@ -10,6 +10,12 @@ import { MonitorGlobalPage } from '@/features/coordinacion/pages/MonitorGlobalPa
 import { AvisosAdminPage } from '@/features/avisos/pages/AvisosAdminPage';
 import { TareasBoard } from '@/features/tareas/components/TareasBoard';
 import { SetupCuatrimestreWizard } from '@/features/coordinacion/components/SetupCuatrimestreWizard';
+import { EstructuraAcademicaPage } from '@/features/admin/pages/EstructuraAcademicaPage';
+import { GestionUsuariosPage } from '@/features/admin/pages/GestionUsuariosPage';
+import { AuditoriaPage } from '@/features/admin/pages/AuditoriaPage';
+import { GrillaSalarialPage } from '@/features/finanzas/pages/GrillaSalarialPage';
+import { LiquidacionesDashboardPage } from '@/features/finanzas/pages/LiquidacionesDashboardPage';
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -36,6 +42,15 @@ function App() {
               <Route path="admin/avisos" element={<AvisosAdminPage />} />
               <Route path="admin/tareas" element={<TareasBoard />} />
               <Route path="admin/setup" element={<SetupCuatrimestreWizard onComplete={() => {}} onCancel={() => {}} />} />
+              
+              {/* Admin Panel routes */}
+              <Route path="admin/estructura" element={<EstructuraAcademicaPage />} />
+              <Route path="admin/usuarios" element={<GestionUsuariosPage />} />
+              <Route path="admin/auditoria" element={<AuditoriaPage />} />
+              
+              {/* Finanzas routes */}
+              <Route path="finanzas/salarios" element={<GrillaSalarialPage />} />
+              <Route path="finanzas/liquidaciones" element={<LiquidacionesDashboardPage />} />
             </Route>
             
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
