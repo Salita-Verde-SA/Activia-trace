@@ -6,7 +6,10 @@ import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { ForgotPasswordPage } from '@/features/auth/pages/ForgotPasswordPage';
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { CalificacionesPage } from '@/features/calificaciones/pages/CalificacionesPage';
-
+import { MonitorGlobalPage } from '@/features/coordinacion/pages/MonitorGlobalPage';
+import { AvisosAdminPage } from '@/features/avisos/pages/AvisosAdminPage';
+import { TareasBoard } from '@/features/tareas/components/TareasBoard';
+import { SetupCuatrimestreWizard } from '@/features/coordinacion/components/SetupCuatrimestreWizard';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -29,6 +32,10 @@ function App() {
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="calificaciones" element={<CalificacionesPage />} />
+              <Route path="admin/monitor" element={<MonitorGlobalPage />} />
+              <Route path="admin/avisos" element={<AvisosAdminPage />} />
+              <Route path="admin/tareas" element={<TareasBoard />} />
+              <Route path="admin/setup" element={<SetupCuatrimestreWizard onComplete={() => {}} onCancel={() => {}} />} />
             </Route>
             
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
