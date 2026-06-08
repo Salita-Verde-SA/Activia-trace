@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSalarios } from '../../hooks/useSalarios';
-import { SalarioBase } from '../../types';
+import type { SalarioBase } from '../../types';
 
 export function SalariosBaseEditor() {
   const { salariosBaseQuery, createSalarioBase, updateSalarioBase } = useSalarios();

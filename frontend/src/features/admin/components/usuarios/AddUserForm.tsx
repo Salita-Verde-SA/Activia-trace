@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useUsuarios } from '../../hooks/useUsuarios';
-import { Usuario } from '../../types';
+import type { Usuario } from '../../types';
 
 export function AddUserForm({ onClose }: { onClose: () => void }) {
   const { createUsuario } = useUsuarios();

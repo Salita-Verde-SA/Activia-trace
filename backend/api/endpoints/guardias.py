@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from datetime import date
 
-from api.dependencies import get_db, get_current_user, require_permission
+from core.dependencies import get_db
+from api.dependencies.auth import get_current_user, require_permission
 from models.usuario import Usuario
 from schemas.guardia import GuardiaCreate, GuardiaResponse
 from services.encuentros import GuardiaService

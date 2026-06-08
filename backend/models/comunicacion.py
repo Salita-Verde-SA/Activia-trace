@@ -1,7 +1,7 @@
 from uuid import uuid4
 from sqlalchemy import Column, String, DateTime, Enum, Text, ForeignKey, CheckConstraint, Boolean
 from sqlalchemy.dialects.postgresql import UUID
-from core.database import Base
+from models.base import Base
 from core.crypto import EncryptedString
 from datetime import datetime
 import enum

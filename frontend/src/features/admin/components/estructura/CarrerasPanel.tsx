@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useEstructura } from '../../hooks/useEstructura';
-import { Carrera } from '../../types';
+import type { Carrera } from '../../types';
 
 export function CarrerasPanel() {
   const { carrerasQuery, createCarrera, updateCarrera } = useEstructura();

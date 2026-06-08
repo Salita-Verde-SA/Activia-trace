@@ -3,7 +3,8 @@ from fastapi import APIRouter, Depends, status, Query
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.dependencies import get_db, require_permission
+from core.dependencies import get_db
+from api.dependencies.auth import require_permission
 from models.user import Usuario
 from models.tareas import EstadoTarea
 from schemas.tarea import (

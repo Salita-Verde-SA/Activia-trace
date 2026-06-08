@@ -3,7 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any
 import uuid
 
-from api.deps import get_db, require_permission
+from core.dependencies import get_db
+from api.dependencies.auth import require_permission
 from models.user import Usuario
 from schemas.analisis import ReporteAtrasadosResponse, RankingActividadesResponse, SabanaResponse
 from services.analisis import AnalisisService

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useUploadCalificacionesPreview, useConfirmImport } from '../hooks/useCalificaciones';
-import { PreviewResponse, ColumnMap } from '../types';
+import type { PreviewResponse, ColumnMap } from '../types';
 
 interface ImportWizardProps {
   materiaId: string;

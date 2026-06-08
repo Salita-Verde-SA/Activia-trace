@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFechas } from '../hooks/useFechas';
-import { TipoFechaAcademica } from '../types';
+import type { TipoFechaAcademica } from '../types';
 
 interface FechasListProps {
   materiaId: string;

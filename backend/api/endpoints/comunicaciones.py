@@ -1,19 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Any
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List, Any
 from uuid import UUID
 
-from api.deps import get_db, require_permission
-from models.user import Usuario
-from schemas.comunicacion import LoteCreate, LoteResponse, ComunicacionResponse
-from services.comunicaciones import ComunicacionService
-from services.audit import AuditService
-
-router = APIRouter(prefix="/comunicaciones", tags=["comunicaciones"])
-
-@router.post("/lotes", response_model=UUID, status_code=status.HTTP_201_CREATED)
-async def encolar_lote(
-    lote_data: LoteCreate,
+from core.dependencies import get_db
     db: AsyncSession = Depends(get_db),
     actor: Usuario = Depends(require_permission("comunicacion:escribir"))
 ) -> Any:

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { estructuraApi } from '../services/estructuraApi';
-import { Carrera, Cohorte, Materia } from '../types';
+import type { Carrera, Cohorte, Materia } from '../types';
 
 export function useEstructura() {
   const queryClient = useQueryClient();

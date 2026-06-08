@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy import Column, String, Integer, DateTime, Enum, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from core.database import Base
+from models.base import Base
 
 class TipoEvaluacion(str, enum.Enum):
     PARCIAL = "Parcial"

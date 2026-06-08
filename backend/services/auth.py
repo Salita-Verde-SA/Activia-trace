@@ -95,9 +95,16 @@ class AuthService:
         return await self._issue_tokens(user)
 
     async def _issue_tokens(self, user) -> TokenResponse:
+        from models.rbac import UsuarioRol, Rol
+        from sqlalchemy import select
+        
+        stmt = select(Rol.nombre).join(UsuarioRol).where(UsuarioRol.usuario_id == user.id)
+        result = await self.db.execute(stmt)
+        roles = result.scalars().all()
+
         # Emit access token
         access_token = create_access_token(
-            data={"sub": str(user.id), "tenant_id": str(user.tenant_id)}
+            data={"sub": str(user.id), "tenant_id": str(user.tenant_id), "roles": roles}
         )
 
         # Generate refresh token

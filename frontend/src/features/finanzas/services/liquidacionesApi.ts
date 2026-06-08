@@ -1,5 +1,5 @@
-import { api } from '@/shared/services/api';
-import { Liquidacion } from '../types';
+import api from '@/shared/services/api';
+import type { Liquidacion } from '../types';
 
 export const liquidacionesApi = {
   getAll: (params?: { periodo_anio?: number; periodo_mes?: number; estado?: string }) => 

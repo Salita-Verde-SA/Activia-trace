@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useEstructura } from '../../hooks/useEstructura';
-import { Cohorte } from '../../types';
+import type { Cohorte } from '../../types';
 
 export function CohortesPanel() {
   const { cohortesQuery, carrerasQuery, createCohorte, updateCohorte } = useEstructura();

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { facturasApi } from '../services/facturasApi';
-import { Factura } from '../types';
+import type { Factura } from '../types';
 
 export function useFacturas(params?: { periodo_anio?: number; periodo_mes?: number }) {
   const queryClient = useQueryClient();

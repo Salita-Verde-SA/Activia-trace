@@ -3,7 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.dependencies import get_db, require_permission
+from core.dependencies import get_db
+from api.dependencies.auth import require_permission
 from models.user import Usuario
 from schemas.evaluacion import EvaluacionCreate, EvaluacionResponse, ReservaImport, ReservaResponse, ResultadoCreate, ResultadoResponse, EvaluacionMetrics
 from services.evaluaciones import EvaluacionService

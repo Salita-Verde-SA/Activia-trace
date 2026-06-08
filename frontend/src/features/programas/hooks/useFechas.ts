@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getFechasByMateria, createFecha, updateFecha, deleteFecha } from '../services/fechasApi';
-import { FechaAcademicaCreate, FechaAcademicaUpdate } from '../types';
+import type { FechaAcademicaCreate, FechaAcademicaUpdate } from '../types';
 
 export const useFechas = (materiaId: string) => {
   const queryClient = useQueryClient();

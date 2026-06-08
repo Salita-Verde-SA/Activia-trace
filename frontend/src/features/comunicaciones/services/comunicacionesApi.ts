@@ -1,5 +1,5 @@
 import api from '@/shared/services/api';
-import { LoteCreate, LoteResponse, ComunicacionResponse } from '../types';
+import type { LoteCreate, LoteResponse, ComunicacionResponse } from '../types';
 
 export const createLote = async (data: LoteCreate): Promise<LoteResponse> => {
   const response = await api.post('/api/comunicaciones/lote', data);

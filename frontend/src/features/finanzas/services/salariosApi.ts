@@ -1,5 +1,5 @@
-import { api } from '@/shared/services/api';
-import { SalarioBase, SalarioPlus } from '../types';
+import api from '@/shared/services/api';
+import type { SalarioBase, SalarioPlus } from '../types';
 
 export const salariosApi = {
   getBase: () => 

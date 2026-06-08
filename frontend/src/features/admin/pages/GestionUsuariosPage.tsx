@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useUsuarios } from '../../hooks/useUsuarios';
-import { Usuario } from '../../types';
+import { useUsuarios } from '../hooks/useUsuarios';
+import type { Usuario } from '../types';
 import { AddUserForm, EditRolesModal } from '../components/usuarios/AddUserForm';
 
 export function GestionUsuariosPage() {

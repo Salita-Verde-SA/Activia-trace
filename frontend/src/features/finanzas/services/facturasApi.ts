@@ -1,5 +1,5 @@
-import { api } from '@/shared/services/api';
-import { Factura } from '../types';
+import api from '@/shared/services/api';
+import type { Factura } from '../types';
 
 export const facturasApi = {
   getAll: (params?: { periodo_anio?: number; periodo_mes?: number }) => 

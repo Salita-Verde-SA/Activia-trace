@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tareasApi } from '../services/tareasApi';
-import { TareaCreate, TareaUpdateEstado, ComentarioTareaCreate } from '../types';
+import type { TareaCreate, TareaUpdateEstado, ComentarioTareaCreate } from '../types';
 
 export const useTareas = () => {
   const queryClient = useQueryClient();

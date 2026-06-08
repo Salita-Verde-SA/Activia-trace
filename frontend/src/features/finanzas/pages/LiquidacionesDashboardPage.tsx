@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLiquidaciones } from '../../hooks/useLiquidaciones';
+import { useLiquidaciones } from '../hooks/useLiquidaciones';
 import { LiquidacionTable } from '../components/liquidaciones/LiquidacionTable';
 import { CloseLiquidacionAction } from '../components/liquidaciones/CloseLiquidacionAction';
 import { LiquidacionesHistory } from '../components/liquidaciones/LiquidacionesHistory';

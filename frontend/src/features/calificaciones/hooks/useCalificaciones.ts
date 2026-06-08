@@ -8,7 +8,7 @@ import {
   getRanking,
   getSabana
 } from '../services/calificacionesApi';
-import { ImportConfirmRequest, UmbralCreate } from '../types';
+import type { ImportConfirmRequest, UmbralCreate } from '../types';
 
 export const useUploadCalificacionesPreview = () => {
   return useMutation({

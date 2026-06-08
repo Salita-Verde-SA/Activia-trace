@@ -1,5 +1,5 @@
-import { api } from '@/shared/services/api';
-import { Usuario } from '../types';
+import api from '@/shared/services/api';
+import type { Usuario } from '../types';
 
 export const usuariosApi = {
   getAll: (params?: { rol?: string; email?: string }) => 

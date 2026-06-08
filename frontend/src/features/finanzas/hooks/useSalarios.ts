@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { salariosApi } from '../services/salariosApi';
-import { SalarioBase, SalarioPlus } from '../types';
+import type { SalarioBase, SalarioPlus } from '../types';
 
 export function useSalarios() {
   const queryClient = useQueryClient();

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useEstructura } from '../../hooks/useEstructura';
-import { Materia } from '../../types';
+import type { Materia } from '../../types';
 
 export function MateriasPanel() {
   const { materiasQuery, createMateria, updateMateria } = useEstructura();

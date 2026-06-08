@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createLote } from '../services/comunicacionesApi';
-import { ComunicacionCreate } from '../types';
+import type { ComunicacionCreate } from '../types';
 
 interface ComunicacionComposerProps {
   alumnoIds: string[];

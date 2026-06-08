@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAvisos } from '../hooks/useAvisos';
-import { AlcanceAviso, SeveridadAviso } from '../types';
+import type { AlcanceAviso, SeveridadAviso } from '../types';
 
 interface AvisosFormProps {
   onSuccess?: () => void;

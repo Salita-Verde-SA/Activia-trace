@@ -4,7 +4,8 @@ from typing import Any
 import uuid
 import json
 
-from api.deps import get_db, require_permission
+from core.dependencies import get_db
+from api.dependencies.auth import require_permission
 from models.user import Usuario
 from schemas.calificacion import UmbralCreate, UmbralResponse, PreviewResponse, ImportConfirmRequest, ColumnMap
 from services.calificacion import UmbralService, CalificacionService

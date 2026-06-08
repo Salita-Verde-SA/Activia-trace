@@ -1,5 +1,5 @@
 import api from '@/shared/services/api';
-import { FechaAcademica, FechaAcademicaCreate, FechaAcademicaUpdate } from '../types';
+import type { FechaAcademica, FechaAcademicaCreate, FechaAcademicaUpdate } from '../types';
 
 export const getFechasByMateria = async (materiaId: string): Promise<FechaAcademica[]> => {
   const response = await api.get(`/api/fechas-academicas/materia/${materiaId}`);

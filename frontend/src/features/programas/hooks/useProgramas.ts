@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getProgramasByMateria, createPrograma, updatePrograma, deletePrograma } from '../services/programasApi';
-import { ProgramaMateriaCreate, ProgramaMateriaUpdate } from '../types';
+import type { ProgramaMateriaCreate, ProgramaMateriaUpdate } from '../types';
 
 export const useProgramas = (materiaId: string) => {
   const queryClient = useQueryClient();

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { avisosApi } from '../services/avisosApi';
-import { AvisoCreate, AvisoAcknowledgmentCreate } from '../types';
+import type { AvisoCreate, AvisoAcknowledgmentCreate } from '../types';
 
 export const useAvisos = () => {
   const queryClient = useQueryClient();

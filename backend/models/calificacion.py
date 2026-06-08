@@ -1,7 +1,7 @@
 import uuid
 from sqlalchemy import Column, String, Float, Boolean, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, JSONB
-from core.database import Base
+from models.base import Base
 from models.mixins import TenantMixin, TimestampMixin, SoftDeleteMixin
 
 class UmbralMateria(Base, TenantMixin, TimestampMixin, SoftDeleteMixin):

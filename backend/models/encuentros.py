@@ -2,7 +2,7 @@ from uuid import uuid4
 import enum
 from sqlalchemy import Column, String, DateTime, Date, Time, Enum, Text, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import UUID
-from core.database import Base
+from models.base import Base
 
 class DiaSemana(str, enum.Enum):
     LUNES = "Lunes"

@@ -1,5 +1,5 @@
-import { api } from '@/shared/services/api';
-import { AuditLog } from '../types';
+import api from '@/shared/services/api';
+import type { AuditLog } from '../types';
 
 export interface AuditLogResponse {
   items: AuditLog[];

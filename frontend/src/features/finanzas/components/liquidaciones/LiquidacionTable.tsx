@@ -1,4 +1,4 @@
-import { Liquidacion } from '../../types';
+import type { Liquidacion } from '../../types';
 
 export function LiquidacionTable({ 
   liquidaciones, 

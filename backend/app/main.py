@@ -28,7 +28,7 @@ app = FastAPI(title="Activia Trace", lifespan=lifespan)
 from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://localhost:5174"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,25 +49,23 @@ app.include_router(programas.router)
 app.include_router(fechas_academicas.router)
 
 
-# TODO: Estos endpoints tienen imports rotos (api.deps no existe).
-# Habilitar a medida que se corrijan.
-# from api.endpoints import usuarios, asignaciones, equipos, padron, calificaciones, analisis, comunicaciones, encuentros, guardias, evaluaciones, avisos, tareas, liquidaciones, facturas, salarios, auditoria, perfil, mensajeria_interna
-# app.include_router(usuarios.router, prefix="/api")
-# app.include_router(asignaciones.router, prefix="/api")
-# app.include_router(equipos.router, prefix="/api")
-# app.include_router(padron.router, prefix="/api")
-# app.include_router(calificaciones.router, prefix="/api")
-# app.include_router(analisis.router, prefix="/api")
-# app.include_router(comunicaciones.router, prefix="/api")
-# app.include_router(encuentros.router, prefix="/api", tags=["encuentros"])
-# app.include_router(guardias.router, prefix="/api", tags=["guardias"])
-# app.include_router(evaluaciones.router, prefix="/api/evaluaciones", tags=["evaluaciones"])
-# app.include_router(avisos.router, prefix="/api/avisos", tags=["avisos"])
-# app.include_router(tareas.router, prefix="/api/tareas", tags=["tareas"])
-# app.include_router(liquidaciones.router, prefix="/api/liquidaciones", tags=["liquidaciones"])
-# app.include_router(facturas.router, prefix="/api/facturas", tags=["facturas"])
-# app.include_router(salarios.router, prefix="/api/salarios", tags=["salarios"])
-# app.include_router(auditoria.router, prefix="/api/auditoria", tags=["auditoria"])
-# app.include_router(perfil.router, prefix="/api/perfil", tags=["perfil"])
-# app.include_router(mensajeria_interna.router, prefix="/api/mensajes/internos", tags=["mensajeria_interna"])
+from api.endpoints import usuarios, asignaciones, equipos, padron, calificaciones, analisis, comunicaciones, encuentros, guardias, evaluaciones, avisos, tareas, liquidaciones, facturas, salarios, auditoria, perfil, mensajeria_interna
+app.include_router(usuarios.router, prefix="/api")
+app.include_router(asignaciones.router, prefix="/api")
+app.include_router(equipos.router, prefix="/api")
+app.include_router(padron.router, prefix="/api")
+app.include_router(calificaciones.router, prefix="/api/calificaciones")
+app.include_router(analisis.router, prefix="/api/analisis")
+app.include_router(comunicaciones.router, prefix="/api/comunicaciones")
+app.include_router(encuentros.router, prefix="/api/v1/encuentros", tags=["encuentros"])
+app.include_router(guardias.router, prefix="/api/v1/guardias", tags=["guardias"])
+app.include_router(evaluaciones.router, prefix="/api/v1/evaluaciones", tags=["evaluaciones"])
+app.include_router(avisos.router, prefix="/api/v1/avisos", tags=["avisos"])
+app.include_router(tareas.router, prefix="/api/v1/tareas", tags=["tareas"])
+app.include_router(liquidaciones.router, prefix="/api/v1/liquidaciones", tags=["liquidaciones"])
+app.include_router(facturas.router, prefix="/api/v1/facturas", tags=["facturas"])
+app.include_router(salarios.router, prefix="/api/v1/salarios", tags=["salarios"])
+app.include_router(auditoria.router, prefix="/api/v1/auditoria", tags=["auditoria"])
+app.include_router(perfil.router, prefix="/api/v1/perfil", tags=["perfil"])
+app.include_router(mensajeria_interna.router, prefix="/api/v1/mensajes/internos", tags=["mensajeria_interna"])
 

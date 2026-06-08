@@ -4,7 +4,8 @@ from typing import Optional
 from datetime import datetime
 from uuid import UUID
 
-from api.dependencies import get_db, require_permission
+from core.dependencies import get_db
+from api.dependencies.auth import require_permission
 from models.user import Usuario
 from schemas.auditoria import AuditoriaFiltro, AuditoriaRespuesta, AuditoriaMetricas
 from services.auditoria import AuditoriaService

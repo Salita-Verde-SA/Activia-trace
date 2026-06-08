@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useAuditoria } from '../../hooks/useAuditoria';
-import { AuditLog } from '../../types';
+import { useAuditoria } from '../hooks/useAuditoria';
+import type { AuditLog } from '../types';
 
 export function AuditoriaPage() {
   const [filters, setFilters] = useState({

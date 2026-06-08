@@ -1,5 +1,5 @@
-import { api } from '@/shared/services/api';
-import { Carrera, Cohorte, Materia } from '../types';
+import api from '@/shared/services/api';
+import type { Carrera, Cohorte, Materia } from '../types';
 
 export const estructuraApi = {
   getCarreras: () => api.get<Carrera[]>('/api/admin/carreras').then(res => res.data),

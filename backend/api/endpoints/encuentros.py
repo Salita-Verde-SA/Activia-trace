@@ -3,7 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.dependencies import get_db, get_current_user, require_permission
+from core.dependencies import get_db
+from api.dependencies.auth import get_current_user, require_permission
 from models.usuario import Usuario
 from schemas.encuentro import SlotEncuentroCreate, InstanciaEncuentroUpdate, InstanciaEncuentroResponse
 from services.encuentros import EncuentroService

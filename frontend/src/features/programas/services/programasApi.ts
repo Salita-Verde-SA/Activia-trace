@@ -1,5 +1,5 @@
 import api from '@/shared/services/api';
-import { ProgramaMateria, ProgramaMateriaCreate, ProgramaMateriaUpdate } from '../types';
+import type { ProgramaMateria, ProgramaMateriaCreate, ProgramaMateriaUpdate } from '../types';
 
 export const getProgramasByMateria = async (materiaId: string): Promise<ProgramaMateria[]> => {
   const response = await api.get(`/api/programas/materia/${materiaId}`);

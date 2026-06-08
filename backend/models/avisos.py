@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy import Column, String, DateTime, Enum, Boolean, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from core.database import Base
+from models.base import Base
 from datetime import datetime, timezone
 
 class SeveridadAviso(str, enum.Enum):

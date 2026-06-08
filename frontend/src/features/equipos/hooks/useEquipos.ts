@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { equiposApi } from '../services/equiposApi';
-import { AsignacionMasivaCreate, ClonadoEquipoRequest, AsignacionVigenciaUpdate } from '../types';
+import type { AsignacionMasivaCreate, ClonadoEquipoRequest, AsignacionVigenciaUpdate } from '../types';
 
 export const useEquipos = (materiaId?: string) => {
   const queryClient = useQueryClient();
