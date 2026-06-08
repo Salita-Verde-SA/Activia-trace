@@ -66,3 +66,4 @@ class Materia(Base):
         nullable=False, 
         default=EstadoEstructura.ACTIVA
     )
+    clave_plus: Mapped[str | None] = mapped_column(String(50), nullable=True)

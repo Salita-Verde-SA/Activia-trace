@@ -4,7 +4,8 @@ from core.crypto import get_blind_index
 from core.security.password import get_password_hash
 from repositories.usuario import UsuarioRepository
 from models.user import Usuario
-from schemas.usuario import UsuarioCreate, UsuarioUpdate
+from schemas.usuario import UsuarioCreate, UsuarioUpdate, UsuarioPerfilUpdate
+from models.audit import AuditLog
 from fastapi import HTTPException
 
 class UsuarioService:
@@ -56,6 +57,29 @@ class UsuarioService:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
         update_data = data.model_dump(exclude_unset=True)
+        updated = await self.usuario_repo.update(usuario_id, update_data)
+        return updated
+
+    async def actualizar_perfil(self, usuario_id: uuid.UUID, data: UsuarioPerfilUpdate) -> Usuario:
+        usuario = await self.usuario_repo.get(usuario_id)
+        if not usuario:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+        update_data = data.model_dump(exclude_unset=True)
+        # Aseguramos de no poder actualizar dni o cuil, pero Pydantic lo prohíbe ya.
+        
+        # Guardamos log de auditoría
+        if update_data:
+            log = AuditLog(
+                tenant_id=self.tenant_id,
+                usuario_id=usuario_id,
+                accion="PERFIL_MODIFICADO",
+                entidad="Usuario",
+                entidad_id=usuario_id,
+                detalles={"campos_modificados": list(update_data.keys())}
+            )
+            self.db.add(log)
+            
         updated = await self.usuario_repo.update(usuario_id, update_data)
         return updated
 

@@ -25,6 +25,8 @@ class Usuario(Base, TenantMixin, TimestampMixin, SoftDeleteMixin):
     cuil = Column(EncryptedString, nullable=True)
     cbu = Column(EncryptedString, nullable=True)
     alias_cbu = Column(EncryptedString, nullable=True)
+    asignaciones = relationship('Asignacion', back_populates='usuario', cascade='all, delete-orphan')
+    hilos_participa = relationship('HiloMensajeInterno', secondary='hilo_usuario', back_populates='participantes')
     
     # Datos de negocio
     legajo = Column(String, nullable=True)

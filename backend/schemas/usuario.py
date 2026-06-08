@@ -37,3 +37,14 @@ class UsuarioResponse(UsuarioBase):
     totp_enabled: bool
     created_at: datetime
     updated_at: datetime
+
+class UsuarioPerfilUpdate(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    
+    nombre: str | None = Field(None, max_length=255)
+    apellido: str | None = Field(None, max_length=255)
+    cbu: str | None = Field(None, max_length=50)
+    alias_cbu: str | None = Field(None, max_length=255)
+    banco: str | None = Field(None, max_length=100)
+    regional: str | None = Field(None, max_length=100)
+    modalidad_cobro: str | None = Field(None, max_length=50)

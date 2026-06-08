@@ -10,5 +10,7 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     TEST_DATABASE_URL: str | None = None
+    MOODLE_URL: str | None = None
+    MOODLE_TOKEN: str | None = None
 
 settings = Settings()
