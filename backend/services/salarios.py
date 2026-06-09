@@ -3,7 +3,7 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi import HTTPException, status
-from datetime import date
+from datetime import date, timedelta
 
 from models.liquidaciones import SalarioBase, SalarioPlus
 from schemas.salario import SalarioBaseCreate, SalarioBaseResponse, SalarioPlusCreate, SalarioPlusResponse
@@ -14,7 +14,7 @@ class SalarioService:
         self.tenant_id = tenant_id
 
     async def crear_salario_base(self, data: SalarioBaseCreate) -> SalarioBaseResponse:
-        # Buscar salario base anterior para el mismo rol y cerrarlo si no tiene fecha_hasta o si es mayor a data.fecha_desde
+        # Buscar salario base anterior para el mismo rol y cerrarlo si no tiene fecha_hasta o si su fecha_hasta es mayor o igual a la nueva fecha_desde
         query = select(SalarioBase).where(
             SalarioBase.tenant_id == self.tenant_id,
             SalarioBase.rol == data.rol,
@@ -24,14 +24,12 @@ class SalarioService:
         salarios_viejos = (await self.db.execute(query)).scalars().all()
         for s_viejo in salarios_viejos:
             if s_viejo.fecha_desde >= data.fecha_desde:
-                # Caso extremo: estamos insertando un salario más antiguo? O igual?
-                # Por simplicidad del MVP, solo cortamos el anterior un día antes
-                pass
-            
-            # Cortar el anterior
-            # Ideally: s_viejo.fecha_hasta = data.fecha_desde - timedelta(days=1)
-            # Para evitar errores con imports, usamos el date directamente si aplicara, o lo dejamos a cargo del usuario proveer grillas consistentes.
-            pass
+                # Si el viejo empieza después o el mismo día, lo forzamos a terminar el mismo día
+                # Idealmente esto es un error de validación, pero por ahora lo cerramos
+                s_viejo.fecha_hasta = data.fecha_desde
+            else:
+                # Cortar el anterior un día antes de que empiece el nuevo
+                s_viejo.fecha_hasta = data.fecha_desde - timedelta(days=1)
             
         salario = SalarioBase(
             tenant_id=self.tenant_id,
@@ -46,6 +44,21 @@ class SalarioService:
         return SalarioBaseResponse.model_validate(salario, from_attributes=True)
 
     async def crear_salario_plus(self, data: SalarioPlusCreate) -> SalarioPlusResponse:
+        # Buscar salario plus anterior para el mismo rol y clave, y cerrarlo
+        query = select(SalarioPlus).where(
+            SalarioPlus.tenant_id == self.tenant_id,
+            SalarioPlus.rol == data.rol,
+            SalarioPlus.clave_plus == data.clave_plus,
+            (SalarioPlus.fecha_hasta == None) | (SalarioPlus.fecha_hasta >= data.fecha_desde)
+        ).order_by(SalarioPlus.fecha_desde.desc())
+        
+        salarios_viejos = (await self.db.execute(query)).scalars().all()
+        for s_viejo in salarios_viejos:
+            if s_viejo.fecha_desde >= data.fecha_desde:
+                s_viejo.fecha_hasta = data.fecha_desde
+            else:
+                s_viejo.fecha_hasta = data.fecha_desde - timedelta(days=1)
+                
         salario = SalarioPlus(
             tenant_id=self.tenant_id,
             clave_plus=data.clave_plus,
