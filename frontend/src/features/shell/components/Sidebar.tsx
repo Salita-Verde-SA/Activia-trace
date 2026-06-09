@@ -6,7 +6,6 @@ export const Sidebar = ({ isOpen, closeSidebar }: { isOpen: boolean, closeSideba
   
   // Basic filtering based on roles
   const menuItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: 'dashboard', roles: ['ALUMNO', 'PROFESOR', 'COORDINADOR', 'ADMIN', 'FINANZAS', 'NEXO', 'TUTOR'] },
     { name: 'Mi Estado', path: '/alumno/estado', icon: 'school', roles: ['ALUMNO'] },
     { name: 'Mis Avisos', path: '/alumno/avisos', icon: 'notifications', roles: ['ALUMNO'] },
     { name: 'Coloquios', path: '/alumno/coloquios', icon: 'calendar_today', roles: ['ALUMNO'] },

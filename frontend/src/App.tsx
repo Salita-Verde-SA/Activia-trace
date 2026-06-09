@@ -1,10 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider } from '@/features/auth/context/AuthContext';
+import { AuthProvider, useAuth } from '@/features/auth/context/AuthContext';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from '@/features/shell/layouts/MainLayout';
 import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { ForgotPasswordPage } from '@/features/auth/pages/ForgotPasswordPage';
-import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { CalificacionesPage } from '@/features/calificaciones/pages/CalificacionesPage';
 import { MonitorGlobalPage } from '@/features/coordinacion/pages/MonitorGlobalPage';
 import { AvisosAdminPage } from '@/features/avisos/pages/AvisosAdminPage';
@@ -28,6 +27,29 @@ const queryClient = new QueryClient({
   },
 });
 
+const RoleBasedRedirect = () => {
+  const { user } = useAuth();
+  
+  if (!user || !user.roles || user.roles.length === 0) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (user.roles.includes('ADMIN') || user.roles.includes('COORDINADOR')) {
+    return <Navigate to="/admin/monitor" replace />;
+  }
+  if (user.roles.includes('FINANZAS')) {
+    return <Navigate to="/finanzas/salarios" replace />;
+  }
+  if (user.roles.includes('PROFESOR') || user.roles.includes('TUTOR')) {
+    return <Navigate to="/calificaciones" replace />;
+  }
+  if (user.roles.includes('ALUMNO')) {
+    return <Navigate to="/alumno/estado" replace />;
+  }
+  
+  return <Navigate to="/login" replace />;
+};
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -38,8 +60,7 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             
             <Route path="/" element={<MainLayout />}>
-              <Route index element={<Navigate to="/dashboard" replace />} />
-              <Route path="dashboard" element={<DashboardPage />} />
+              <Route index element={<RoleBasedRedirect />} />
               <Route path="calificaciones" element={<CalificacionesPage />} />
               <Route path="admin/monitor" element={<MonitorGlobalPage />} />
               <Route path="admin/avisos" element={<AvisosAdminPage />} />
@@ -61,7 +82,7 @@ function App() {
               <Route path="finanzas/liquidaciones" element={<LiquidacionesDashboardPage />} />
             </Route>
             
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<RoleBasedRedirect />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>
