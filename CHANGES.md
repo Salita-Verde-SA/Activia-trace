@@ -1,552 +1,420 @@
-# CHANGES — Secuencia de Implementación
+# CHANGES.md — JR Stack v2: Post-Starters
 
-> Índice canónico de todos los changes del proyecto **activia-trace**.
-> Cada change es atómico: un agente puede implementarlo en una sesión (~4-6 horas).
-> **Leer este archivo antes de ejecutar cualquier `/opsx:propose`.**
-
----
-
-## Cómo usar este documento
-
-1. **Identificá el change** que vas a implementar por su código `C-NN` (respetá el orden de dependencias).
-2. **Leé la KB** indicada en la sección **"Leer antes"** de ese change — son tu contrato de dominio.
-3. **Proponé el change**: `/opsx:propose C-NN-<nombre>` para generar proposal, design, specs y tasks.
-4. **Implementá y archivá**: aplicá las tasks, verificá contra los specs, y `/opsx:archive` al cerrar.
-5. **Marcá el checkbox** del change (`[ ]` → `[x]`) en este archivo cuando quede en producción.
+> Roadmap operativo del epic **"JR Stack v2 — post-starters"** (2026-06-04).
+> El epic anterior (installer base + starters) está archivado en
+> `docs/archive/CHANGES-2026-06-04-installer-y-starters.md` — leerlo para
+> historial de decisiones de C-01..C-32 y los changes descriptivos intermedios.
+>
+> Este documento cubre los 6 changes del nuevo epic. Convención de IDs: kebab
+> descriptivo (sin `C-NN` estricto — convención establecida desde `harness-scope-model`).
+> Atomicidad: cada change implementable en una sesión, ≤ 12 tareas.
+> **Fuente de verdad del estado real: el `openspec` CLI** (`openspec list`,
+> `openspec status`). Este documento es el plan.
 
 ---
 
 ## Árbol de dependencias
 
 ```
-C-01 foundation-setup (infra, Docker, FastAPI skel, DB inicial, OTel)
-└── C-02 core-models-y-tenancy (Tenant, mixins, repo base con scope tenant, Alembic)
-    └── C-03 auth-jwt-2fa (login, refresh rotation, recuperación, sesión)
-        └── C-04 rbac-permisos-finos (roles, permisos modulo:accion, matriz, guard)
-            ├── C-05 audit-log (E-AUD append-only, middleware, impersonación)
-            ├── C-06 estructura-academica (Carrera, Cohorte, Materia, ABM)
-            │   ├── C-07 usuarios-y-asignaciones (Usuario PII cifrada, Asignacion, vigencia)
-            │   │   ├── C-08 equipos-docentes (mis-equipos, masiva, clonar, exportar)
-            │   │   ├── C-09 padron-ingesta-moodle (VersionPadron, import xlsx/csv, Moodle WS)
-            │   │   │   └── C-10 calificaciones-y-umbral (Calificacion, UmbralMateria, import)
-            │   │   │       └── C-11 analisis-atrasados-reportes (atrasados, ranking, notas finales)
-            │   │   │           └── C-12 comunicaciones-cola-worker (Comunicacion, worker, preview, aprobación)
-            │   │   ├── C-13 encuentros-y-guardias (Slot, Instancia, Guardia, export aula)
-            │   │   ├── C-14 evaluaciones-y-coloquios (Evaluacion, Reserva, Resultado, FechaAcademica)
-            │   │   ├── C-15 avisos-y-acknowledgment (Aviso, ack, scope, vigencia)
-            │   │   ├── C-16 tareas-internas (Tarea, ComentarioTarea, workflow)
-            │   │   ├── C-17 programas-y-fechas-academicas (ProgramaMateria, FechaAcademica)
-            │   │   └── C-18 liquidaciones-y-honorarios (SalarioBase/Plus, Liquidacion, Factura)
-            │   ├── C-19 panel-auditoria-metricas (dashboards de uso, F9.1)
-            │   ├── C-20 perfil-y-mensajeria-interna (perfil propio, inbox interno)
-            │   └── C-21 frontend-shell-y-auth (SPA shell, login, guard, cliente HTTP)
-            │       ├── C-22 frontend-academico-docente (importación, atrasados, comunicaciones)
-            │       ├── C-23 frontend-coordinacion (equipos, avisos, tareas, monitores)
-            │       ├── C-24 frontend-finanzas-y-admin (liquidaciones, facturas, estructura, auditoría)
-            │       └── C-25 frontend-alumno (mis avisos, estado académico, coloquios)
+openspec-init-cleanup (XS, repo de skills)
+  — independiente, cualquier ola —
+
+opencode-orchestrator-parity (PRIORIDAD #1)
+  — independiente, cualquier ola —
+
+uninstall-subcommand
+  — independiente de los anteriores —
+          │
+          ▼
+   tui-menu-hub
+   (reestructura ScreenWelcome en hub multi-opción)
+          │
+          ├────────────────────┐
+          ▼                    ▼
+   tui-update-stack     tui-configure-models
+   (opción "Update      (opción "Configure models":
+    stack" en el menú)   model-routing claude + opencode)
+
+claude-agent-switch-research
+  — independiente, cualquier ola —
 ```
 
-### Paralelismo por fase
-
-```
-GATE 0: (inicio) — sin dependencias
-  → C-01 foundation-setup                         [Agente A]
-
-GATE 1: C-01 ✓                                     ← cimiento listo
-  → C-02 core-models-y-tenancy                     [Agente A]
-
-GATE 2: C-02 ✓
-  → C-03 auth-jwt-2fa                              [Agente A]
-
-GATE 3: C-03 ✓
-  → C-04 rbac-permisos-finos                       [Agente A]
-
-GATE 4: C-04 ✓                                     ← PRIMER FORK (seguridad lista)
-  → C-05 audit-log                                 [Agente B]
-  → C-06 estructura-academica                      [Agente A]
-  → C-21 frontend-shell-y-auth                     [Agente C]
-
-GATE 5: C-06 ✓                                     ← FORK ANCHO (entidades raíz listas)
-  → C-07 usuarios-y-asignaciones                   [Agente A]
-  → C-15 avisos-y-acknowledgment                   [Agente B — si C-05 ✓]
-  → C-17 programas-y-fechas-academicas             [Agente B]
-
-GATE 6: C-07 ✓                                     ← FORK ANCHO (usuarios + asignaciones listos)
-  → C-08 equipos-docentes                          [Agente A]
-  → C-09 padron-ingesta-moodle                     [Agente B]
-  → C-13 encuentros-y-guardias                     [Agente A]
-  → C-14 evaluaciones-y-coloquios                  [Agente B]
-  → C-16 tareas-internas                           [Agente C]
-  → C-18 liquidaciones-y-honorarios                [Agente C]
-  → C-19 panel-auditoria-metricas                  [Agente C — si C-05 ✓]
-  → C-20 perfil-y-mensajeria-interna               [Agente C]
-
-GATE 7: C-09 ✓
-  → C-10 calificaciones-y-umbral                   [Agente B]
-
-GATE 8: C-10 ✓
-  → C-11 analisis-atrasados-reportes               [Agente B]
-
-GATE 9: C-11 ✓                                     ← flujo central del PROFESOR completo
-  → [x] C-12 comunicaciones-cola-worker            [Agente B]
-
-GATE 10: C-21 ✓ + backend de cada dominio ✓       ← capa de presentación
-  → C-22 frontend-academico-docente                [Agente C — si C-12 ✓]
-  → C-23 frontend-coordinacion                     [Agente C — si C-08, C-15, C-16 ✓]
-  → C-24 frontend-finanzas-y-admin                 [Agente C — si C-18, C-19 ✓]
-```
-
-### Camino crítico (10 changes — mínimo irreducible)
-
-La cadena lineal más corta para tener el flujo de mayor valor (importar → analizar → comunicar) operando en producción multi-tenant:
-
-```
-C-01 → C-02 → C-03 → C-04 → C-06 → C-07 → C-09 → C-10 → C-11 → C-12*
-```
-
-`C-12*` (comunicaciones-cola-worker) es el último change indispensable del flujo central. El frontend mínimo (`C-21` + `C-22*`) corre en paralelo sobre la rama del Agente C y converge en GATE 10.
-
-### Plan óptimo con 3 agentes
-
-| Paso | Agente A (Backend Core) | Agente B (Backend Aux) | Agente C (Frontend / Soporte) |
-|------|--------------------------|-------------------------|--------------------------------|
-| 1 | C-01 foundation-setup | — | — |
-| 2 | C-02 core-models-y-tenancy | — | — |
-| 3 | C-03 auth-jwt-2fa | — | — |
-| 4 | C-04 rbac-permisos-finos | — | — |
-| 5 | C-06 estructura-academica | C-05 audit-log | C-21 frontend-shell-y-auth |
-| 6 | C-07 usuarios-y-asignaciones | C-17 programas-y-fechas | C-15 avisos-y-acknowledgment |
-| 7 | C-08 equipos-docentes | C-09 padron-ingesta-moodle | C-20 perfil-y-mensajeria |
-| 8 | C-13 encuentros-y-guardias | C-10 calificaciones-y-umbral | C-16 tareas-internas |
-| 9 | C-14 evaluaciones-y-coloquios | C-11 analisis-atrasados-reportes | C-18 liquidaciones-y-honorarios |
-| 10 | C-19 panel-auditoria-metricas | C-12 comunicaciones-cola-worker | C-22 frontend-academico-docente |
-| 11 | — | C-23 frontend-coordinacion | C-24 frontend-finanzas-y-admin |
-
-> Los 3 agentes convergen alrededor del paso 10-11. El Agente A queda libre antes y puede tomar `C-19` o adelantar refactors.
+> Notas de dependencia:
+> - `openspec-init-cleanup` NO toca este repo Go — vive en el `SKILL.md` del
+>   skill `jr-orchestrator` (repo de skills separado). Se puede hacer en cualquier
+>   ola sin coordinación con los demás.
+> - `opencode-orchestrator-parity` es trabajo de auditoría + golden test sobre
+>   assets existentes; no bloquea ni es bloqueado por nada de este epic.
+> - `uninstall-subcommand` es wiring puro (el engine `internal/uninstall` ya
+>   existe y está testeado desde C-12); no depende de paridad ni de cleanup.
+> - `tui-menu-hub` depende del executor headless de uninstall (`uninstall-subcommand`)
+>   porque la pantalla ScreenUninstall lo invoca.
+> - `tui-update-stack` depende del menú hub (agrega una entrada al hub).
+> - `tui-configure-models` también depende del menú hub (agrega la entrada
+>   "Configure models"); es hermano paralelo de `tui-update-stack` (ambos cuelgan
+>   del hub y no se bloquean entre sí).
+> - `claude-agent-switch-research` es un change de investigación pura; puede
+>   ejecutarse en cualquier ola, en paralelo con cualquier otro.
 
 ---
 
-## FASE 0 — Cimiento e Infraestructura
+## Plan óptimo de paralelización
 
-### [C-01] `foundation-setup`
-- **Estado**: `[x]` completado
-- **Scope**:
-  - Estructura de directorios Clean Architecture: `routers/`, `services/`, `repositories/`, `models/`, `schemas/`, `core/`, `integrations/`, `workers/`. Límite ≤500 LOC/archivo.
-  - Esqueleto FastAPI con `app/main.py`, health-check `GET /health`, configuración Pydantic v2 Settings desde `.env`.
-  - `docker-compose.yml` (api, postgres, worker) + `Dockerfile` multi-stage. Convención Easypanel.
-  - Conexión SQLAlchemy 2.0 **async** + sesión por request (dependency injection).
-  - OpenTelemetry + logging estructurado JSON base.
-  - `pyproject.toml` con deps (FastAPI, SQLAlchemy, Alembic, asyncpg, Pydantic v2, argon2-cffi, python-jose, pytest, httpx).
-  - Tests: smoke de `/health`, arranque de la app, conexión a DB de test.
-- **Dependencias**: ninguna
-- **Governance**: BAJO
-- **Leer antes**:
-  - `knowledge-base/08_arquitectura_propuesta.md` §2 (patrón por capas), §6 (persistencia)
-  - `docs/ARQUITECTURA.md` (stack, estructura de directorios, variables de entorno)
+| Ola | Changes en paralelo | Bloquea a | Comentario |
+|---|---|---|---|
+| 0 | `openspec-init-cleanup`, `opencode-orchestrator-parity` | nada / nada | Independientes; `openspec-init-cleanup` es XS en repo de skills |
+| 1 | `uninstall-subcommand`, `claude-agent-switch-research` | `tui-menu-hub` / — | `uninstall-subcommand` habilita el menú; research corre en paralelo libre |
+| 2 | `tui-menu-hub` | `tui-update-stack`, `tui-configure-models` | Punto de convergencia TUI; necesita executor del uninstall (ola 1) |
+| 3 | `tui-update-stack`, `tui-configure-models` | — | Cierre del epic TUI; ambos cuelgan del hub en paralelo |
+
+**Camino crítico del epic**: `uninstall-subcommand → tui-menu-hub → tui-update-stack` (3 changes).
+Es la cadena más larga; el resto corre en paralelo o es independiente.
+
+**Máximo paralelismo útil**: 2 agentes (ola 0 y ola 1 tienen 2 changes independientes cada una).
 
 ---
 
-## FASE 1 — Seguridad y Modelos Core (cimiento crítico)
+## Plan con 2 agentes
 
-> Cadena estrictamente secuencial. Es el corazón multi-tenant del sistema: nada se construye sin esto.
-
-### [C-02] `core-models-y-tenancy`
-- **Estado**: `[x]` completado
-- **Scope**:
-  - Modelo `Tenant` raíz. Mixin base con `id` (UUID), `tenant_id`, `created_at`, `updated_at`, `deleted_at` (soft delete).
-  - **Repository genérico** con scope de tenant SIEMPRE activo: todo query filtra por `tenant_id` por defecto (ADR-002 row-level). Un query sin scope debe fallar en review.
-  - Utilidad de cifrado AES-256 para atributos `[cifrado]` (DNI, CUIL, CBU, email PII): helper de cifrado/descifrado en reposo, nunca en logs.
-  - Setup Alembic (`Migración 001: tenant`) + convención de migración por cambio de schema.
-  - Soft delete transversal (nunca borrado físico).
-  - Tests: aislamiento multi-tenant (un tenant no ve datos de otro), soft delete, cifrado round-trip, mixin timestamps.
-- **Dependencias**: `C-01`
-- **Governance**: CRITICO
-- **Leer antes**:
-  - `knowledge-base/04_modelo_de_datos.md` §Supuestos base, §Convenciones
-  - `knowledge-base/08_arquitectura_propuesta.md` §4 (multi-tenancy), §6 (persistencia, soft delete)
-  - `docs/ARQUITECTURA.md` §6, §8 (tenant isolation, AES-256, ADR-002)
-
-### [C-03] `auth-jwt-2fa`
-- **Estado**: `[x]` completado
-- **Scope**:
-  - `POST /api/auth/login` — email + password (Argon2id), JWT access 15min + refresh token con **rotación** (refresh usado se invalida). Claims mínimos: `user_id`, `tenant_id`, `roles`, `exp`.
-  - `POST /api/auth/refresh` — rota refresh, emite nuevo par. `POST /api/auth/logout` — revoca sesión.
-  - **2FA TOTP opcional** por usuario: enrolar, verificar, gate entre validación de credenciales y emisión de sesión.
-  - Recuperación: `POST /api/auth/forgot` (token de un solo uso por email, expiración corta) + `POST /api/auth/reset`.
-  - Rate limiting 5/60s por IP+email en login. Regla de oro: identidad/tenant SOLO del JWT verificado.
-  - Dependency `get_current_user` que resuelve identidad + tenant desde el token verificado.
-  - Tests: login OK/KO, refresh rotation (reuso invalida), 2FA flow, recuperación token único, rate limit, identidad inmutable por parámetro.
-- **Dependencias**: `C-02`
-- **Governance**: CRITICO
-- **Leer antes**:
-  - `knowledge-base/07_flujos_principales.md` FL-01 (autenticación), §regla de oro
-  - `knowledge-base/03_actores_y_roles.md` §1, §6 (acceso anónimo)
-  - `knowledge-base/08_arquitectura_propuesta.md` §3.1, §3.3 (auth, identidad)
-  - `docs/ARQUITECTURA.md` §5.1 (ADR-001 auth propio)
-
-### [C-04] `rbac-permisos-finos`
-- **Estado**: `[x] completado`
-- **Scope**:
-  - Catálogo administrable: tablas `Rol`, `Permiso` (`modulo:accion`), matriz `RolPermiso` (datos, NO hardcode).
-  - Roles del dominio seed: ALUMNO, TUTOR, PROFESOR, COORDINADOR, NEXO, ADMIN, FINANZAS.
-  - Resolución de permisos efectivos server-side por request (unión de roles, acotada por tenant y vigencia de asignación).
-  - Dependency/guard `require_permission("modulo:accion")` que declara el permiso por endpoint; sin él → 403.
-  - `Migración 002: rol, permiso, rol_permiso` + seed de la matriz base de `03_actores_y_roles.md` §3.3.
-  - Tests: usuario sin permiso → 403, unión de roles, permiso `(propio)` vs global, catálogo administrable.
-- **Dependencias**: `C-03`
-- **Governance**: CRITICO
-- **Leer antes**:
-  - `knowledge-base/03_actores_y_roles.md` §2 (roles), §3 (RBAC, matriz §3.3), §5 (vigencia)
-  - `knowledge-base/08_arquitectura_propuesta.md` §3.2 (RBAC permisos finos)
-
-### [C-05] `audit-log`
-- **Estado**: `[x]` terminado
-- **Scope**:
-  - Modelo `AuditLog` (E-AUD) **append-only**: sin update ni delete a nivel app y DB. Campos: actor, impersonado, materia, accion, detalle JSON, filas_afectadas, ip, user_agent, fecha_hora.
-  - Helper/decorator de auditoría para registrar acciones significativas con código estandarizado (`CALIFICACIONES_IMPORTAR`, `PADRON_CARGAR`, etc.).
-  - **Impersonación**: permiso `impersonacion:usar`, sesión distinguible, acciones atribuidas al actor real; registra `IMPERSONACION_INICIAR` / `IMPERSONACION_FINALIZAR`.
-  - `Migración 003: audit_log`.
-  - Tests: append-only (update/delete rechazados), atribución bajo impersonación, registro de acción con código + filas afectadas.
-- **Dependencias**: `C-04`
-- **Governance**: CRITICO
-- **Leer antes**:
-  - `knowledge-base/04_modelo_de_datos.md` §E-AUD, §Códigos de acción
-  - `knowledge-base/03_actores_y_roles.md` §4 (impersonación)
-  - `knowledge-base/08_arquitectura_propuesta.md` §3.4 (audit append-only), §3.5 (impersonación)
+| Paso | Agente A (Go / infra) | Agente B (skills / research) |
+|------|------------------------|-------------------------------|
+| Ola 0 | `opencode-orchestrator-parity` (auditoría assets + golden test) | `openspec-init-cleanup` (SKILL.md del jr-orchestrator) |
+| Ola 1 | `uninstall-subcommand` (wiring CLI Go) | `claude-agent-switch-research` (investigación) |
+| Ola 2 | `tui-menu-hub` (reestructura TUI Bubbletea) | — |
+| Ola 3 | `tui-update-stack` (port internal/update + opción menú) | `tui-configure-models` (port model-routing picker claude+opencode) |
 
 ---
 
-## FASE 2 — Entidades Raíz del Dominio Académico
+## Fichas de change
 
-### [C-06] `estructura-academica`
-- **Estado**: `[x] completado`
+### `opencode-orchestrator-parity` — Auditar paridad del orquestador opencode vs claude
+
+- **Estado**: COMPLETADO.
 - **Scope**:
-  - Modelos: `Carrera`, `Cohorte`, `Materia` (catálogo único por tenant — ADR-006).
-  - ABM `/api/admin/carreras`, `/api/admin/cohortes`, `/api/admin/materias` con guard `estructura:gestionar` (ADMIN).
-  - Reglas: unicidad `(tenant_id, codigo)` en Carrera/Materia; `(tenant_id, carrera_id, nombre)` en Cohorte; carrera inactiva no admite cohortes abiertas.
-  - `Migración 004: carrera, cohorte, materia`.
-  - Tests: CRUD, unicidad por tenant, aislamiento multi-tenant, estado activa/inactiva.
-- **Dependencias**: `C-04`
-- **Governance**: MEDIO
+  - Auditar `internal/harness/config/assets/opencode/sdd-orchestrator.md`: identificar qué secciones del
+    orquestador SDD (delegation, governance, model-routing, engram protocol,
+    session-close, etc.) existen en `internal/harness/config/assets/claude/sdd-orchestrator.md` pero faltan
+    o están degradadas en el asset de opencode.
+  - Portar el contenido faltante al asset de opencode, conservando diferencias
+    legítimas de formato entre agentes (opencode usa `task` tool nativo; claude usa Agent tool).
+  - Implementar el golden test ausente: `TestCompose_AllToggles_opencode` (hoy solo
+    existe `TestCompose_AllToggles` para claude) en
+    `internal/harness/config/compose_test.go` con testdata en `internal/harness/config/testdata/`.
+  - El golden test falla rojo si el asset de opencode diverge silenciosamente
+    en el futuro (blind spot que este change cierra).
+- **Decisiones / notas clave**:
+  - El código de `ConfigDeliveryPrimaryAgent` y `mode:primary` en opencode.json está
+    implementado y testeado; el gap era de CONTENIDO, no de mecanismo.
+  - Única divergencia justificada: delegación via `task` tool (opencode nativo) vs Agent tool (claude).
+    El `Template:` block y todo lo demás son idénticos entre variantes.
+  - Golden generado en `internal/harness/config/testdata/compose_all_toggles_opencode.golden`.
+- **Dependencias**: ninguna. Habilita: nada directo (mejora de calidad).
+- **Governance**: BAJO (auditoría) / MEDIO (edita asset en `internal/harness/config/assets/opencode/`).
 - **Leer antes**:
-  - `knowledge-base/04_modelo_de_datos.md` §E1 Carrera, §E2 Cohorte, §E3 Materia
-  - `knowledge-base/06_funcionalidades.md` Épica 5 (F5.1, F5.2)
-  - `docs/ARQUITECTURA.md` §10 (ADR-006 Materia + Dictado)
+  - `internal/harness/config/assets/opencode/sdd-orchestrator.md` — asset opencode (corregido).
+  - `internal/harness/config/assets/claude/sdd-orchestrator.md` — referencia canónica.
+  - `internal/harness/config/compose_test.go` — golden test modelo para claude y opencode.
+  - `internal/harness/config/testdata/compose_all_toggles_claude.golden` — golden existente de claude.
+  - `CLAUDE.md` §3 regla "NUNCA hardcodear paths de agente" y §4 governance.
 
 ---
 
-## FASE 3 — Identidad, Asignaciones y Estructura Documental
+### `uninstall-subcommand` — Exponer `jr-stack uninstall` en la CLI
 
-### [C-07] `usuarios-y-asignaciones`
-- **Estado**: `[x] completado`
+- **Estado**: IMPLEMENTADO (2026-06-06, rama `feat/uninstall-subcommand`). Wiring completo
+  (flags + executor exportado + dispatch + `case "uninstall"`). **Bonus fix de engine**:
+  `internal/uninstall` no manejaba `model.HarnessCommand` → `uninstall --mode lite/full`
+  crasheaba con el catálogo real (`starter-add-command` es type:command). Se agregó
+  `commandRemovalStep` + `CommandsDir`/`VariantKey` en la interfaz + `RelPathForVariant`
+  exportado de `internal/harness/command`. TDD estricto, suite completa verde. Pendiente: archive OPSX.
 - **Scope**:
-  - Modelo `Usuario` con PII **cifrada** (`email`, `dni`, `cuil`, `cbu`, `alias_cbu`); legajo como atributo de negocio opcional (no PK, no credencial).
-  - Modelo `Asignacion` (Usuario ↔ Rol ↔ contexto: materia/carrera/cohorte/comisiones), `responsable_id` (jerarquía), vigencia `desde/hasta`, `estado_vigencia` derivado.
-  - ABM usuarios `/api/admin/usuarios` (guard gestión de usuarios, ADMIN); CRUD asignaciones `/api/asignaciones` (`equipos:asignar`).
-  - Unicidad `(tenant_id, email)`. Asignación vencida no otorga permisos pero se conserva (histórico).
-  - `Migración 005: usuario, asignacion`.
-  - Tests: PII cifrada no expuesta en logs/respuestas, unicidad email por tenant, vigencia (vencida no autoriza), multi-rol, jerarquía responsable.
-- **Dependencias**: `C-06`
-- **Governance**: CRITICO
+  - Nuevo `cmd/jr-stack/headless/uninstall_flags.go`: tipo `ParsedUninstallFlags` +
+    función `ParseUninstallFlags(args []string)`. Flags: `--mode`, `--agent`,
+    `--custom` (lista de IDs), `--strategy targeted|restore`, `--restore-manifest`,
+    `--dry-run`, `--yes`, `--home`. Uninstall es MACHINE-scope (sin `--project`).
+  - Nuevo `cmd/jr-stack/headless/uninstall_executor.go`: función `RunHeadlessUninstall`
+    que llama `uninstall.BuildPlan` (engine C-12, intacto) y lo ejecuta. Construida
+    como executor COMPARTIDO — también podrá ser invocado desde la TUI (change
+    `tui-menu-hub`).
+  - Nuevo `cmd/jr-stack/uninstall_dispatch.go`: función `runUninstallDispatch` con
+    lógica flat (espeja `runStarterAdd`). Adapter `uninstallRegistryAdapter` que
+    satisface la interfaz que `uninstall.BuildPlan` espera.
+  - Nuevo `case "uninstall":` en el `switch os.Args[1]` de `cmd/jr-stack/main.go`.
+  - Tests: `uninstall_flags_test.go`, `uninstall_executor_test.go`,
+    `uninstall_dispatch_test.go`. Usar fakes/stubs para el engine (nunca el entorno real).
+  - **SIN tocar `internal/uninstall`** — el engine está completo y testeado (C-12).
+  - ~200–250 LOC producción + tests proporcionados. TDD estricto activo.
+- **Decisiones / notas clave**:
+  - `RunHeadlessUninstall` debe ser una función exportada limpia (no solo usado por
+    main.go) para que `tui-menu-hub` pueda invocarla en la pantalla ScreenUninstall.
+  - El uninstall es MACHINE-scope por diseño (no hay `--project` aquí): deshace
+    harnesses del home del usuario, no de un proyecto.
+  - La operación es destructiva — el engine ya tiene snapshot+rollback mandatorio
+    (C-12, governance ALTO); el wiring es aditivo pero hereda esa governance.
+- **Dependencias**: ninguna (el engine `internal/uninstall` ya existe). Habilita:
+  `tui-menu-hub` (pantalla ScreenUninstall usa `RunHeadlessUninstall`).
+- **Governance**: **ALTO** (expone destrucción de config del usuario; la operación
+  es destructiva). Proponer y esperar review antes del apply.
 - **Leer antes**:
-  - `knowledge-base/04_modelo_de_datos.md` §E4 Usuario, §E5 Asignación
-  - `knowledge-base/03_actores_y_roles.md` §5 (vigencia temporal)
-  - `knowledge-base/06_funcionalidades.md` F4.1, F4.3
-  - `docs/ARQUITECTURA.md` §5, §6 (PII cifrada AES-256)
-
-### [C-17] `programas-y-fechas-academicas`
-- **Estado**: `[x] completado`
-- **Scope**:
-  - Modelos: `ProgramaMateria` (documento por materia × carrera × cohorte, `referencia_archivo` al almacenamiento), `FechaAcademica` (parciales/TP/coloquios por materia × cohorte × número).
-  - `/api/programas` (upload + asociar, `estructura:gestionar`) y `/api/fechas-academicas` (CRUD, listado tabular + calendario).
-  - Salida: generación de fragmento de contenido listo para el aula virtual del LMS (F5.4).
-  - `Migración 0NN: programa_materia, fecha_academica`.
-  - Tests: CRUD, asociación materia×carrera×cohorte, referencia de archivo opaca, aislamiento tenant.
-- **Dependencias**: `C-06`
-- **Governance**: BAJO
-- **Leer antes**:
-  - `knowledge-base/04_modelo_de_datos.md` §E15 FechaAcademica, §E16 ProgramaMateria
-  - `knowledge-base/06_funcionalidades.md` F5.3, F5.4
+  - `internal/uninstall/` — engine completo (C-12, archivado `2026-05-27-c12-uninstall`).
+  - `cmd/jr-stack/headless/executor.go` + `flags.go` — modelo para el executor/flags del install (espejarlo).
+  - `cmd/jr-stack/starter_add.go` + `cmd/jr-stack/starter_dispatch.go` — modelo del dispatch flat para starters (espejarlo).
+  - `cmd/jr-stack/main.go` — punto de entrada del switch de dispatch.
+  - `CLAUDE.md` §3 regla "NUNCA pisar config del usuario sin backup".
 
 ---
 
-## FASE 4 — Módulos de Dominio (gran fork paralelo)
+### `tui-menu-hub` — TUI con menú descriptivo multi-opción
 
-> Todos dependen de `C-07` (usuarios + asignaciones). Se pueden repartir entre los 3 agentes en paralelo.
-
-### [C-08] `equipos-docentes`
-- **Estado**: `[x] completado`
+- **Estado**: PENDIENTE.
 - **Scope**:
-  - Vistas/endpoints sobre `Asignacion`: mis-equipos del docente (F4.2), gestión de asignaciones (F4.3).
-  - Asignación masiva (F4.4): bloque docentes × materia × carrera × cohorte × rol con vigencia.
-  - Clonar equipo entre períodos (F4.5, RN-12): duplica asignaciones vigentes con fechas del nuevo período.
-  - Modificar vigencia general del equipo (F4.6); exportar equipo a archivo (F4.7).
-  - `/api/equipos/*` con guard `equipos:asignar` (COORDINADOR, ADMIN). Genera audit (`ASIGNACION_MODIFICAR`).
-  - Tests: clonado entre cohortes, asignación masiva, modificación de vigencia en bloque, export.
-- **Dependencias**: `C-07`
-- **Governance**: ALTO
+  - Reestructurar `internal/tui/` para convertir `ScreenWelcome` en un menú hub:
+    opciones Install / Starters / Manage backups / Uninstall / Update stack / Quit.
+  - Nueva pantalla `ScreenStarters`: lista los starters del catálogo → al confirmar,
+    llama `runStarterAdd` (binario en PATH con `$ARGUMENTS`, o invoca el executor
+    headless de starter directamente).
+  - Nueva pantalla `ScreenBackups`: lista backups existentes (`internal/backup`
+    snapshot index) → acciones restore / rename / delete.
+  - Nueva pantalla `ScreenUninstall`: formulario de opciones (modo, agente, strategy)
+    → llama `RunHeadlessUninstall` (del change `uninstall-subcommand`).
+  - La pantalla Install existente (`ScreenInstall`) se preserva sin cambios internos;
+    solo se agrega el routing desde el hub.
+  - Usar Lipgloss inline mínimo (igual que hoy). **NO portar theme cosmético del
+    legacy** (`styles/`, logo, frames, persona-marketing) — prohibido por `CLAUDE.md` §1.
+  - Tests Bubbletea con `teatest` (skill `go-testing`).
+- **Decisiones / notas clave**:
+  - Los backends de cada pantalla YA existen (`internal/backup`, `internal/uninstall`,
+    `catalog.Starters`); el trabajo es exclusivamente pantallas TUI + wiring.
+  - La entrada "Update stack" aparece en el menú pero puede mostrar "coming soon"
+    hasta que `tui-update-stack` esté terminado — el hub no bloquea.
+  - El routing entre pantallas debe ser limpio (patrón Bubbletea model/update/view);
+    no poner lógica de negocio en la TUI.
+- **Dependencias**: `uninstall-subcommand` (la pantalla ScreenUninstall invoca
+  `RunHeadlessUninstall`). Habilita: `tui-update-stack` (agrega la entrada Update
+  al hub).
+- **Governance**: BAJO (pantallas TUI) + MEDIO (wiring uninstall que toca config
+  del usuario). Implementar con checkpoints; superficiar decisiones no obvias al
+  operador.
 - **Leer antes**:
-  - `knowledge-base/06_funcionalidades.md` Épica 4 (F4.2–F4.7)
-  - `knowledge-base/07_flujos_principales.md` FL-03 (setup cuatrimestre)
-  - `knowledge-base/04_modelo_de_datos.md` §E5 Asignación
-
-### [C-09] `padron-ingesta-moodle`
-- **Estado**: `[x] completado`
-- **Scope**:
-  - Modelos `VersionPadron` + `EntradaPadron` (versionado: una versión activa por materia×cohorte; activar nueva desactiva la anterior).
-  - Import de padrón: archivo `.xlsx`/`.csv` (fallback manual) con vista previa (F1.3, F1.4).
-  - Integración **Moodle Web Services** (`integrations/moodle_ws.py`): sync de usuarios/actividades, sync nocturna + on-demand; errores mapean a `502` con reintento.
-  - Vaciar datos de materia (F1.5, RN-04). Audit `PADRON_CARGAR`.
-  - `Migración 0NN: version_padron, entrada_padron`.
-  - Tests: versionado (activar desactiva anterior), import xlsx/csv, entrada sin usuario_id (alumno sin cuenta), aislamiento tenant, mock Moodle WS + fallback 502.
-- **Dependencias**: `C-07`
-- **Governance**: MEDIO
-- **Leer antes**:
-  - `knowledge-base/04_modelo_de_datos.md` §E6 Padrón (versionado)
-  - `knowledge-base/06_funcionalidades.md` F1.3, F1.4, F1.5
-  - `knowledge-base/08_arquitectura_propuesta.md` §5.1 (Moodle WS, fallback manual)
-
-### [C-10] `calificaciones-y-umbral`
-- **Estado**: `[x] completado`
-- **Scope**:
-  - Modelos `Calificacion` (numérica/textual, `aprobado` derivado, origen Importado/Manual) y `UmbralMateria` (umbral_pct por asignación, valores aprobatorios).
-  - Importar calificaciones desde archivo del LMS (F1.1): detecta columnas de actividades numéricas (RN-01) y textuales (RN-02), vista previa, selección de actividades.
-  - Importar reporte de finalización (F1.2): detecta TPs entregados sin nota.
-  - Configurar umbral por materia (F2.1, RN-03, defecto 60%). Audit `CALIFICACIONES_IMPORTAR`.
-  - `Migración 0NN: calificacion, umbral_materia`.
-  - Tests: derivación `aprobado` (numérica vs umbral, textual vs conjunto), import + preview, selección de actividades, umbral por asignación (no afecta otros docentes).
-- **Dependencias**: `C-09`
-- **Governance**: MEDIO
-- **Leer antes**:
-  - `knowledge-base/04_modelo_de_datos.md` §E7 Calificación, §E8 Umbral
-  - `knowledge-base/06_funcionalidades.md` F1.1, F1.2, F2.1
-  - `knowledge-base/07_flujos_principales.md` FL-02 (pasos 3–5)
-
-### [C-11] `analisis-atrasados-reportes`
-- **Estado**: `[x] completado`
-- **Scope**:
-  - Cómputo de **alumnos atrasados** (actividades faltantes o nota < umbral, RN-06) (F2.2).
-  - Ranking de actividades aprobadas (F2.3, RN-09); reportes rápidos por materia (F2.4); notas finales agrupadas (F2.5).
-  - Exportar TPs sin corregir (F2.6, RN-07/08). Monitores: general (F2.7), seguimiento tutor/profesor (F2.8), coordinación/admin con rango de fechas (F2.9).
-  - `/api/analisis/*` con guards `atrasados:ver`. Lógica de cálculo en Services (sin SQL en Services).
-  - Tests: definición de atrasado contra umbral, ranking (solo ≥1 aprobada), notas finales agrupadas, filtros del monitor, export.
-- **Dependencias**: `C-10`
-- **Governance**: MEDIO
-- **Leer antes**:
-  - `knowledge-base/06_funcionalidades.md` Épica 2 (F2.2–F2.9)
-  - `knowledge-base/07_flujos_principales.md` FL-02 (pasos 5–6)
-  - `knowledge-base/04_modelo_de_datos.md` §E7, §E8
-
-### [C-12] `comunicaciones-cola-worker`
-- **Estado**: `[x]` completado
-- **Scope**:
-  - Modelo `Comunicacion` (destinatario `[cifrado]`, lote_id, estado: Pendiente → Enviando → Enviado/Error/Cancelado, RN-15).
-  - **Worker asíncrono** de despacho (`workers/`): consume cola, transiciona estados. Plantillas con variables de sustitución.
-  - Preview obligatorio antes de encolar (F3.1, RN-16). Envío masivo con cola (F3.2). Aprobación humana configurable por tenant (F3.3, RN-17): guard `comunicacion:aprobar`, lote o individual.
-  - `/api/comunicaciones/*` (`comunicacion:enviar`). Audit `COMUNICACION_ENVIAR`.
-  - `Migración 0NN: comunicacion`.
-  - Tests: máquina de estados (transiciones válidas/ inválidas), preview, aprobación lote/individual, cancelación, destinatario cifrado, worker procesa Pendiente→Enviado.
-- **Dependencias**: `C-11`
-- **Governance**: ALTO
-- **Leer antes**:
-  - `knowledge-base/04_modelo_de_datos.md` §E21 Comunicación
-  - `knowledge-base/06_funcionalidades.md` Épica 3 (F3.1–F3.3)
-  - `knowledge-base/07_flujos_principales.md` FL-02 (7–8), FL-04 (aprobación)
-  - `knowledge-base/08_arquitectura_propuesta.md` §5.2 (worker de cola)
-
-### [C-13] `encuentros-y-guardias`
-- **Estado**: `[x]` completado
-- **Scope**:
-  - Modelos `SlotEncuentro`, `InstanciaEncuentro`, `Guardia`.
-  - Crear encuentro recurrente (F6.1, RN-13): genera todas las instancias del slot. Encuentro único (F6.2). Editar instancia (F6.3: estado, meet_url, video_url, comentario).
-  - Generar bloque HTML para el aula virtual (F6.4); vista admin de encuentros (F6.5).
-  - Registro de guardias (F6.6): tutor registra, coordinación consulta global + export.
-  - `/api/encuentros/*`, `/api/guardias/*` con guards `encuentros:gestionar`.
-  - `Migración 0NN: slot_encuentro, instancia_encuentro, guardia`.
-  - Tests: generación de instancias recurrentes (cant_semanas), encuentro único, edición de estado, registro de guardia, export.
-- **Dependencias**: `C-07`
-- **Governance**: MEDIO
-- **Leer antes**:
-  - `knowledge-base/04_modelo_de_datos.md` §E9, §E10, §E11
-  - `knowledge-base/06_funcionalidades.md` Épica 6 (F6.1–F6.6)
-  - `knowledge-base/07_flujos_principales.md` FL-06 (encuentros recurrentes)
-
-### [C-14] `evaluaciones-y-coloquios`
-- **Estado**: `[x]` completado
-- **Scope**:
-  - Modelos `Evaluacion`, `ReservaEvaluacion`, `ResultadoEvaluacion`.
-  - Crear convocatoria de coloquio (F7.3): materia, instancia, días y cupos. Importar alumnos a convocatoria (F7.2). Listado de convocatorias (F7.4). Panel de métricas (F7.1). Admin global (F7.5).
-  - Reserva de turno por ALUMNO (F7, FL-07): día disponible con cupo; estado Activa/Cancelada.
-  - `/api/coloquios/*` (COORDINADOR/ADMIN gestión; ALUMNO reserva).
-  - `Migración 0NN: evaluacion, reserva_evaluacion, resultado_evaluacion`.
-  - Tests: creación de turnos con cupo, reserva resta cupo, sin cupo rechaza, métricas (convocados/reservas/libres), resultado consolidado.
-- **Dependencias**: `C-07`
-- **Governance**: MEDIO
-- **Leer antes**:
-  - `knowledge-base/04_modelo_de_datos.md` §E14 Evaluación (Reserva, Resultado)
-  - `knowledge-base/06_funcionalidades.md` Épica 7 (F7.1–F7.5)
-  - `knowledge-base/07_flujos_principales.md` FL-07 (coloquio)
-
-### [C-15] `avisos-y-acknowledgment`
-- **Estado**: `[x]` completado
-- **Scope**:
-  - Modelos `Aviso` (alcance Global/PorMateria/PorCohorte/PorRol, severidad, vigencia inicio/fin, orden, requiere_ack) y `AcknowledgmentAviso`.
-  - ABM avisos (F3.5): `avisos:publicar` (COORDINADOR/ADMIN). Visualización por destinatario según rol/alcance/cohorte (RN-18/19/20).
-  - Confirmación de lectura por ALUMNO/cualquier rol; contadores derivados de `AcknowledgmentAviso` (no denormalizados).
-  - `/api/avisos/*`. `Migración 0NN: aviso, acknowledgment_aviso`.
-  - Tests: filtrado por scope (rol/cohorte/materia), ventana de vigencia (fuera de rango no se muestra), ack (deja de mostrarse + cuenta), orden de prioridad.
-- **Dependencias**: `C-06`
-- **Governance**: MEDIO
-- **Leer antes**:
-  - `knowledge-base/04_modelo_de_datos.md` §E13 Aviso, Acknowledgment
-  - `knowledge-base/06_funcionalidades.md` F3.5
-  - `knowledge-base/07_flujos_principales.md` FL-09 (publicación de aviso)
-
-### [C-16] `tareas-internas`
-- **Estado**: `[x]` completado
-- **Scope**:
-  - Modelos `Tarea` (asignado_a, asignado_por, estado Pendiente/En progreso/Resuelta/Cancelada, contexto_id) y `ComentarioTarea`.
-  - Mis tareas (F8.1); asignar/delegar tarea a otro docente (F8.2); administración global con filtros (F8.3); cambio de estado + comentarios (workflow asincrónico).
-  - `/api/tareas/*` con guard `tareas:gestionar`. Módulo de alto uso (cientos simultáneas).
-  - `Migración 0NN: tarea, comentario_tarea`.
-  - Tests: alta + asignación, delegación con trazabilidad asignador/asignado, transiciones de estado, comentarios en hilo, filtros.
-- **Dependencias**: `C-07`
-- **Governance**: MEDIO
-- **Leer antes**:
-  - `knowledge-base/04_modelo_de_datos.md` §E12 Tarea, ComentarioTarea
-  - `knowledge-base/06_funcionalidades.md` Épica 8 (F8.1–F8.3)
-  - `knowledge-base/07_flujos_principales.md` FL-05 (workflow de tareas)
-
-### [C-18] `liquidaciones-y-honorarios`
-- **Estado**: `[x]` completado
-- **Scope**:
-  - Modelos `SalarioBase` (por rol, vigencia), `SalarioPlus` (grupo × rol, vigencia), `Liquidacion` (base + plus = total, es_nexo, excluido_por_factura, estado Abierta/Cerrada), `Factura`.
-  - Cálculo de liquidación del período (FL-08, RN-21): base por rol vigente + plus por grupos. Vista (F10.1), cerrar (F10.2, inmutable RN-22), historial (F10.3).
-  - Grilla salarial ABM (F10.4, RN-31/32/33). Facturas de docentes que facturan (F10.5, RN-35): excluidos de liquidación general. Separación contable factura vs no-factura + KPIs (F10.6, RN-36/37/38).
-  - `/api/liquidaciones/*`, `/api/facturas/*` con guards `liquidaciones:*` (FINANZAS). Audit `LIQUIDACION_CERRAR`.
-  - `Migración 0NN: salario_base, salario_plus, liquidacion, factura`.
-  - Tests: selección de base vigente por período, suma de plus, total, cierre inmutable, exclusión por factura, segmentación NEXO/factura/general.
-- **Dependencias**: `C-07`
-- **Governance**: CRITICO
-- **Leer antes**:
-  - `knowledge-base/04_modelo_de_datos.md` §E17–E20 (Salario, Liquidación, Factura)
-  - `knowledge-base/06_funcionalidades.md` Épica 10 (F10.1–F10.6)
-  - `knowledge-base/07_flujos_principales.md` FL-08 (liquidación)
-  - `knowledge-base/10_preguntas_abiertas.md` PA-22, PA-23 (mapeo y acumulación de Plus — confirmar antes)
-
-### [C-19] `panel-auditoria-metricas`
-- **Estado**: `[x]` completado
-- **Scope**:
-  - Panel de interacciones (F9.1): acciones por día, estado de comunicaciones por docente, interacciones por docente×materia, log de últimas acciones (máx configurable, defecto 200).
-  - Log completo de auditoría (F9.2, RN-23/24) con filtros: rango de fechas, materia, usuario, estado.
-  - `/api/auditoria/*` con guard `auditoria:ver` (ADMIN, COORDINADOR `(propio)`, FINANZAS). Solo lectura sobre `AuditLog`.
-  - Tests: agregaciones por día/docente/materia, límite configurable, filtros, scope `(propio)` del coordinador.
-- **Dependencias**: `C-07`, `C-05`
-- **Governance**: ALTO
-- **Leer antes**:
-  - `knowledge-base/06_funcionalidades.md` Épica 9 (F9.1, F9.2)
-  - `knowledge-base/07_flujos_principales.md` FL-11 (auditoría por docente)
-  - `knowledge-base/04_modelo_de_datos.md` §E-AUD
-
-### [C-20] `perfil-y-mensajeria-interna`
-- **Estado**: `[x]` completado
-- **Scope**:
-  - Editar perfil propio (F11.1): nombre, datos fiscales/bancarios, regional, modalidad de cobro; CUIL solo lectura.
-  - Bandeja de mensajes interna (F3.4, F11.2, FL-10): hilos recibidos, responder dentro del hilo. Mensajería entre usuarios registrados (paralela a comunicaciones a alumnos).
-  - Cierre de sesión explícito (F11.3) — reusa `C-03` logout.
-  - `/api/perfil`, `/api/inbox/*`.
-  - Tests: edición de campos editables, CUIL no modificable, hilo de mensajes (leer/responder), aislamiento por usuario/tenant.
-- **Dependencias**: `C-07`
-- **Governance**: BAJO
-- **Leer antes**:
-  - `knowledge-base/06_funcionalidades.md` Épica 11 (F11.1–F11.3), F3.4
-  - `knowledge-base/07_flujos_principales.md` FL-10 (mensajería interna)
-  - `knowledge-base/04_modelo_de_datos.md` §E4 Usuario
+  - `internal/tui/model.go`, `internal/tui/screen.go` — estructura actual de la TUI.
+  - `internal/tui/gate.go` — lógica de preflight y selección actual.
+  - `internal/backup/` — API de backups para la pantalla ScreenBackups.
+  - `cmd/jr-stack/headless/uninstall_executor.go` — executor a invocar desde ScreenUninstall (creado en `uninstall-subcommand`).
+  - `CLAUDE.md` §1 (prohibición del theme cosmético) y skill `go-testing` (patrones teatest).
 
 ---
 
-## FASE 5 — Frontend (SPA por features)
+### `claude-agent-switch-research` — Investigar agent-switching en Claude (RESEARCH)
 
-> `C-21` es el shell común. Las features (C-22/23/24) consumen los endpoints ya construidos en backend.
-
-### [C-21] `frontend-shell-y-auth`
-- **Estado**: `[x] completado`
+- **Estado**: PENDIENTE. (**Change de investigación — no produce código de producción.**)
 - **Scope**:
-  - Scaffolding React 18 + TypeScript + Vite. Estructura feature-based. Tailwind, TanStack Query, React Hook Form + Zod, Axios.
-  - Cliente HTTP centralizado: interceptor de auth + **refresh transparente** de tokens. Manejo de 401/403.
-  - Pantallas de login, 2FA, recuperación de contraseña (consumen `C-03`). Guard de rutas por permiso. Layout/menú adaptado a permisos de la sesión.
-  - Logout. Tests: render de login, flujo de auth (mock), guard redirige sin sesión, refresh transparente.
-- **Dependencias**: `C-04`
-- **Governance**: BAJO
+  - Research profundo: ¿existe en Claude Code un mecanismo nativo de "Tab entre
+    agentes" (equivalente a `mode:primary` de opencode)? ¿Hay roadmap público o
+    feature flag conocido?
+  - Explorar workarounds vía slash-commands o campo `"agent"` en `settings.json`
+    que aproximen el UX de switching.
+  - Verificar empíricamente qué produce instalar el orquestador como subagent
+    definition (`"agent"` en settings.json) — ¿es tab-switch real o solo define
+    el agente default del proyecto?
+  - Output obligatorio: documento de veredicto (`docs/research/claude-agent-switch.md`
+    o similar) con: conclusión (posible / no posible / workaround limitado), evidencia
+    consultada, reframe de qué sí es alcanzable hoy, y recomendación de si requiere
+    un change de implementación posterior o se cierra como "no entregable documentado".
+  - Puede terminar en "no entregable, documentado" — ese también es un resultado
+    válido y valioso.
+- **Decisiones / notas clave**:
+  - La exploración previa ya confirmó que Claude Code NO tiene UI nativa de tab-switch;
+    este change profundiza y documenta formalmente ese hallazgo + busca alternativas.
+  - Lo más cercano hoy: instalar el orquestador como subagent definition + `"agent"`
+    default en settings.json (el proyecto arranca en modo orquestador, NO es tab-switch).
+  - El veredicto puede desencadenar un change de implementación posterior (si se
+    encuentra un workaround viable) o archivarse como investigación definitiva.
+- **Dependencias**: ninguna (research independiente). No bloquea ni habilita ningún
+  otro change del epic.
+- **Governance**: BAJO (research + config mínima para pruebas empíricas).
 - **Leer antes**:
-  - `knowledge-base/08_arquitectura_propuesta.md` §2 (frontend SPA por features)
-  - `knowledge-base/07_flujos_principales.md` FL-01 (auth)
-  - `docs/ARQUITECTURA.md` (stack frontend, convenciones)
-
-### [C-22] `frontend-academico-docente`
-- **Estado**: `[x]` completado
-- **Scope**:
-  - Feature de gestión de comisión (PROFESOR): importación de calificaciones con preview y selección de actividades, configuración de umbral, vista de atrasados, ranking, notas finales, reportes rápidos.
-  - Detección de entregas sin corregir + export. Comunicación a atrasados: preview + envío + tracking de estado en tiempo real.
-  - Monitores de seguimiento (tutor/profesor). Consume `C-10`, `C-11`, `C-12`.
-  - Tests (componentes/integración con mocks): import flow, tabla de atrasados, preview de comunicación, tracking de estados.
-- **Dependencias**: `C-21`, `C-12`
-- **Governance**: BAJO
-- **Leer antes**:
-  - `knowledge-base/06_funcionalidades.md` Épicas 1, 2, 3
-  - `knowledge-base/07_flujos_principales.md` FL-02, FL-04
-
-### [C-23] `frontend-coordinacion`
-- **Estado**: `[x]` completado
-- **Scope**:
-  - Features de COORDINADOR/ADMIN: gestión de equipos docentes (mis-equipos, masiva, clonar, vigencia, export), avisos (ABM + scope + ack), tareas internas (workflow), monitores transversales (general F2.7, F2.9), encuentros admin, coloquios.
-  - Setup de cuatrimestre (FL-03). Consume `C-08`, `C-13`, `C-14`, `C-15`, `C-16`, `C-17`.
-  - Tests: ABM equipos, clonado, publicación de aviso, workflow de tarea, filtros de monitor.
-- **Dependencias**: `C-21`, `C-08`, `C-15`, `C-16`
-- **Governance**: BAJO
-- **Leer antes**:
-  - `knowledge-base/06_funcionalidades.md` Épicas 4, 5, 6, 7, 8
-  - `knowledge-base/07_flujos_principales.md` FL-03, FL-05, FL-06, FL-09
-
-### [C-24] `frontend-finanzas-y-admin`
-- **Estado**: `[x]` completado
-- **Scope**:
-  - Feature FINANZAS: vista de liquidaciones del período con segmentación (general / NEXO / factura) + KPIs, cerrar liquidación, historial, grilla salarial, gestión de facturas.
-  - Feature ADMIN: estructura académica (carreras, cohortes, materias), usuarios del tenant, panel de auditoría y métricas, log completo. Consume `C-06`, `C-07`, `C-18`, `C-19`.
-  - Tests: vista de liquidación segmentada, cierre, ABM grilla salarial, panel de auditoría con filtros.
-- **Dependencias**: `C-21`, `C-18`, `C-19`
-- **Governance**: BAJO
-- **Leer antes**:
-  - `knowledge-base/06_funcionalidades.md` Épicas 9, 10, 5
-  - `knowledge-base/07_flujos_principales.md` FL-08, FL-11, FL-12
-
-### [C-25] `frontend-alumno`
-- **Estado**: `[x]` completado
-- **Scope**:
-  - Feature ALUMNO: portal dedicado con rutas bajo `/alumno/*`.
-  - Pantalla "Mis Avisos" con capacidad de confirmar lectura (ack).
-  - Pantalla "Mi Estado" para visualizar materias cursadas y calificaciones consolidadas.
-  - Pantalla "Coloquios" para explorar llamados y reservar cupos.
-  - Tests: visualización acotada al alumno, confirmación de ack, reserva exitosa/fallida sin cupo.
-- **Dependencias**: `C-21`, `C-14`, `C-15`
-- **Governance**: BAJO
-- **Leer antes**:
-  - `knowledge-base/03_actores_y_roles.md` (rol ALUMNO)
-  - `openspec/changes/c-25-frontend-alumno/proposal.md`
+  - `assets/claude/sdd-orchestrator.md` — lo que hoy se inyecta como orquestador en Claude.
+  - `internal/agents/claude/adapter.go` — cómo el installer escribe en `settings.json` de Claude.
+  - Documentación oficial de Claude Code (slash-commands, subagent definitions, settings.json schema).
+  - `ARCHITECTURE.md` §2.1 — descripción del harness `sdd-orchestrator`.
 
 ---
 
-## Resumen
+### `tui-update-stack` — Update rápido del stack desde la TUI
 
-| Métrica | Valor |
-|---------|-------|
-| Total de changes | 25 |
-| Fases | 6 (FASE 0 a FASE 5) |
-| Camino crítico | 10 changes (`C-01 → C-02 → C-03 → C-04 → C-06 → C-07 → C-09 → C-10 → C-11 → C-12`) |
-| Gates de paralelismo | 11 (GATE 0 a GATE 10) |
-| Changes CRITICO (governance) | 6 (C-02, C-03, C-04, C-05, C-07, C-18) |
-| Primer fork | GATE 4 (tras C-04, seguridad lista) |
+- **Estado**: PENDIENTE.
+- **Scope**:
+  - Portar `internal/update` + `internal/update/upgrade` del repo legacy
+    (`E:\ESCRITORIO\programar\2026\Framework\jr-stack-legacy`), **stripped** de
+    código `gga` y del theme cosmético del legacy.
+  - Agregar la opción "Update stack" al menú hub (`tui-menu-hub`): al seleccionarla,
+    la pantalla ScreenUpdate corre el flujo de actualización.
+  - Flujo de actualización:
+    - Check de versiones de `jr-stack` + `engram` contra GitHub Releases API.
+    - Mostrar qué binarios están desactualizados (diff de versión).
+    - Upgrade de binarios: self-replace de `jr-stack` (rename-trick para Windows
+      exe-in-use, ya resuelto en el legacy `update/upgrade/executor.go`) + upgrade
+      de `engram` vía el método de instalación correcto por OS.
+    - Re-sync de configs: re-inyectar los config-harness (`sdd-orchestrator`,
+      `permissions`) en los agentes detectados (vía el pipeline existente en modo
+      "solo config").
+  - Limpieza obligatoria al portar: eliminar todos los leftovers
+    `gentle-ai`/`gentle-stack`/`Gentleman.Dots`/GGA/theme del código portado.
+  - Tests: unit tests para la lógica de check de versiones y upgrade; mock de la
+    GitHub Releases API. TDD estricto activo.
+- **Decisiones / notas clave**:
+  - **UX: replicar la riqueza del legacy (decisión del operador, 2026-06-06).** El
+    hub legacy NO tenía un solo "Update stack" — tenía **tres** entradas separadas
+    (`Upgrade tools`, `Sync configs`, `Upgrade + Sync`) más un **badge dinámico ★**
+    en el ítem del menú cuando hay updates disponibles (o sufijo `(up to date)` tras
+    el chequeo). Portar esa UX: las 3 acciones + el badge ★ vivo en el hub. Hoy el
+    hub (de `tui-menu-hub`) muestra solo "Update stack (coming soon)" como placeholder
+    inline (`hubNotice`); este change lo reemplaza por la entrada/entradas reales.
+  - Referencia legacy: `internal/tui/screens/welcome.go` (`WelcomeOptions` con el
+    badge ★ vía `update.HasUpdates`), `screens/upgrade.go`, `screens/sync_screen.go`,
+    `screens/upgrade_sync.go`.
+  - El rename-trick para Windows (escribir `.new`, mover target a `.old`, renombrar
+    `.new` → target, best-effort remove `.old`) ya está resuelto en `binary-self-install`
+    (`internal/install/self_install.go`) — reutilizarlo o factorizarlo a `internal/system`.
+  - El re-sync de configs debe pasar por el pipeline existente (backup + markers
+    idempotentes), no reescribir lógica de inyección.
+  - Checkpoint: proponer el diseño del flujo de re-sync al operador antes de
+    implementarlo (involucra `internal/install` en modo parcial).
+- **Dependencias**: `tui-menu-hub` (el hub debe existir para agregar la entrada
+  Update). No habilita nada (es el cierre del epic TUI).
+- **Governance**: MEDIO (self-replace de binario + re-inyección en config de
+  agentes). Implementar con checkpoints; superficiar el diseño del re-sync al
+  operador antes del apply.
+- **Leer antes**:
+  - Repo legacy `internal/update/` y `internal/update/upgrade/executor.go` — lógica a portar.
+  - `internal/install/self_install.go` — rename-trick para Windows ya implementado (reusar).
+  - `internal/agents/` — adapters por agente para detectar qué agentes están instalados.
+  - `internal/harness/config/` — instalador de config-harnesses (para el re-sync).
+  - `tui-menu-hub` change (debe estar terminado — depende de él).
+  - `CLAUDE.md` §3 regla "SIEMPRE limpiar leftovers gentle-ai / gentle-stack / Gentleman.Dots".
 
-**Primer change recomendado**: `C-01` (foundation-setup).
+---
 
-Para arrancar: `/opsx:propose C-01-foundation-setup`
+### `tui-configure-models` — Configurar model-routing desde la TUI (claude + opencode)
+
+- **Estado**: PENDIENTE. (Origen: el hub legacy tenía "Configure models" y el
+  operador decidió, 2026-06-06, portarlo a v2 como change nuevo — no entró en
+  `tui-menu-hub`, que ya está cerrado con 6 opciones.)
+- **Scope**:
+  - Agregar la opción **"Configure models"** al hub (`tui-menu-hub` ya existe).
+  - Pantalla de entrada `ScreenModelConfig`: menú `Configure Claude models` /
+    `Configure OpenCode models` / `Back` (espeja `screens/model_config.go` del legacy).
+  - Pantalla `ScreenClaudeModelPicker`: presets **balanced / performance / economy /
+    custom**; en modo custom, lista por fase OPSX (orchestrator, explore, propose,
+    apply, archive, default) cicleando alias **opus → sonnet → haiku** con Enter
+    (espeja `screens/claude_model_picker.go` del legacy).
+  - Pantalla equivalente para **OpenCode** (su propio set de modelos/aliases — NO
+    asumir paridad 1:1 con Claude; opencode tiene su propio catálogo de modelos).
+  - Al confirmar, **re-inyectar la tabla de model-routing en el bloque del
+    `sdd-orchestrator`** de los agentes detectados, vía el pipeline existente
+    (backup + markers idempotentes) en modo "solo config" — NO reescribir lógica
+    de inyección. El toggle `model-routing` del `sdd-orchestrator` es el destino real
+    del routing configurado ("si se chequea, aparece el routing correcto").
+  - Limpieza obligatoria al portar del legacy: eliminar leftovers
+    `gentle-ai`/`gentle-stack`/`Gentleman.Dots`/theme cosmético.
+  - Tests Bubbletea con `teatest` (skill `go-testing`): presets, ciclado de alias
+    en custom, navegación, y el wiring de re-inyección con fakes (nunca el entorno real).
+- **Decisiones / notas clave**:
+  - Los presets de Claude del legacy (balanced/performance/economy/custom) y el
+    ciclado opus→sonnet→haiku son la referencia de UX — reusarlos. Verificar que
+    los presets sigan vigentes con el model-routing actual del `sdd-orchestrator` v2.
+  - **OpenCode NO es un clon de Claude**: necesita su propio picker con su catálogo
+    de modelos. Resolver `(TBD)` qué modelos/aliases expone opencode antes del apply.
+  - El destino del routing es el harness `config` `sdd-orchestrator` (toggle
+    `model-routing`), no un archivo nuevo — pasa por el mismo install pipeline parcial
+    que usará `tui-update-stack` para el re-sync.
+- **Dependencias**: `tui-menu-hub` (el hub debe existir para agregar la entrada).
+  Hermano paralelo de `tui-update-stack` (ambos cuelgan del hub, no se bloquean).
+  No habilita nada (hoja del epic TUI).
+- **Governance**: MEDIO (re-inyección en config de agentes — toca `CLAUDE.md`/
+  `AGENTS.md` del usuario vía markers + backup). Implementar con checkpoints;
+  superficiar el diseño del re-sync al operador antes del apply.
+- **Leer antes**:
+  - Legacy `internal/tui/screens/model_config.go` — pantalla de entrada (3 opciones).
+  - Legacy `internal/tui/screens/claude_model_picker.go` — presets + custom por fase + ciclado.
+  - Legacy `internal/tui/screens/model_picker.go` y `model_config_test.go` — picker genérico + tests modelo.
+  - `internal/harness/config/` — instalador del `sdd-orchestrator` (toggle `model-routing`), destino del re-sync.
+  - `internal/agents/` — adapters por agente (detectar qué agentes reciben el routing).
+  - `tui-menu-hub` change (debe estar terminado — depende de él).
+  - `CLAUDE.md` §1 (prohibido theme cosmético) y §3 ("SIEMPRE limpiar leftovers gentle-ai…").
+
+---
+
+### `openspec-init-cleanup` — Limpiar basura del `openspec init` en `jr-orchestrator`
+
+- **Estado**: COMPLETADO (2026-06-06). Cleanup `rm -rf .claude/skills/openspec-*`
+  agregado al Step 1 del `SKILL.md` del `jr-orchestrator` (justo después de
+  `openspec init`), via glob future-proof. Aplicado en el repo fuente
+  (`SKILLS/jr-orchestrator`, v2.0) **y** en la copia instalada
+  (`~/.claude/skills/jr-orchestrator`, v2.1) que es la que realmente corre.
+  ⚠️ Descubierto: el repo fuente (v2.0) está DESACTUALIZADO respecto a la copia
+  instalada (v2.1, con checkpoint protocol + skill-registry) — la v2.1 nunca se
+  pusheó al repo. Reconciliar source ↔ instalado es follow-up aparte.
+- **⚠️ ARTEFACTO: SKILL `jr-orchestrator` — este change NO modifica el repo Go.**
+  El fix vive en el `SKILL.md` del skill `jr-orchestrator` (repo
+  `JuanCruzRobledo/jr-orchestrator`, archivo `SKILL.md` o equivalente de la skill).
+  No tocar `internal/` ni ningún archivo Go de este repo.
+- **Scope**:
+  - `openspec init` dropea incondicionalmente los dirs
+    `<proyecto>/.claude/skills/openspec-*` (skills redundantes — ya están globales
+    en el stack). El cleanup no ocurre hoy porque nadie lo dispara.
+  - Fix: agregar un step de cleanup en el `SKILL.md` de `jr-orchestrator`, **en el
+    Step 1** (justo después de `openspec init`), que borra todos los dirs
+    `openspec-*` conocidos bajo `.claude/skills/`:
+    ```bash
+    rm -rf .claude/skills/openspec-explore \
+           .claude/skills/openspec-init \
+           .claude/skills/openspec-onboard \
+           .claude/skills/openspec-design \
+           .claude/skills/openspec-spec \
+           .claude/skills/openspec-tasks \
+           .claude/skills/openspec-verify \
+           .claude/skills/openspec-apply-change \
+           .claude/skills/openspec-archive-change \
+           .claude/skills/openspec-propose
+    ```
+  - El comando debe ser future-proof: si `openspec init` agrega dirs `openspec-*`
+    nuevos en el futuro, el glob `rm -rf .claude/skills/openspec-*` los cubre
+    automáticamente (alternativa más robusta que listar nombres explícitos).
+  - **NO tocar** `.claude/commands/opsx/` — es el delivery de slash-commands y se
+    mantiene intacto.
+  - **NO modificar** el skill `openspec-init` — el fix es en el orquestador, no en
+    el init mismo.
+  - Tamaño: XS (~5 líneas en el SKILL.md). No requiere tests unitarios.
+- **Decisiones / notas clave**:
+  - Los dirs `openspec-*` son auto-generados y re-creables; no son archivos
+    user-authored. Borrarlos es seguro.
+  - La raíz del problema: `openspec init` siempre los genera; el orquestador debe
+    limpiar inmediatamente después (es más limpio que parchear `openspec init`).
+- **Dependencias**: ninguna (XS, independiente). No bloquea ni habilita nada del epic.
+- **Governance**: BAJO (archivos auto-generados, re-creables, no user-authored).
+  Autonomía completa — change XS que no requiere review previo.
+- **Leer antes**:
+  - `SKILL.md` del repo `JuanCruzRobledo/jr-orchestrator` — Step 1 donde se inserta
+    el cleanup (fuente a editar).
+  - `ARCHITECTURE.md` §4.2 — descripción del flujo de `jr-orchestrator` (lazy-loading).
+  - `CLAUDE.md` §1 — confirmación de que `.claude/commands/opsx/` no se toca.
+
+---
+
+## Tabla resumen
+
+| Change | Ola | Governance | Depende de | Habilita |
+|---|---|---|---|---|
+| `opencode-orchestrator-parity` | 0 (paralelo) | BAJO/MEDIO | — | — |
+| `openspec-init-cleanup` | 0 (paralelo) | BAJO | — | — | ✅ COMPLETADO |
+| `uninstall-subcommand` | 1 | **ALTO** | — | `tui-menu-hub` | ✅ IMPLEMENTADO |
+| `claude-agent-switch-research` | 1+ (libre) | BAJO | — | — |
+| `tui-menu-hub` | 2 | BAJO/MEDIO | `uninstall-subcommand` | `tui-update-stack`, `tui-configure-models` | ✅ IMPLEMENTADO (pend. archive) |
+| `tui-update-stack` | 3 | MEDIO | `tui-menu-hub` | — |
+| `tui-configure-models` | 3 | MEDIO | `tui-menu-hub` | — |
+
+**Camino crítico**: `uninstall-subcommand → tui-menu-hub → {tui-update-stack ‖ tui-configure-models}` (3 changes; los dos últimos en paralelo).
+
+**Próximo paso**: archivar `tui-menu-hub` (implementado, suite verde) y luego encarar
+en paralelo `tui-update-stack` y `tui-configure-models` (ambos cuelgan del hub).

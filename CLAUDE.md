@@ -1,156 +1,138 @@
-# activia-trace — Instrucciones para Agentes
+# CLAUDE.md — JR Stack (instalador del harness metodológico)
 
-> Este archivo (y su copia `CLAUDE.md`) es lo PRIMERO que todo agente lee al entrar al repo.
-> Generado a partir de `knowledge-base/`, `docs/ARQUITECTURA.md` y `CHANGES.md`. No editar a mano sin re-sincronizar ambos archivos.
+> Constitución operativa del proyecto. Versión canónica (Claude).
+> Espejo de `AGENTS.md`: **si modificás uno, actualizás el otro.**
+> Leé este archivo antes de cualquier acción no trivial.
 
-**activia-trace** es una plataforma de gestión académica y trazabilidad multi-tenant que opera como capa de orquestación sobre Moodle: consolida calificaciones, detecta atrasos, gestiona comunicación saliente con aprobación, equipos docentes, encuentros, coloquios, liquidaciones de honorarios y auditoría completa. Cada institución es un tenant aislado; el nombre del producto es *trace* — todo audita.
-
----
-
-## Stack Tecnológico
-
-Detalle completo en [docs/ARQUITECTURA.md §2](docs/ARQUITECTURA.md). Resumen funcional en [knowledge-base/02_descripcion_general.md](knowledge-base/02_descripcion_general.md).
-
-### Backend
-| Componente | Tecnología | Notas |
-|------------|-----------|-------|
-| Lenguaje | **Python 3.13** | snake_case en todo |
-| Framework | **FastAPI** | API REST async |
-| ORM | **SQLAlchemy 2.0** (async) | Queries SOLO en repositories |
-| Migraciones | **Alembic** | Una migración por cambio de schema |
-| Base de datos | **PostgreSQL** | JSONB para criterios/scores configurables |
-| Validación | **Pydantic v2** | DTOs request/response; `extra='forbid'` |
-| Auth | **JWT** (access corto + refresh rotation) + **Argon2id** | hashing de passwords |
-| Cifrado en reposo | **AES-256** | PII sensible (CBU, DNI) y secretos |
-| Background jobs | **Worker async** | cola de comunicaciones (Pend→Send→OK/Fail / Pend→Canc) |
-| Integraciones | **N8N** + **Moodle Web Services** | cliente dedicado `moodle_ws.py` |
-| Testing | **pytest** + coverage | ≥80% líneas, ≥90% reglas de negocio |
-
-### Frontend
-| Componente | Tecnología | Notas |
-|------------|-----------|-------|
-| Framework | **React 18** + **TypeScript** | Sin `any`, sin class components |
-| Bundler | **Vite** | HMR en dev |
-| Server state | **TanStack Query** | Todo fetch pasa por hooks de `services/` |
-| Forms | **React Hook Form + Zod** | Validación tipada |
-| Estilos | **Tailwind CSS** | Sin CSS modules, sin inline (salvo valores dinámicos) |
-| HTTP | **Axios** | Cliente centralizado en `@/shared/services/api` |
-| Estructura | **Feature-based modules** | `features/{name}/{components,hooks,services,types,pages}` |
-
-### Infraestructura
-| Componente | Tecnología |
-|------------|-----------|
-| Contenedores | **Docker** + docker-compose (local y prod) |
-| Deploy | **Easypanel** |
-| Observabilidad | Logs estructurados JSON + **OpenTelemetry** |
+> **Nota sobre el orquestador SDD.** El orquestador SDD global (coordinación,
+> delegación a sub-agentes, model-routing por fase, protocolo Engram, governance)
+> ya vive en tu `~/.claude/CLAUDE.md`. **Este archivo NO lo duplica.** Si necesitás
+> el detalle del orquestador, referenciá ese archivo global. Acá viven solo las
+> reglas **específicas de este proyecto**.
 
 ---
 
-## Base de Conocimiento
+## 1. Stack y topología
 
-La fuente de verdad del dominio vive en `knowledge-base/` (agnóstica de tecnología). El detalle técnico vive en `docs/`. **Leé el archivo relevante ANTES de implementar.**
+- **Lenguaje**: Go 1.26.
+- **TUI**: Bubbletea + Lipgloss (sin el theme cosmético del repo viejo).
+- **Distribución**: binario único, cross-platform — Windows, macOS, Linux, WSL y Termux.
+- **Entrypoint**: `cmd/jr-stack/`.
+- **Catálogo**: embebido en el binario vía `//go:embed` (`internal/catalog/harnesses.yaml`).
 
-| Archivo | Cuándo leerlo |
-|---------|---------------|
-| [01_vision_y_objetivos.md](knowledge-base/01_vision_y_objetivos.md) | Entender propósito y alcance |
-| [02_descripcion_general.md](knowledge-base/02_descripcion_general.md) | Sistema, integraciones, propiedades de seguridad |
-| [03_actores_y_roles.md](knowledge-base/03_actores_y_roles.md) | Auth, RBAC, permisos, matriz de capacidades, impersonación |
-| [04_modelo_de_datos.md](knowledge-base/04_modelo_de_datos.md) | Entidades, ERD, migraciones |
-| [05_reglas_de_negocio.md](knowledge-base/05_reglas_de_negocio.md) | Reglas codificadas (RN-XX) |
-| [06_funcionalidades.md](knowledge-base/06_funcionalidades.md) | Funcionalidades por épica |
-| [07_flujos_principales.md](knowledge-base/07_flujos_principales.md) | Flujos E2E (importación, mensajería, auth) |
-| [08_arquitectura_propuesta.md](knowledge-base/08_arquitectura_propuesta.md) | Patrones y estructura de producto |
-| [09_decisiones_y_supuestos.md](knowledge-base/09_decisiones_y_supuestos.md) | Decisiones cerradas y supuestos base |
-| [10_preguntas_abiertas.md](knowledge-base/10_preguntas_abiertas.md) | ⚠️ Inconsistencias a resolver ANTES de codear |
-| [11_historias_de_usuario.md](knowledge-base/11_historias_de_usuario.md) | Historias (Connextra) + criterios de aceptación |
-| [docs/PRD.md](docs/PRD.md) | Requerimientos de producto y RNF |
-| [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) | Stack, Clean Architecture, estructura de directorios, seguridad |
+Qué es esto: un **instalador methodology-first**. Materializa el `MANUAL-METODOLOGICO.md`.
+Un comando (`jr-stack install`) instala/configura el sustrato (harnesses); un único
+orquestador de fundación deja el proyecto listo para el ciclo OPSX
+(`explore → propose → apply → verify → archive`).
 
-> ⚠️ **Roles del dominio**: ALUMNO · TUTOR · PROFESOR · COORDINADOR · NEXO · ADMIN · FINANZAS. Leé `03_actores_y_roles.md` para internalizar el modelo de permisos ANTES de cualquier implementación.
+**NO es** (fuera de scope, decisión firme — ver ARCHITECTURE.md §1):
+GGA (code review en commit), themes/statusline/keybindings, persona como producto
+de marketing, framing "supercharge any agent" / relación con Gentleman.Dots.
 
-> ⚠️ **Preguntas ALTA pendientes** (resolver antes de tocar el dominio afectado): **PA-01** catálogo de materias (Materia vs InstanciaDictado), **PA-07** cohortes ↔ carrera, **PA-22**/**PA-23** claves de Plus y acumulación en liquidaciones, **PA-25** semántica del rol NEXO. Ver [10_preguntas_abiertas.md](knowledge-base/10_preguntas_abiertas.md). No codees el módulo de liquidaciones (C-18) ni el de estructura académica (C-06) sin cerrar las preguntas que los bloquean.
-
----
-
-## Skills Disponibles
-
-Cargá la skill correspondiente al contexto **ANTES** de escribir código. Aplicá todos sus patrones.
-
-| Agente | Rol | Skills que carga |
-|--------|-----|------------------|
-| **Backend Core** | FastAPI / SQLAlchemy / migraciones / modelos | `fastapi-templates`, `postgresql-table-design`, `python-testing-patterns`, `test-driven-development` |
-| **Backend Aux** | Servicios, integraciones, seguridad, performance | `api-security-best-practices`, `postgresql-optimization`, `systematic-debugging` |
-| **Frontend** | React / TanStack / Tailwind / E2E | `typescript-advanced-types`, `tailwind-design-system`, `playwright-best-practices` |
-| **DevOps** | Contenedores / build | `multi-stage-dockerfile` |
-| **Transversal** | Calidad / revisión | `code-review-excellence`, `systematic-debugging` |
-| **Orquestación** | SDD / OPSX / docs | `kb-creator`, `roadmap-generator`, `agent-instruction`, `find-skill` |
-
-> **Gap conocido**: no hay skill de buenas prácticas React instalada (`vercel-react-best-practices` recomendada pero NO instalada por decisión del usuario). El stack queda cubierto ~100% por las skills preinstaladas.
-
----
-
-## Roadmap de Changes
-
-El plan de implementación completo está en [CHANGES.md](CHANGES.md). Resumen:
-
-- **Total**: 24 changes (`C-01`…`C-24`) en 6 fases, organizados con 11 gates de paralelismo y un plan óptimo de 3 agentes (Backend Core / Backend Aux / Frontend).
-- **Camino crítico** (10 changes, mínimo irreducible): `C-01 → C-02 → C-03 → C-04 → C-06 → C-07 → C-09 → C-10 → C-11 → C-12`. Es el flujo de mayor valor: importar → analizar → comunicar, en producción multi-tenant.
-- **Primer change**: `C-01 foundation-setup` (infra, Docker, FastAPI skeleton, DB inicial, OpenTelemetry). Sin dependencias.
-- **Primer fork** (GATE 4, tras `C-04 rbac`): seguridad lista → arrancan en paralelo `C-05 audit-log`, `C-06 estructura-academica` y `C-21 frontend-shell-y-auth`.
-
-**Antes de cualquier `/opsx:propose`**: leé [CHANGES.md](CHANGES.md), identificá el change por su `C-NN`, respetá sus dependencias y leé los archivos de "Leer antes" de ese change.
-
----
-
-## Reglas Duras (no negociables)
-
-Estas reglas son **contrato**. Romperlas es un defecto, no una decisión de estilo. Ante conflicto entre la KB y este archivo, prevalecen las reglas duras.
-
-### Generales
-1. **No buildear automático.** Nunca ejecutar build/compile/bundle sin pedido explícito del usuario.
-2. **No commitear sin pedido explícito.** `git add`/`commit`/`push` SOLO cuando el usuario lo pide. Si estás en la rama default, ramificá antes.
-3. **Conventional Commits sin `Co-Authored-By`.** Formato `tipo(scope): mensaje`. Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`. Scopes: `auth`, `tenancy`, `users`, `alumnos`, `materias`, `comisiones`, `entregas`, `comunicacion`, `equipos`, `encuentros`, `coloquios`, `liquidaciones`, `auditoria`, `moodle`, `api`, `ui`. JAMÁS agregar atribución a IA ni `Co-Authored-By`.
-4. **Tests sin mocks de DB.** Usar base real o contenedor de test (DB efímera). Mockear la base de datos invalida el test — no prueba nada.
-5. **Pydantic schemas con `extra='forbid'`.** Todo schema rechaza campos no declarados (`model_config = ConfigDict(extra='forbid')`).
-6. **snake_case en Python.** Funciones, variables, columnas de BD, módulos y paquetes.
-7. **PascalCase en componentes React.** Nombre del componente y del archivo (`ProductCard.tsx`). Sin `any`, sin class components.
-
-### Seguridad y arquitectura (fundacionales — fallan en code review)
-8. **Identidad SIEMPRE desde la sesión** (JWT verificado). JAMÁS desde un parámetro de URL, body, header ni cualquier dato de la petición. Esto define quién es el usuario, sus roles y su tenant. Sin excepciones.
-9. **Multi-tenancy row-level.** `tenant_id` en cada tabla; los repositories filtran por tenant **por defecto**. Un query sin scope de tenant es un bug que falla en code review.
-10. **RBAC fino `modulo:accion`**, no flags binarios ni superusuario. Cada endpoint declara `require_permission(...)`. **Fail-closed**: sin permiso explícito → 403.
-11. **Nunca lógica de negocio en Routers.** Nunca acceso directo a DB desde Services (siempre vía Repository). Flujo unidireccional Routers → Services → Repositories → Models.
-12. **Secretos y PII (CBU, DNI) SIEMPRE AES-256.** Passwords con Argon2id. Nunca texto plano.
-13. **Soft delete siempre** (auditoría append-only). Nunca hard delete.
-14. **Identidad por UUID interno.** El legajo es un atributo de negocio, nunca credencial ni selector de sesión.
-15. **≤500 LOC por archivo backend**, componentes React <200 LOC. Una migración Alembic por cambio de schema.
-16. **Cobertura mínima**: ≥80% líneas, ≥90% reglas de negocio. **Strict TDD**: test que falla → código mínimo → triangulación → refactor.
-
----
-
-## Agent Governance — Autonomía por dominio
-
-La autonomía del agente depende de la criticidad del dominio que toca.
-
-| Nivel | Dominios | Comportamiento |
-|-------|----------|----------------|
-| **CRÍTICO** | auth, multi-tenancy, RBAC, audit log, liquidaciones, core-models | Solo análisis y propuesta. NO escribir código sin aprobación humana explícita. |
-| **MEDIO** | lógica de dominio, integraciones (Moodle/N8N), pipelines | Implementar con checkpoints; surfacear decisiones no obvias para revisión. |
-| **BAJO** | CRUDs simples, pages frontend sin lógica crítica, catálogos, configuración | Autonomía total si pasan los tests. Reportar en el resumen. |
-
-Antes de cualquier acción no trivial: identificá el nivel de governance del dominio. En CRÍTICO o sus equivalentes de seguridad, describí el cambio planeado y esperá confirmación antes de escribir.
-
----
-
-## Flujo de Trabajo
+### Estructura de paquetes (ARCHITECTURE.md §5)
 
 ```
-1. Leer la KB relevante (knowledge-base/) + docs/ARQUITECTURA.md   → entender el dominio
-2. Identificar el change en CHANGES.md (C-NN) + sus dependencias    → respetar gates
-3. Verificar el nivel de governance del dominio                    → CRÍTICO = propuesta primero
-4. /opsx:propose C-NN-nombre                                        → proposal + design + specs + tasks
-5. Implementar las tasks (cargando skills, Strict TDD)             → respetando las reglas duras
-6. /opsx:archive C-NN-nombre + marcar [x] en CHANGES.md            → cerrar el change
+cmd/jr-stack/            entrypoint CLI
+internal/
+  system/                detección OS/arch/WSL/Termux, deps, guards   [PORT]
+  catalog/               parseo del harnesses.yaml embebido           [NEW]  ← existe
+  model/                 tipos de dominio (harness, agente, modo)     [NEW]  ← existe
+  planner/               grafo de dependencias, orden, review payload [PORT]
+  agents/                adapters por agente (claude/opencode/...)    [PORT, slim]
+  harness/               install/inject por tipo de harness           [NEW]
+    skill/  config/  external/
+  filemerge/             merge por markers (inyectar sin pisar)       [PORT]
+  backup/                snapshot + restore de configs                [PORT]
+  pipeline/              ejecución por etapas + rollback              [PORT]
+  verify/                health checks post-install                   [PORT]
+  tui/                   Bubbletea (sin theme cosmético del viejo)    [PORT, slim]
+assets/                  catálogo + configs bundleadas (sdd-orchestrator, etc.)
 ```
 
-Aplicá TODAS las reglas duras en cada paso. Ante conflicto entre la KB y este archivo, las reglas duras prevalecen.
+`[PORT]` = traer del repo viejo (`E:\ESCRITORIO\programar\2026\jr-stack`) y limpiar.
+`[NEW]` = construir. Se descarta: `components/gga`, `components/theme`,
+`components/persona` (marketing). `components/permissions` **se mantiene** (la
+seguridad no es opcional).
+
+---
+
+## 2. Modelo de dominio (resumen)
+
+Detalle real en `internal/model/harness.go`. Tipos clave:
+
+- **`Harness`** — módulo instalable/configurable. Campos: `ID`, `Name`, `Type`,
+  `Source` (skill), `External` (tool), `Toggles` (config), `InstallModes`,
+  `DependsOn`, `Agents`. Métodos: `InMode(mode)`, `SupportsAgent(agent)`.
+- **`HarnessType`** — cómo se materializa un harness:
+  - `skill` → `SKILL.md` + assets, clonado de un repo y copiado al dir de skills del agente.
+  - `config` → texto/archivos bundleados que configuran el agente (ej. `sdd-orchestrator`, `permissions`).
+  - `external` → binario/servicio de terceros que instalamos/configuramos pero no son nuestros (Engram, OpenSpec, Context7).
+- **`InstallMode`** — `lite` | `full` | `custom`. Convención: un harness Lite lista
+  `[lite, full]` (Full incluye a Lite); uno exclusivo de Full lista `[full]`; Custom matchea todos.
+- **`Agent`** — `claude`, `opencode`, `gemini`, `codex`, `cursor`, `vscode`, `windsurf`, `antigravity`.
+- **Catálogo** (`internal/catalog`) — `Load()` parsea y valida el YAML embebido;
+  un catálogo malformado es error de build/release (falla ruidoso). Métodos:
+  `ByID`, `ForMode`, `ForAgent`.
+
+**El harness `sdd-orchestrator` es clave**: es de tipo `config` y se compone a
+partir de **toggles modulares** (`tdd`, `engram`, `model-routing`, `delegation`,
+`governance`). El resultado es el bloque de instrucciones del orquestador que se
+inyecta en `CLAUDE.md`/`AGENTS.md` del proyecto destino.
+
+---
+
+## 3. Reglas críticas NO negociables
+
+Formuladas como "NUNCA X → hacer Y". Estas reglas son duras: violarlas invalida el trabajo.
+
+- **NUNCA pisar config del usuario sin backup** → SIEMPRE snapshot vía `internal/backup` antes de escribir.
+- **SIEMPRE inyectar con markers idempotentes** → usar `internal/filemerge` (merge por markers); reinstalar no debe duplicar bloques.
+- **NUNCA hardcodear paths de agente** → resolver SIEMPRE vía el adapter del agente (`internal/agents`).
+- **NUNCA commitear sin pedido explícito** del responsable; *conventional commits* exclusivamente; **NUNCA** atribución de coautoría a la IA.
+- **NUNCA meter en el repo lo que se saca** → GGA, theme, statusline, keybindings, persona-marketing y el framing "supercharge any agent" NO van. La persona puede sobrevivir solo como harness `config` opcional, sin envoltorio de marketing.
+- **SIEMPRE limpiar leftovers `gentle-ai` / `gentle-stack` / `Gentleman.Dots`** al portar código del repo viejo (paths, strings, nombres, branding).
+- **NUNCA instalar "repos"** → el instalador instala **harnesses**, y cada harness sabe cómo se materializa (skill/config/external).
+- **NUNCA editar `harnesses.yaml` sin pasar por `catalog.Load()` validando** → un catálogo inválido rompe el release.
+- **NUNCA build después de cambios** salvo pedido explícito (regla del operador).
+- **SIEMPRE marcar `(TBD)`** cuando una decisión no está tomada; nunca inventar.
+
+---
+
+## 4. Governance por dominio
+
+El nivel de autonomía es proporcional a la criticidad del paquete tocado.
+
+| Nivel | Dominios (paquetes) | Comportamiento del agente |
+|---|---|---|
+| **ALTO** | `backup` (snapshot/restore), `filemerge` (merge por markers), `pipeline` (rollback) | Propone y espera review. Pueden **destruir config del usuario**. |
+| **MEDIO** | `agents` (adapters por agente), `harness/*` (installers) | Implementa con checkpoints. |
+| **BAJO** | `catalog`, `model`, `tui` | Autonomía completa si los tests pasan. |
+
+> No hay dominios CRÍTICO en este proyecto (no manejamos auth/billing/secrets de
+> producción). El máximo es ALTO porque destruir la config del usuario es el peor
+> daño posible del instalador.
+
+---
+
+## 5. Mapa de navegación ("Necesito X → Leer Y")
+
+| Necesito… | Leer / mirar |
+|---|---|
+| El blueprint del diseño (fuente de verdad) | `ARCHITECTURE.md` |
+| La metodología (etapas, governance, flujo) | `../MANUAL-METODOLOGICO.md` |
+| Roadmap de changes, deps, camino crítico | `CHANGES.md` |
+| Qué harnesses existen y de qué tipo | `internal/catalog/harnesses.yaml` |
+| Los tipos de dominio | `internal/model/harness.go` |
+| Cargar/validar el catálogo | `internal/catalog/catalog.go` |
+| Infra a portar (backup, filemerge, planner, agents, pipeline, verify, tui) | repo viejo: `E:\ESCRITORIO\programar\2026\jr-stack\internal\` |
+| Configs bundleadas (sdd-orchestrator por agente) | repo viejo: `internal/assets/` |
+| Estado real de los changes | `openspec` CLI (`openspec list`, `openspec status`) — fuente de verdad |
+| El orquestador SDD global | `~/.claude/CLAUDE.md` (NO duplicar acá) |
+
+---
+
+## 6. Notas
+
+- `openspec/` está versionado-ignorado por git (dogfooding interno).
+- Cada incremento del roadmap es un change OPSX (ver `CHANGES.md`).
+- Skills de dominio relevantes para este repo: `go-testing` (tests Go + Bubbletea TUI).

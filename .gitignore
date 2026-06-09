@@ -1,3 +1,41 @@
+# Binaries (incluye los cross-platform que emiten los build scripts:
+# jr-stack_linux_amd64, jr-stack_windows_amd64.exe, jr-stack_darwin_arm64, etc.)
+/jr-stack
+/jr-stack_*
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binary / coverage
+*.test
+*.out
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dist
+dist/
+*.tar
+
+# Agent tooling metadata (generated per-user, not product code)
+.atl/
+.engram/
+
+# OpenSpec working artifacts — we dogfood the methodology on this repo;
+# the dev-process changes/specs and generated tool commands are not part
+# of the product
+openspec/
+.claude/
+.opencode/
 # Build output intermedio (regenerable con `npm run pdf` desde .build/)
 .build/node_modules/
 .build/activia-trace-doc.html
