@@ -23,13 +23,11 @@ class SalarioService:
         
         salarios_viejos = (await self.db.execute(query)).scalars().all()
         for s_viejo in salarios_viejos:
-            if s_viejo.fecha_desde >= data.fecha_desde:
-                # Si el viejo empieza después o el mismo día, lo forzamos a terminar el mismo día
-                # Idealmente esto es un error de validación, pero por ahora lo cerramos
-                s_viejo.fecha_hasta = data.fecha_desde
-            else:
-                # Cortar el anterior un día antes de que empiece el nuevo
-                s_viejo.fecha_hasta = data.fecha_desde - timedelta(days=1)
+            if data.fecha_desde <= s_viejo.fecha_desde:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"La fecha de inicio debe ser posterior al salario activo actual ({s_viejo.fecha_desde}).")
+            
+            # Cortar el anterior un día antes de que empiece el nuevo
+            s_viejo.fecha_hasta = data.fecha_desde - timedelta(days=1)
             
         salario = SalarioBase(
             tenant_id=self.tenant_id,
@@ -54,10 +52,10 @@ class SalarioService:
         
         salarios_viejos = (await self.db.execute(query)).scalars().all()
         for s_viejo in salarios_viejos:
-            if s_viejo.fecha_desde >= data.fecha_desde:
-                s_viejo.fecha_hasta = data.fecha_desde
-            else:
-                s_viejo.fecha_hasta = data.fecha_desde - timedelta(days=1)
+            if data.fecha_desde <= s_viejo.fecha_desde:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"La fecha de inicio debe ser posterior al salario plus activo actual ({s_viejo.fecha_desde}).")
+            
+            s_viejo.fecha_hasta = data.fecha_desde - timedelta(days=1)
                 
         salario = SalarioPlus(
             tenant_id=self.tenant_id,

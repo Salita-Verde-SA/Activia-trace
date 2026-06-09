@@ -18,10 +18,25 @@ export function SalariosBaseEditor() {
         onSuccess: () => setEditingId(null)
       });
     } else {
+      // Validate overlapping dates for new records
+      const activeRecord = salariosBaseQuery.data?.find(s => s.rol === formData.rol && !s.vigente_hasta);
+      if (activeRecord) {
+        if (formData.vigente_desde && new Date(formData.vigente_desde) <= new Date(activeRecord.vigente_desde)) {
+          alert(`Error: La fecha de inicio debe ser posterior a la del salario activo actual (${new Date(activeRecord.vigente_desde).toLocaleDateString()}).`);
+          return;
+        }
+        if (!window.confirm(`Al crear este nuevo valor, el salario base activo actual de ${formData.rol} se cerrará el día anterior. ¿Desea continuar?`)) {
+          return;
+        }
+      }
+
       createSalarioBase.mutate(formData, {
         onSuccess: () => {
           setIsCreating(false);
           setFormData({ rol: '', monto: 0, vigente_desde: new Date().toISOString().split('T')[0] });
+        },
+        onError: (err: any) => {
+          alert(err?.response?.data?.detail || "Ocurrió un error al guardar.");
         }
       });
     }
