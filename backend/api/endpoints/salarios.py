@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, status
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
+from uuid import UUID
 
 from core.dependencies import get_db
 from api.dependencies.auth import require_permission
@@ -43,3 +44,23 @@ async def listar_salarios_plus(
 ):
     service = SalarioService(db, current_user.tenant_id)
     return await service.listar_salarios_plus()
+
+@router.put("/base/{salario_id}", response_model=SalarioBaseResponse)
+async def update_salario_base(
+    salario_id: UUID,
+    data: SalarioBaseCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_permission("finanzas:grilla"))
+):
+    service = SalarioService(db, current_user.tenant_id)
+    return await service.update_salario_base(salario_id, data)
+
+@router.put("/plus/{salario_id}", response_model=SalarioPlusResponse)
+async def update_salario_plus(
+    salario_id: UUID,
+    data: SalarioPlusCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_permission("finanzas:grilla"))
+):
+    service = SalarioService(db, current_user.tenant_id)
+    return await service.update_salario_plus(salario_id, data)

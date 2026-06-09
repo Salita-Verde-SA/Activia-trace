@@ -68,3 +68,40 @@ class SalarioService:
         query = select(SalarioPlus).where(SalarioPlus.tenant_id == self.tenant_id).order_by(SalarioPlus.fecha_desde.desc())
         salarios = (await self.db.execute(query)).scalars().all()
         return [SalarioPlusResponse.model_validate(s, from_attributes=True) for s in salarios]
+
+    async def update_salario_base(self, salario_id: UUID, data: SalarioBaseCreate) -> SalarioBaseResponse:
+        query = select(SalarioBase).where(
+            SalarioBase.id == salario_id,
+            SalarioBase.tenant_id == self.tenant_id
+        )
+        salario = (await self.db.execute(query)).scalar_one_or_none()
+        if not salario:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Salario base no encontrado")
+            
+        salario.rol = data.rol
+        salario.monto = data.monto
+        salario.fecha_desde = data.fecha_desde
+        salario.fecha_hasta = data.fecha_hasta
+        
+        await self.db.commit()
+        await self.db.refresh(salario)
+        return SalarioBaseResponse.model_validate(salario, from_attributes=True)
+
+    async def update_salario_plus(self, salario_id: UUID, data: SalarioPlusCreate) -> SalarioPlusResponse:
+        query = select(SalarioPlus).where(
+            SalarioPlus.id == salario_id,
+            SalarioPlus.tenant_id == self.tenant_id
+        )
+        salario = (await self.db.execute(query)).scalar_one_or_none()
+        if not salario:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Salario plus no encontrado")
+            
+        salario.clave_plus = data.clave_plus
+        salario.rol = data.rol
+        salario.monto = data.monto
+        salario.fecha_desde = data.fecha_desde
+        salario.fecha_hasta = data.fecha_hasta
+        
+        await self.db.commit()
+        await self.db.refresh(salario)
+        return SalarioPlusResponse.model_validate(salario, from_attributes=True)
