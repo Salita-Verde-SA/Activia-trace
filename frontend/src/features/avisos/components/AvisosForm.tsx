@@ -37,39 +37,39 @@ export const AvisosForm: React.FC<AvisosFormProps> = ({ onSuccess, onCancel }) =
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-      <h3 className="text-lg font-bold mb-4">Nuevo Aviso Institucional</h3>
+    <form onSubmit={handleSubmit} className="bg-black/20 backdrop-blur-md p-6 rounded-xl shadow-sm border border-white/10">
+      <h3 className="text-2xl font-serif text-white/90 mb-6">Nuevo Aviso Institucional</h3>
       
       <div className="grid grid-cols-1 gap-4 mb-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Título</label>
+          <label className="block text-sm font-medium text-white/70 mb-1">Título</label>
           <input
             type="text"
             required
             value={titulo}
             onChange={(e) => setTitulo(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2"
+            className="w-full rounded-md border-white/10 bg-white/5 text-white/90 px-3 py-2 focus:border-primary-500 focus:ring-primary-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Cuerpo</label>
+          <label className="block text-sm font-medium text-white/70 mb-1">Cuerpo</label>
           <textarea
             required
             rows={4}
             value={cuerpo}
             onChange={(e) => setCuerpo(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2"
+            className="w-full rounded-md border-white/10 bg-white/5 text-white/90 px-3 py-2 focus:border-primary-500 focus:ring-primary-500"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Alcance</label>
+            <label className="block text-sm font-medium text-white/70 mb-1">Alcance</label>
             <select
               value={alcance}
               onChange={(e) => setAlcance(e.target.value as AlcanceAviso)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className="w-full rounded-md border-white/10 bg-white/5 text-white/90 px-3 py-2 focus:border-primary-500 focus:ring-primary-500 [&>option]:bg-neutral-900 [&>option]:text-white"
             >
               <option value={AlcanceAviso.GLOBAL}>Global</option>
               <option value={AlcanceAviso.ALUMNOS}>Solo Alumnos</option>
@@ -77,11 +77,11 @@ export const AvisosForm: React.FC<AvisosFormProps> = ({ onSuccess, onCancel }) =
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Severidad</label>
+            <label className="block text-sm font-medium text-white/70 mb-1">Severidad</label>
             <select
               value={severidad}
               onChange={(e) => setSeveridad(e.target.value as SeveridadAviso)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className="w-full rounded-md border-white/10 bg-white/5 text-white/90 px-3 py-2 focus:border-primary-500 focus:ring-primary-500 [&>option]:bg-neutral-900 [&>option]:text-white"
             >
               <option value={SeveridadAviso.INFO}>Informativo</option>
               <option value={SeveridadAviso.WARNING}>Advertencia</option>
@@ -92,22 +92,22 @@ export const AvisosForm: React.FC<AvisosFormProps> = ({ onSuccess, onCancel }) =
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio</label>
+            <label className="block text-sm font-medium text-white/70 mb-1">Fecha Inicio</label>
             <input
               type="date"
               required
               value={fechaInicio}
               onChange={(e) => setFechaInicio(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className="w-full rounded-md border-white/10 bg-white/5 text-white/90 px-3 py-2 focus:border-primary-500 focus:ring-primary-500 [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Fin (Opcional)</label>
+            <label className="block text-sm font-medium text-white/70 mb-1">Fecha Fin (Opcional)</label>
             <input
               type="date"
               value={fechaFin}
               onChange={(e) => setFechaFin(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className="w-full rounded-md border-white/10 bg-white/5 text-white/90 px-3 py-2 focus:border-primary-500 focus:ring-primary-500 [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert"
             />
           </div>
         </div>
@@ -118,9 +118,9 @@ export const AvisosForm: React.FC<AvisosFormProps> = ({ onSuccess, onCancel }) =
             id="requiereAck"
             checked={requiereAck}
             onChange={(e) => setRequiereAck(e.target.checked)}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            className="h-4 w-4 bg-black/20 text-primary-500 focus:ring-primary-500 border-white/10 rounded"
           />
-          <label htmlFor="requiereAck" className="ml-2 block text-sm text-gray-900">
+          <label htmlFor="requiereAck" className="ml-2 block text-sm text-white/90">
             Requerir confirmación de lectura (Ack)
           </label>
         </div>
@@ -130,14 +130,14 @@ export const AvisosForm: React.FC<AvisosFormProps> = ({ onSuccess, onCancel }) =
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          className="px-4 py-2 border border-white/10 bg-white/5 rounded-md text-white/70 hover:bg-white/10 transition-colors"
         >
           Cancelar
         </button>
         <button
           type="submit"
           disabled={crearAviso.isPending}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300"
+          className="px-4 py-2 bg-primary-600/80 border border-primary-500/50 shadow-[0_0_15px_rgba(var(--color-primary-500),0.2)] text-white rounded-md hover:bg-primary-600 disabled:bg-primary-600/30 disabled:border-transparent disabled:shadow-none transition-colors"
         >
           {crearAviso.isPending ? 'Publicando...' : 'Publicar Aviso'}
         </button>

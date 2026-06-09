@@ -56,7 +56,7 @@ export const Sidebar = ({ isOpen, closeSidebar }: { isOpen: boolean, closeSideba
           <span>New Record</span>
         </button>
 
-        <div className="flex-1 overflow-y-auto mt-4 px-3">
+        <div className="flex-1 overflow-y-auto mt-4 mb-6 px-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <ul className="space-y-2">
             {visibleItems.map((item) => (
               <li key={item.path}>

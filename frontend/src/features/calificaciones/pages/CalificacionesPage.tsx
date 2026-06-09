@@ -37,12 +37,12 @@ export const CalificacionesPage: React.FC = () => {
     <div className="p-6 max-w-7xl mx-auto relative">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestión de Comisión</h1>
-          <p className="text-gray-600">Materia Activa - Profesor {user?.nombre}</p>
+          <h1 className="text-3xl font-serif text-white/90">Gestión de Comisión</h1>
+          <p className="text-white/70">Materia Activa - Profesor {user?.nombre}</p>
         </div>
         <button 
           onClick={() => setShowImport(!showImport)}
-          className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700"
+          className="bg-primary-600/80 border border-primary-500/50 text-white px-4 py-2 rounded-md shadow-[0_0_15px_rgba(var(--color-primary-500),0.2)] hover:bg-primary-600 transition-colors"
         >
           {showImport ? 'Ocultar Importación' : 'Importar Calificaciones'}
         </button>

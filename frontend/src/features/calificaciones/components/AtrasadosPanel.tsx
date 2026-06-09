@@ -37,59 +37,59 @@ export const AtrasadosPanel: React.FC<AtrasadosPanelProps> = ({ materiaId, onCon
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden border border-red-100">
-      <div className="bg-red-50 p-4 border-b border-red-100 flex justify-between items-center">
+    <div className="bg-white/5 backdrop-blur-md rounded-xl shadow-md overflow-hidden border border-white/10">
+      <div className="bg-red-500/10 p-4 border-b border-white/10 flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-red-800">Alumnos en Riesgo (Atrasados)</h2>
-          <p className="text-sm text-red-600">
+          <h2 className="text-xl font-serif text-red-400">Alumnos en Riesgo (Atrasados)</h2>
+          <p className="text-sm text-red-400/80">
             {reporte.total_alumnos_atrasados} de {reporte.total_alumnos_padron} estudiantes tienen actividades desaprobadas o faltantes.
           </p>
         </div>
         <button 
           onClick={handleContactarSeleccionados}
           disabled={selectedIds.size === 0}
-          className="bg-red-600 text-white px-4 py-2 rounded font-semibold hover:bg-red-700 disabled:opacity-50"
+          className="bg-red-500/20 border border-red-500/50 text-red-400 px-4 py-2 rounded-md font-semibold hover:bg-red-500/30 disabled:opacity-50 transition-colors"
         >
           Contactar ({selectedIds.size})
         </button>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-white/10">
+          <thead className="border-b border-white/10">
             <tr>
               <th className="px-4 py-3 text-left">
                 <input 
                   type="checkbox" 
                   checked={selectedIds.size === reporte.alumnos_atrasados.length && reporte.alumnos_atrasados.length > 0}
                   onChange={toggleSelectAll}
-                  className="rounded border-gray-300 text-red-600"
+                  className="rounded bg-black/20 border-white/10 text-red-500 focus:ring-red-500/50 focus:ring-offset-0"
                 />
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Alumno</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actividades Pendientes</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acción</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase">Alumno</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase">Actividades Pendientes</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase">Acción</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="divide-y divide-white/10">
             {reporte.alumnos_atrasados.map((alumno) => (
-              <tr key={alumno.entrada_padron_id} className="hover:bg-gray-50">
+              <tr key={alumno.entrada_padron_id} className="hover:bg-white/5 transition-colors">
                 <td className="px-4 py-3">
                   <input 
                     type="checkbox"
                     checked={selectedIds.has(alumno.entrada_padron_id)}
                     onChange={() => toggleSelect(alumno.entrada_padron_id)}
-                    className="rounded border-gray-300 text-red-600"
+                    className="rounded bg-black/20 border-white/10 text-red-500 focus:ring-red-500/50 focus:ring-offset-0"
                   />
                 </td>
                 <td className="px-4 py-3">
-                  <div className="font-medium text-gray-900">{alumno.nombre} {alumno.apellido}</div>
-                  <div className="text-sm text-gray-500">{alumno.email}</div>
+                  <div className="font-medium text-white/90">{alumno.nombre} {alumno.apellido}</div>
+                  <div className="text-sm text-white/50">{alumno.email}</div>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
                     {alumno.actividades_no_aprobadas.map((act, i) => (
-                      <span key={i} className="inline-block px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded">
+                      <span key={i} className="inline-block px-2 py-1 text-xs bg-red-500/10 text-red-400 border border-red-500/20 rounded">
                         {act.actividad_nombre} ({act.nota_numerica ?? act.nota_textual ?? 'S/N'})
                       </span>
                     ))}
@@ -98,7 +98,7 @@ export const AtrasadosPanel: React.FC<AtrasadosPanelProps> = ({ materiaId, onCon
                 <td className="px-4 py-3">
                   <button 
                     onClick={() => onContactar(alumno.entrada_padron_id)}
-                    className="text-indigo-600 hover:text-indigo-900 font-semibold text-sm"
+                    className="text-primary-400 hover:text-primary-300 font-semibold text-sm transition-colors"
                   >
                     Contactar
                   </button>
@@ -107,7 +107,7 @@ export const AtrasadosPanel: React.FC<AtrasadosPanelProps> = ({ materiaId, onCon
             ))}
             {reporte.alumnos_atrasados.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={4} className="px-4 py-8 text-center text-white/50">
                   No hay alumnos atrasados en esta comisión.
                 </td>
               </tr>

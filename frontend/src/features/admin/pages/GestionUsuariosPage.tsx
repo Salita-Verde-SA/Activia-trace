@@ -15,34 +15,34 @@ export function GestionUsuariosPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Gestión de Usuarios</h1>
-          <p className="mt-1 text-sm text-gray-500">Administración de usuarios del tenant y sus roles globales.</p>
+          <h1 className="text-3xl font-serif text-white/90">Gestión de Usuarios</h1>
+          <p className="mt-1 text-sm text-white/70">Administración de usuarios del tenant y sus roles globales.</p>
         </div>
         <button
           onClick={() => setIsAdding(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="px-4 py-2 bg-primary-600/80 border border-primary-500/50 text-white shadow-[0_0_15px_rgba(var(--color-primary-500),0.2)] rounded-md hover:bg-primary-600 transition-colors"
         >
           Nuevo Usuario
         </button>
       </div>
 
-      <div className="flex space-x-4 bg-gray-50 p-4 border rounded">
+      <div className="flex space-x-4 bg-white/5 backdrop-blur-md p-4 border border-white/10 rounded-xl">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Email</label>
+          <label className="block text-sm font-medium text-white/70">Email</label>
           <input
             type="text"
             value={filterEmail}
             onChange={(e) => setFilterEmail(e.target.value)}
             placeholder="Buscar por email..."
-            className="mt-1 block w-64 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            className="mt-1 block w-64 rounded-md border-white/10 bg-white/5 text-white/90 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Rol</label>
+          <label className="block text-sm font-medium text-white/70">Rol</label>
           <select
             value={filterRol}
             onChange={(e) => setFilterRol(e.target.value)}
-            className="mt-1 block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            className="mt-1 block w-48 rounded-md border-white/10 bg-white/5 text-white/90 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm [&>option]:bg-neutral-900 [&>option]:text-white"
           >
             <option value="">Todos</option>
             <option value="ALUMNO">Alumno</option>
@@ -65,42 +65,42 @@ export function GestionUsuariosPage() {
       )}
 
       {usuariosQuery.isLoading ? (
-        <div className="p-4 text-center text-gray-500">Cargando usuarios...</div>
+        <div className="p-4 text-center text-white/50">Cargando usuarios...</div>
       ) : (
-        <div className="overflow-x-auto border rounded-lg bg-white shadow">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="overflow-x-auto border border-white/10 rounded-xl bg-black/10 backdrop-blur-sm shadow-sm">
+          <table className="min-w-full divide-y divide-white/10">
+            <thead className="bg-white/5">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roles</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase tracking-wider">Usuario</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase tracking-wider">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase tracking-wider">Roles</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-white/50 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-white/10">
               {usuariosQuery.data?.map(usuario => (
-                <tr key={usuario.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <tr key={usuario.id} className="transition-colors hover:bg-white/5">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white/90">
                     {usuario.nombre} {usuario.apellido}
-                    {usuario.legajo && <span className="block text-xs text-gray-500">Legajo: {usuario.legajo}</span>}
+                    {usuario.legajo && <span className="block text-xs text-white/50">Legajo: {usuario.legajo}</span>}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{usuario.email}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">{usuario.email}</td>
+                  <td className="px-6 py-4 text-sm text-white/70">
                     <div className="flex flex-wrap gap-1">
                       {usuario.roles?.map(rol => (
-                        <span key={rol} className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                        <span key={rol} className="px-2 inline-flex text-xs leading-5 font-semibold rounded border border-primary-500/30 bg-primary-500/20 text-primary-300">
                           {rol}
                         </span>
                       ))}
                       {(!usuario.roles || usuario.roles.length === 0) && (
-                        <span className="text-gray-400 italic text-xs">Sin roles</span>
+                        <span className="text-white/40 italic text-xs">Sin roles</span>
                       )}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button 
                       onClick={() => setEditingUser(usuario)}
-                      className="text-blue-600 hover:text-blue-900"
+                      className="text-primary-400 hover:text-primary-300 transition-colors"
                     >
                       Editar Roles
                     </button>
@@ -109,7 +109,7 @@ export function GestionUsuariosPage() {
               ))}
               {usuariosQuery.data?.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center text-gray-500">No se encontraron usuarios.</td>
+                  <td colSpan={4} className="px-6 py-4 text-center text-white/50">No se encontraron usuarios.</td>
                 </tr>
               )}
             </tbody>
