@@ -19,15 +19,10 @@ export function SalariosBaseEditor() {
       });
     } else {
       // Validate overlapping dates for new records
-      const activeRecord = salariosBaseQuery.data?.find(s => s.rol === formData.rol && !s.vigente_hasta);
-      if (activeRecord) {
-        if (formData.vigente_desde && new Date(formData.vigente_desde) <= new Date(activeRecord.vigente_desde)) {
-          alert(`Error: La fecha de inicio debe ser posterior a la del salario activo actual (${new Date(activeRecord.vigente_desde).toLocaleDateString()}).`);
-          return;
-        }
-        if (!window.confirm(`Al crear este nuevo valor, el salario base activo actual de ${formData.rol} se cerrará el día anterior. ¿Desea continuar?`)) {
-          return;
-        }
+      const existingRecord = salariosBaseQuery.data?.find(s => s.rol === formData.rol);
+      if (existingRecord) {
+        alert(`Error: Ya existe un salario base configurado para el rol ${formData.rol}. Por favor, edite el registro existente en lugar de crear uno nuevo.`);
+        return;
       }
 
       createSalarioBase.mutate(formData, {

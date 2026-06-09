@@ -19,15 +19,10 @@ export function SalariosPlusEditor() {
       });
     } else {
       // Validate overlapping dates for new records
-      const activeRecord = salariosPlusQuery.data?.find(s => s.rol === formData.rol && s.grupo_nombre === formData.grupo_nombre && !s.vigente_hasta);
-      if (activeRecord) {
-        if (formData.vigente_desde && new Date(formData.vigente_desde) <= new Date(activeRecord.vigente_desde)) {
-          alert(`Error: La fecha de inicio debe ser posterior a la del salario plus activo actual (${new Date(activeRecord.vigente_desde).toLocaleDateString()}).`);
-          return;
-        }
-        if (!window.confirm(`Al crear este nuevo valor, el salario plus activo actual de ${formData.grupo_nombre} para ${formData.rol} se cerrará el día anterior. ¿Desea continuar?`)) {
-          return;
-        }
+      const existingRecord = salariosPlusQuery.data?.find(s => s.rol === formData.rol && s.grupo_nombre === formData.grupo_nombre);
+      if (existingRecord) {
+        alert(`Error: Ya existe un salario plus configurado para el grupo "${formData.grupo_nombre}" en el rol ${formData.rol}. Por favor, edite el registro existente.`);
+        return;
       }
 
       createSalarioPlus.mutate(formData, {
