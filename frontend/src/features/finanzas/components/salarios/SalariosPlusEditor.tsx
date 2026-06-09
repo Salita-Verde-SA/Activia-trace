@@ -14,8 +14,16 @@ export function SalariosPlusEditor() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId) {
+      const existingRecord = salariosPlusQuery.data?.find(s => s.rol === formData.rol && s.grupo_nombre === formData.grupo_nombre && s.id !== editingId);
+      if (existingRecord) {
+        alert(`Error: Ya existe un salario plus configurado para el grupo "${formData.grupo_nombre}" en el rol ${formData.rol}. No puede asignar un grupo/rol que ya está en uso.`);
+        return;
+      }
       updateSalarioPlus.mutate({ id: editingId, data: formData }, {
-        onSuccess: () => setEditingId(null)
+        onSuccess: () => setEditingId(null),
+        onError: (err: any) => {
+          alert(err?.response?.data?.detail || "Ocurrió un error al actualizar.");
+        }
       });
     } else {
       // Validate overlapping dates for new records

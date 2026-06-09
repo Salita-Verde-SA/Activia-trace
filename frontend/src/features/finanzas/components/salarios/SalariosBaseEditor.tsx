@@ -14,8 +14,16 @@ export function SalariosBaseEditor() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId) {
+      const existingRecord = salariosBaseQuery.data?.find(s => s.rol === formData.rol && s.id !== editingId);
+      if (existingRecord) {
+        alert(`Error: Ya existe un salario base configurado para el rol ${formData.rol}. No puede asignar un rol que ya está en uso.`);
+        return;
+      }
       updateSalarioBase.mutate({ id: editingId, data: formData }, {
-        onSuccess: () => setEditingId(null)
+        onSuccess: () => setEditingId(null),
+        onError: (err: any) => {
+          alert(err?.response?.data?.detail || "Ocurrió un error al actualizar.");
+        }
       });
     } else {
       // Validate overlapping dates for new records
