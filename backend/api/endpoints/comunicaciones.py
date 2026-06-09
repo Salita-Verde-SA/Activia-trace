@@ -1,12 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Any
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Any
 from uuid import UUID
 
 from core.dependencies import get_db
+from api.dependencies.auth import require_permission
+from models.user import Usuario
+from schemas.comunicacion import LoteCreate, LoteResponse, ComunicacionResponse
+from services.comunicaciones import ComunicacionService
+from services.auditoria import AuditoriaService
+
+router = APIRouter(prefix="/comunicaciones", tags=["comunicaciones"])
+
+@router.post("/lotes", response_model=UUID, status_code=status.HTTP_201_CREATED)
+async def encolar_lote(
+    lote_data: LoteCreate,
     db: AsyncSession = Depends(get_db),
     actor: Usuario = Depends(require_permission("comunicacion:escribir"))
 ) -> Any:
@@ -56,7 +64,7 @@ async def aprobar_lote(
     if rowcount == 0:
         raise HTTPException(status_code=404, detail="Lote no encontrado o ya aprobado/procesado")
         
-    await AuditService.log_action(
+    await AuditoriaService.log_action(
         db=db,
         tenant_id=actor.tenant_id,
         actor_id=actor.id,

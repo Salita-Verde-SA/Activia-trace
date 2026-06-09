@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { PLACEHOLDER_UUID } from '@/shared/constants';
 import { ImportWizard } from '../components/ImportWizard';
 import { UmbralPanel } from '../components/UmbralPanel';
 import { AtrasadosPanel } from '../components/AtrasadosPanel';
@@ -9,9 +10,9 @@ import { EnvioTracker } from '@/features/comunicaciones/components/EnvioTracker'
 export const CalificacionesPage: React.FC = () => {
   const { user } = useAuth();
   // TODO: Obtener materiaId dinámicamente según la asignación del profesor
-  const materiaId = '00000000-0000-0000-0000-000000000000'; // Placeholder
-  const cohorteId = '00000000-0000-0000-0000-000000000000'; // Placeholder
-  const versionPadronId = '00000000-0000-0000-0000-000000000000'; // Placeholder
+  const materiaId = PLACEHOLDER_UUID; // Placeholder
+  const cohorteId = PLACEHOLDER_UUID; // Placeholder
+  const versionPadronId = PLACEHOLDER_UUID; // Placeholder
 
   const [showImport, setShowImport] = useState(false);
   

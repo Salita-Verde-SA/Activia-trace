@@ -12,6 +12,24 @@ from services.calificacion import UmbralService, CalificacionService
 
 router = APIRouter(prefix="/calificaciones", tags=["calificaciones"])
 
+@router.get("/umbral/{materia_id}", response_model=UmbralResponse)
+async def obtener_umbral(
+    materia_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    actor: Usuario = Depends(require_permission("calificaciones:leer"))
+) -> Any:
+    """
+    Obtiene el umbral de aprobación para una materia.
+    """
+    umbral = await UmbralService.get_umbral_by_materia(
+        db=db,
+        tenant_id=actor.tenant_id,
+        materia_id=materia_id
+    )
+    if not umbral:
+        raise HTTPException(status_code=404, detail="Umbral no configurado")
+    return umbral
+
 @router.put("/umbral", response_model=UmbralResponse)
 async def configurar_umbral(
     data: UmbralCreate,

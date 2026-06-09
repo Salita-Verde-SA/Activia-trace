@@ -15,6 +15,9 @@ import { GestionUsuariosPage } from '@/features/admin/pages/GestionUsuariosPage'
 import { AuditoriaPage } from '@/features/admin/pages/AuditoriaPage';
 import { GrillaSalarialPage } from '@/features/finanzas/pages/GrillaSalarialPage';
 import { LiquidacionesDashboardPage } from '@/features/finanzas/pages/LiquidacionesDashboardPage';
+import { MiEstadoPage } from '@/features/alumno/pages/MiEstadoPage';
+import { MisAvisosPage } from '@/features/alumno/pages/MisAvisosPage';
+import { MisColoquiosPage } from '@/features/alumno/pages/MisColoquiosPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,6 +45,11 @@ function App() {
               <Route path="admin/avisos" element={<AvisosAdminPage />} />
               <Route path="admin/tareas" element={<TareasBoard />} />
               <Route path="admin/setup" element={<SetupCuatrimestreWizard onComplete={() => {}} onCancel={() => {}} />} />
+              
+              {/* Alumno Panel routes */}
+              <Route path="alumno/estado" element={<MiEstadoPage />} />
+              <Route path="alumno/avisos" element={<MisAvisosPage />} />
+              <Route path="alumno/coloquios" element={<MisColoquiosPage />} />
               
               {/* Admin Panel routes */}
               <Route path="admin/estructura" element={<EstructuraAcademicaPage />} />

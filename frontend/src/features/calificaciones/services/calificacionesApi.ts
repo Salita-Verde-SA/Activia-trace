@@ -1,4 +1,5 @@
 import api from '@/shared/services/api';
+import { PLACEHOLDER_UUID } from '@/shared/constants';
 import type { 
   PreviewResponse, 
   ImportConfirmRequest, 
@@ -26,6 +27,9 @@ export const confirmImportCalificaciones = async (data: ImportConfirmRequest): P
 };
 
 export const getUmbral = async (materiaId: string): Promise<UmbralResponse> => {
+  if (materiaId === PLACEHOLDER_UUID) {
+    return { id: '', materia_id: materiaId, umbral_pct: 60, valores_aprobatorios: [] } as unknown as UmbralResponse;
+  }
   const response = await api.get(`/api/calificaciones/umbral/${materiaId}`);
   return response.data;
 };
@@ -36,16 +40,25 @@ export const setUmbral = async (data: UmbralCreate): Promise<UmbralResponse> => 
 };
 
 export const getAtrasados = async (materiaId: string): Promise<ReporteAtrasadosResponse> => {
-  const response = await api.get(`/api/analisis/atrasados/${materiaId}`);
+  if (materiaId === PLACEHOLDER_UUID) {
+    return { materia_id: materiaId, total_alumnos_padron: 0, total_alumnos_atrasados: 0, alumnos_atrasados: [] } as unknown as ReporteAtrasadosResponse;
+  }
+  const response = await api.get(`/api/analisis/materias/${materiaId}/atrasados`);
   return response.data;
 };
 
 export const getRanking = async (materiaId: string): Promise<RankingActividadesResponse> => {
-  const response = await api.get(`/api/analisis/ranking/${materiaId}`);
+  if (materiaId === PLACEHOLDER_UUID) {
+    return { materia_id: materiaId, actividades: [] } as unknown as RankingActividadesResponse;
+  }
+  const response = await api.get(`/api/analisis/materias/${materiaId}/ranking`);
   return response.data;
 };
 
 export const getSabana = async (materiaId: string): Promise<SabanaResponse> => {
-  const response = await api.get(`/api/analisis/sabana/${materiaId}`);
+  if (materiaId === PLACEHOLDER_UUID) {
+    return { materia_id: materiaId, actividades_headers: [], alumnos: [] } as unknown as SabanaResponse;
+  }
+  const response = await api.get(`/api/analisis/materias/${materiaId}/sabana`);
   return response.data;
 };

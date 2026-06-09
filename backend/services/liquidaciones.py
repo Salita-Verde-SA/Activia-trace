@@ -8,10 +8,10 @@ from fastapi import HTTPException, status
 from datetime import date, datetime, timezone
 
 from models.liquidaciones import Liquidacion, EstadoLiquidacion, SalarioBase, SalarioPlus, Factura
-from models.user import Usuario, UsuarioRol, RolUsuario
+from models.user import Usuario
+from models.rbac import Rol
 from models.asignacion import Asignacion
 from models.estructura import Materia
-from models.padron import InstanciaDictado
 from models.audit import AuditLog
 from schemas.liquidacion import LiquidacionPrecalculo, LiquidacionResponse
 
@@ -20,7 +20,7 @@ class LiquidacionService:
         self.db = db
         self.tenant_id = tenant_id
 
-    async def _get_salario_base(self, rol: RolUsuario, periodo_fecha: date) -> float:
+    async def _get_salario_base(self, rol: str, periodo_fecha: date) -> float:
         query = select(SalarioBase).where(
             SalarioBase.tenant_id == self.tenant_id,
             SalarioBase.rol == rol,
@@ -30,7 +30,7 @@ class LiquidacionService:
         sb = (await self.db.execute(query)).scalars().first()
         return sb.monto if sb else 0.0
 
-    async def _get_salario_plus(self, rol: RolUsuario, clave_plus: str, periodo_fecha: date) -> float:
+    async def _get_salario_plus(self, rol: str, clave_plus: str, periodo_fecha: date) -> float:
         query = select(SalarioPlus).where(
             SalarioPlus.tenant_id == self.tenant_id,
             SalarioPlus.rol == rol,
@@ -50,7 +50,8 @@ class LiquidacionService:
         # Esto asume que asignacion.fecha_inicio y fecha_fin están disponibles.
         # Si no, asumimos las asignaciones activas actuales
         query_asignaciones = select(Asignacion).options(
-            selectinload(Asignacion.instancia_dictado).selectinload(InstanciaDictado.materia)
+            selectinload(Asignacion.materia),
+            selectinload(Asignacion.rol)
         ).where(
             Asignacion.tenant_id == self.tenant_id,
             Asignacion.usuario_id == usuario_id
@@ -74,8 +75,10 @@ class LiquidacionService:
         cache_base = {}
 
         for asig in asignaciones:
-            rol = asig.rol
-            if rol == RolUsuario.NEXO:
+            rol = asig.rol.nombre if asig.rol else None
+            if not rol: continue
+
+            if rol == "NEXO":
                 es_nexo = True
                 
             if rol not in cache_base:
@@ -86,7 +89,7 @@ class LiquidacionService:
             
             # Plus
             plus_aplicada = 0.0
-            materia = asig.instancia_dictado.materia if asig.instancia_dictado else None
+            materia = asig.materia
             if materia and materia.clave_plus:
                 clave_plus = materia.clave_plus
                 if (rol, clave_plus) not in plus_aplicados:
@@ -96,7 +99,7 @@ class LiquidacionService:
             
             detalle["asignaciones"].append({
                 "asignacion_id": str(asig.id),
-                "rol": rol.value,
+                "rol": rol,
                 "materia": materia.nombre if materia else "N/A",
                 "clave_plus": materia.clave_plus if materia else None,
                 "monto_base": base_aplicada,

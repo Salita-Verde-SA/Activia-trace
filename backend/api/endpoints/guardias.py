@@ -6,7 +6,7 @@ from datetime import date
 
 from core.dependencies import get_db
 from api.dependencies.auth import get_current_user, require_permission
-from models.usuario import Usuario
+from models.user import Usuario
 from schemas.guardia import GuardiaCreate, GuardiaResponse
 from services.encuentros import GuardiaService
 

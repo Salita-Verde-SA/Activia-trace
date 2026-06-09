@@ -9,7 +9,7 @@ import type {
 
 export const tareasApi = {
   getTareas: async (): Promise<TareaResponse[]> => {
-    const { data } = await api.get('/api/v1/tareas');
+    const { data } = await api.get('/api/v1/tareas/mis-tareas');
     return data;
   },
 

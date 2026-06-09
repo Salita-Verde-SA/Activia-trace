@@ -5,7 +5,7 @@ services:
     build:
       context: ./backend
     ports:
-      - "8000:8000"
+      - "47121:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,7 +37,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: activia_trace
     ports:
-      - "5433:5432"
+      - "47122:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d activia_trace"]
       interval: 5s
@@ -51,7 +51,7 @@ services:
     build:
       context: ./frontend
     ports:
-      - "5173:80"
+      - "47120:80"
     depends_on:
       - api
 

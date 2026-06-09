@@ -8,7 +8,7 @@ import type {
 
 export const avisosApi = {
   getAvisos: async (): Promise<AvisoResponse[]> => {
-    const { data } = await api.get('/api/v1/avisos');
+    const { data } = await api.get('/api/v1/avisos/mis-avisos');
     return data;
   },
 

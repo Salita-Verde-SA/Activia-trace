@@ -18,5 +18,5 @@ export const auditoriaApi = {
     page?: number;
     size?: number;
   }) => 
-    api.get<AuditLogResponse>('/api/auditoria', { params }).then(res => res.data),
+    api.get<AuditLogResponse>('/api/v1/auditoria/explorar', { params }).then(res => res.data),
 };

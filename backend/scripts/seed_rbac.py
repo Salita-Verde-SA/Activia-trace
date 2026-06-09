@@ -27,30 +27,35 @@ PERMISOS = [
     "finanzas:grilla",
     "finanzas:liquidar",
     "finanzas:facturar",
-    "tenant:configurar"
+    "tenant:configurar",
+    "avisos:leer_propios",
+    "tareas:leer_propias"
 ]
 
 ROLES_PERMISOS = {
-    "ALUMNO": ["academico:estado_propio", "evaluacion:reservar", "avisos:confirmar"],
-    "TUTOR": ["avisos:confirmar", "atrasados:ver", "entregas:detectar", "encuentros:gestionar", "guardias:registrar"],
+    "ALUMNO": ["academico:estado_propio", "evaluacion:reservar", "avisos:confirmar", "avisos:leer_propios"],
+    "TUTOR": ["avisos:confirmar", "atrasados:ver", "entregas:detectar", "encuentros:gestionar", "guardias:registrar", "avisos:leer_propios", "tareas:leer_propias"],
     "PROFESOR": [
         "avisos:confirmar", "calificaciones:importar", "atrasados:ver", "entregas:detectar",
-        "comunicacion:enviar", "encuentros:gestionar", "guardias:registrar", "tareas:gestionar"
+        "comunicacion:enviar", "encuentros:gestionar", "guardias:registrar", "tareas:gestionar",
+        "avisos:leer_propios", "tareas:leer_propias"
     ],
     "COORDINADOR": [
         "avisos:confirmar", "calificaciones:importar", "atrasados:ver", "entregas:detectar",
         "comunicacion:enviar", "comunicacion:aprobar", "encuentros:gestionar", "guardias:registrar",
-        "tareas:gestionar", "avisos:publicar", "equipos:gestionar", "auditoria:ver"
+        "tareas:gestionar", "avisos:publicar", "equipos:gestionar", "auditoria:ver",
+        "avisos:leer_propios", "tareas:leer_propias"
     ],
-    "NEXO": [],
+    "NEXO": ["avisos:leer_propios"],
     "ADMIN": [
         "avisos:confirmar", "calificaciones:importar", "atrasados:ver", "entregas:detectar",
         "comunicacion:enviar", "comunicacion:aprobar", "encuentros:gestionar", "guardias:registrar",
         "tareas:gestionar", "avisos:publicar", "equipos:gestionar", "estructura:gestionar",
-        "usuarios:gestionar", "auditoria:ver", "tenant:configurar"
+        "usuarios:gestionar", "auditoria:ver", "tenant:configurar", "avisos:leer_propios", "tareas:leer_propias"
     ],
     "FINANZAS": [
-        "avisos:confirmar", "auditoria:ver", "finanzas:grilla", "finanzas:liquidar", "finanzas:facturar"
+        "avisos:confirmar", "auditoria:ver", "finanzas:grilla", "finanzas:liquidar", "finanzas:facturar",
+        "avisos:leer_propios"
     ]
 }
 

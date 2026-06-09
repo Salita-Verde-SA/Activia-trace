@@ -78,7 +78,26 @@ async def seed_test_users():
                         usuario_id=user.id,
                         rol_id=rol_db.id,
                     ))
-                    print(f"Role {u['rol']} assigned to {u['email']}.")
+                    print(f"Role {u['rol']} assigned to {u['email']} via UsuarioRol.")
+                
+                # Check Asignacion
+                from models.asignacion import Asignacion
+                from datetime import datetime, timezone, timedelta
+                res_as = await session.execute(
+                    select(Asignacion).where(
+                        Asignacion.usuario_id == user.id,
+                        Asignacion.rol_id == rol_db.id
+                    )
+                )
+                if not res_as.scalar_one_or_none():
+                    session.add(Asignacion(
+                        tenant_id=tenant_id,
+                        usuario_id=user.id,
+                        rol_id=rol_db.id,
+                        desde=datetime.now(timezone.utc) - timedelta(days=365*10),
+                        hasta=None
+                    ))
+                    print(f"Role {u['rol']} assigned to {u['email']} via Asignacion.")
             else:
                 print(f"WARN: Role {u['rol']} not found.")
         

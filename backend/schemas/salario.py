@@ -2,11 +2,10 @@ from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from uuid import UUID
 from datetime import date
-from models.user import RolUsuario
 
 class SalarioBaseBase(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    rol: RolUsuario
+    rol: str
     monto: float
     fecha_desde: date
     fecha_hasta: Optional[date] = None
@@ -22,7 +21,7 @@ class SalarioBaseResponse(SalarioBaseBase):
 class SalarioPlusBase(BaseModel):
     model_config = ConfigDict(extra='forbid')
     clave_plus: str
-    rol: RolUsuario
+    rol: str
     monto: float
     fecha_desde: date
     fecha_hasta: Optional[date] = None

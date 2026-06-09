@@ -1,6 +1,6 @@
 import uuid
 from sqlalchemy import Column, ForeignKey, DateTime
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
 from models.base import Base
@@ -25,5 +25,8 @@ class Asignacion(Base, TenantMixin, TimestampMixin, SoftDeleteMixin):
     # Vigencia
     desde = Column(DateTime(timezone=True), nullable=False)
     hasta = Column(DateTime(timezone=True), nullable=True)
+
+    rol = relationship("Rol")
+    materia = relationship("Materia")
 
     # Nota: El estado de vigencia será un property o método que evaluará "desde <= now <= hasta (o null)"

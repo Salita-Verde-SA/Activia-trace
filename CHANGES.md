@@ -42,7 +42,8 @@ C-01 foundation-setup (infra, Docker, FastAPI skel, DB inicial, OTel)
             │   └── C-21 frontend-shell-y-auth (SPA shell, login, guard, cliente HTTP)
             │       ├── C-22 frontend-academico-docente (importación, atrasados, comunicaciones)
             │       ├── C-23 frontend-coordinacion (equipos, avisos, tareas, monitores)
-            │       └── C-24 frontend-finanzas-y-admin (liquidaciones, facturas, estructura, auditoría)
+            │       ├── C-24 frontend-finanzas-y-admin (liquidaciones, facturas, estructura, auditoría)
+            │       └── C-25 frontend-alumno (mis avisos, estado académico, coloquios)
 ```
 
 ### Paralelismo por fase
@@ -519,13 +520,27 @@ C-01 → C-02 → C-03 → C-04 → C-06 → C-07 → C-09 → C-10 → C-11 →
   - `knowledge-base/06_funcionalidades.md` Épicas 9, 10, 5
   - `knowledge-base/07_flujos_principales.md` FL-08, FL-11, FL-12
 
+### [C-25] `frontend-alumno`
+- **Estado**: `[x]` completado
+- **Scope**:
+  - Feature ALUMNO: portal dedicado con rutas bajo `/alumno/*`.
+  - Pantalla "Mis Avisos" con capacidad de confirmar lectura (ack).
+  - Pantalla "Mi Estado" para visualizar materias cursadas y calificaciones consolidadas.
+  - Pantalla "Coloquios" para explorar llamados y reservar cupos.
+  - Tests: visualización acotada al alumno, confirmación de ack, reserva exitosa/fallida sin cupo.
+- **Dependencias**: `C-21`, `C-14`, `C-15`
+- **Governance**: BAJO
+- **Leer antes**:
+  - `knowledge-base/03_actores_y_roles.md` (rol ALUMNO)
+  - `openspec/changes/c-25-frontend-alumno/proposal.md`
+
 ---
 
 ## Resumen
 
 | Métrica | Valor |
 |---------|-------|
-| Total de changes | 24 |
+| Total de changes | 25 |
 | Fases | 6 (FASE 0 a FASE 5) |
 | Camino crítico | 10 changes (`C-01 → C-02 → C-03 → C-04 → C-06 → C-07 → C-09 → C-10 → C-11 → C-12`) |
 | Gates de paralelismo | 11 (GATE 0 a GATE 10) |

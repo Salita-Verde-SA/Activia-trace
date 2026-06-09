@@ -14,7 +14,7 @@ router = APIRouter()
 async def registrar_factura(
     data: FacturaCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(require_permission("liquidaciones:gestionar"))
+    current_user: Usuario = Depends(require_permission("finanzas:facturar"))
 ):
     service = FacturaService(db, current_user.tenant_id)
     return await service.registrar_factura(data)
@@ -24,7 +24,7 @@ async def listar_facturas(
     mes: int = Query(...),
     anio: int = Query(...),
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(require_permission("liquidaciones:leer"))
+    current_user: Usuario = Depends(require_permission("finanzas:facturar"))
 ):
     service = FacturaService(db, current_user.tenant_id)
     return await service.listar_facturas(mes, anio)

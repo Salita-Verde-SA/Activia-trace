@@ -7,9 +7,9 @@ from fastapi import HTTPException, status
 from datetime import datetime
 
 from models.audit import AuditLog
-from models.user import Usuario, RolUsuario
+from models.user import Usuario
+from models.rbac import Rol
 from models.asignacion import Asignacion
-from models.padron import InstanciaDictado
 from schemas.auditoria import AuditoriaFiltro, AuditoriaRespuesta, AuditoriaRegistro, AuditoriaMetricas, MetricaDiaria, MetricaUsuario
 
 class AuditoriaService:
@@ -29,25 +29,25 @@ class AuditoriaService:
         # O en un escenario más avanzado, join con Asignacion.
         # Según spec: "únicamente observe registros relacionados a los usuarios asignados a las materias donde actúa como coordinador, o sus propias acciones."
         
-        roles_globales = [RolUsuario.ADMIN, RolUsuario.FINANZAS]
-        user_roles = [ur.rol for ur in self.current_user.roles]
+        roles_globales = ["ADMIN", "FINANZAS"]
+        user_roles = self.current_user.roles
         es_global = any(r in roles_globales for r in user_roles)
         
-        if not es_global and RolUsuario.COORDINADOR in user_roles:
+        if not es_global and "COORDINADOR" in user_roles:
             # Obtener usuarios que están en las instancias donde este usuario es coordinador
             # Subquery simplificada (sino, muy pesada)
-            query_instancias = select(Asignacion.instancia_dictado_id).where(
+            query_materias = select(Asignacion.materia_id).where(
                 Asignacion.tenant_id == self.tenant_id,
                 Asignacion.usuario_id == self.current_user.id,
-                Asignacion.rol == RolUsuario.COORDINADOR
+                Asignacion.rol_id == select(Rol.id).where(Rol.nombre == "COORDINADOR").scalar_subquery()
             )
-            instancias_ids = (await self.db.execute(query_instancias)).scalars().all()
+            materias_ids = (await self.db.execute(query_materias)).scalars().all()
             
-            if instancias_ids:
+            if materias_ids:
                 # Buscar usuarios asignados a estas instancias
                 query_users_scope = select(Asignacion.usuario_id).where(
                     Asignacion.tenant_id == self.tenant_id,
-                    Asignacion.instancia_dictado_id.in_(instancias_ids)
+                    Asignacion.materia_id.in_(materias_ids)
                 )
                 users_scope = (await self.db.execute(query_users_scope)).scalars().all()
                 users_scope.append(self.current_user.id) # Siempre ver lo propio

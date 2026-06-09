@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { LayoutDashboard, Users, BookOpen, Settings, CheckSquare, Bell, BarChart2, DollarSign, FileText } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, Settings, CheckSquare, Bell, BarChart2, DollarSign, FileText, Calendar } from 'lucide-react';
 
 export const Sidebar = ({ isOpen, closeSidebar }: { isOpen: boolean, closeSidebar: () => void }) => {
   const { user } = useAuth();
@@ -8,6 +8,9 @@ export const Sidebar = ({ isOpen, closeSidebar }: { isOpen: boolean, closeSideba
   // Basic filtering based on roles (mocked for now)
   const menuItems = [
     { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['ALUMNO', 'PROFESOR', 'COORDINADOR', 'ADMIN', 'FINANZAS', 'NEXO', 'TUTOR'] },
+    { name: 'Mi Estado', path: '/alumno/estado', icon: <BookOpen className="w-5 h-5" />, roles: ['ALUMNO'] },
+    { name: 'Mis Avisos', path: '/alumno/avisos', icon: <Bell className="w-5 h-5" />, roles: ['ALUMNO'] },
+    { name: 'Coloquios', path: '/alumno/coloquios', icon: <Calendar className="w-5 h-5" />, roles: ['ALUMNO'] },
     { name: 'Calificaciones', path: '/calificaciones', icon: <BookOpen className="w-5 h-5" />, roles: ['PROFESOR', 'TUTOR', 'COORDINADOR', 'ADMIN'] },
     { name: 'Monitor Global', path: '/admin/monitor', icon: <BarChart2 className="w-5 h-5" />, roles: ['COORDINADOR', 'ADMIN'] },
     { name: 'Avisos', path: '/admin/avisos', icon: <Bell className="w-5 h-5" />, roles: ['COORDINADOR', 'ADMIN'] },
@@ -15,8 +18,8 @@ export const Sidebar = ({ isOpen, closeSidebar }: { isOpen: boolean, closeSideba
     { name: 'Estructura Académica', path: '/admin/estructura', icon: <BookOpen className="w-5 h-5" />, roles: ['ADMIN'] },
     { name: 'Usuarios', path: '/admin/usuarios', icon: <Users className="w-5 h-5" />, roles: ['ADMIN'] },
     { name: 'Auditoría', path: '/admin/auditoria', icon: <Settings className="w-5 h-5" />, roles: ['ADMIN'] },
-    { name: 'Grilla Salarial', path: '/finanzas/salarios', icon: <DollarSign className="w-5 h-5" />, roles: ['FINANZAS', 'ADMIN'] },
-    { name: 'Liquidaciones', path: '/finanzas/liquidaciones', icon: <FileText className="w-5 h-5" />, roles: ['FINANZAS', 'ADMIN'] },
+    { name: 'Grilla Salarial', path: '/finanzas/salarios', icon: <DollarSign className="w-5 h-5" />, roles: ['FINANZAS'] },
+    { name: 'Liquidaciones', path: '/finanzas/liquidaciones', icon: <FileText className="w-5 h-5" />, roles: ['FINANZAS'] },
   ];
 
   const visibleItems = menuItems.filter(item => 

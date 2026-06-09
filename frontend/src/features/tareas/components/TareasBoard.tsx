@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTareas } from '../hooks/useTareas';
-import type { EstadoTarea } from '../types';
+import { EstadoTarea } from '../types';
 
 export const TareasBoard: React.FC = () => {
   const { tareas, isLoading, error, actualizarEstado } = useTareas();

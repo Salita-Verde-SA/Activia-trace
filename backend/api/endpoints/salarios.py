@@ -14,7 +14,7 @@ router = APIRouter()
 async def crear_salario_base(
     data: SalarioBaseCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(require_permission("liquidaciones:gestionar"))
+    current_user: Usuario = Depends(require_permission("finanzas:grilla"))
 ):
     service = SalarioService(db, current_user.tenant_id)
     return await service.crear_salario_base(data)
@@ -22,7 +22,7 @@ async def crear_salario_base(
 @router.get("/base", response_model=List[SalarioBaseResponse])
 async def listar_salarios_base(
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(require_permission("liquidaciones:leer"))
+    current_user: Usuario = Depends(require_permission("finanzas:grilla"))
 ):
     service = SalarioService(db, current_user.tenant_id)
     return await service.listar_salarios_base()
@@ -31,7 +31,7 @@ async def listar_salarios_base(
 async def crear_salario_plus(
     data: SalarioPlusCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(require_permission("liquidaciones:gestionar"))
+    current_user: Usuario = Depends(require_permission("finanzas:grilla"))
 ):
     service = SalarioService(db, current_user.tenant_id)
     return await service.crear_salario_plus(data)
@@ -39,7 +39,7 @@ async def crear_salario_plus(
 @router.get("/plus", response_model=List[SalarioPlusResponse])
 async def listar_salarios_plus(
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(require_permission("liquidaciones:leer"))
+    current_user: Usuario = Depends(require_permission("finanzas:grilla"))
 ):
     service = SalarioService(db, current_user.tenant_id)
     return await service.listar_salarios_plus()

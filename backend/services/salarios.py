@@ -6,7 +6,6 @@ from fastapi import HTTPException, status
 from datetime import date
 
 from models.liquidaciones import SalarioBase, SalarioPlus
-from models.user import RolUsuario
 from schemas.salario import SalarioBaseCreate, SalarioBaseResponse, SalarioPlusCreate, SalarioPlusResponse
 
 class SalarioService:
