@@ -14,42 +14,42 @@ export const MiEstadoPage = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Mi Estado Académico</h1>
+      <h1 className="text-2xl font-serif text-white/90">Mi Estado Académico</h1>
       
-      <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+      <div className="bg-white/5 backdrop-blur-md rounded-xl border border-white/10 shadow-sm overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-gray-50 border-b">
-              <th className="py-3 px-4 font-semibold text-gray-900">Materia</th>
-              <th className="py-3 px-4 font-semibold text-gray-900">Estado</th>
-              <th className="py-3 px-4 font-semibold text-gray-900 text-right">Nota Final</th>
+            <tr className="border-b border-white/10">
+              <th className="py-3 px-4 font-semibold text-white/90">Materia</th>
+              <th className="py-3 px-4 font-semibold text-white/90">Estado</th>
+              <th className="py-3 px-4 font-semibold text-white/90 text-right">Nota Final</th>
             </tr>
           </thead>
           <tbody>
             {estados?.length === 0 ? (
               <tr>
-                <td colSpan={3} className="py-8 text-center text-gray-500">
+                <td colSpan={3} className="py-8 text-center text-white/70">
                   No estás inscripto en ninguna materia actualmente.
                 </td>
               </tr>
             ) : (
               estados?.map(estado => (
-                <tr key={estado.materia_id} className="border-b last:border-0 hover:bg-gray-50">
+                <tr key={estado.materia_id} className="border-b border-white/10 last:border-0 hover:bg-white/5 transition-colors">
                   <td className="py-3 px-4">
-                    <div className="flex items-center gap-2 font-medium text-gray-900">
-                      <BookOpen className="w-4 h-4 text-gray-400" />
+                    <div className="flex items-center gap-2 font-medium text-white/90">
+                      <BookOpen className="w-4 h-4 text-white/50" />
                       {estado.materia_nombre}
                     </div>
                   </td>
                   <td className="py-3 px-4">
-                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium
-                      ${estado.estado === 'promocionado' ? 'bg-green-100 text-green-800' :
-                        estado.estado === 'regular' ? 'bg-blue-100 text-blue-800' :
-                        'bg-gray-100 text-gray-800'}`}>
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium border
+                      ${estado.estado === 'promocionado' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                        estado.estado === 'regular' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                        'bg-white/10 text-white/70 border-white/20'}`}>
                       {estado.estado.toUpperCase()}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-right font-semibold text-gray-900">
+                  <td className="py-3 px-4 text-right font-semibold text-white/90">
                     {estado.nota_final ?? '-'}
                   </td>
                 </tr>

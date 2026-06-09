@@ -10,7 +10,7 @@ from models.user import Usuario
 from schemas.calificacion import UmbralCreate, UmbralResponse, PreviewResponse, ImportConfirmRequest, ColumnMap
 from services.calificacion import UmbralService, CalificacionService
 
-router = APIRouter(prefix="/calificaciones", tags=["calificaciones"])
+router = APIRouter(tags=["calificaciones"])
 
 @router.get("/umbral/{materia_id}", response_model=UmbralResponse)
 async def obtener_umbral(
@@ -100,3 +100,16 @@ async def confirmar_importacion(
     )
     
     return {"status": "success", "registros_importados": registros}
+
+from typing import List
+from schemas.calificacion import EstadoMateria
+
+@router.get("/mi-estado", response_model=List[EstadoMateria])
+async def obtener_mi_estado(
+    db: AsyncSession = Depends(get_db),
+    actor: Usuario = Depends(require_permission("academico:estado_propio"))
+) -> Any:
+    """
+    Obtiene el estado de las materias del alumno autenticado.
+    """
+    return await CalificacionService.obtener_estado_alumno(db, actor.tenant_id, actor.id)

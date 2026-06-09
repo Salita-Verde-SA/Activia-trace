@@ -11,8 +11,8 @@ export const MainLayout = () => {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-secondary-50">
-        <div className="text-primary-600 font-medium">Cargando...</div>
+      <div className="flex h-screen w-full items-center justify-center bg-noir">
+        <div className="text-muted-gold font-label-caps tracking-widest">LOADING...</div>
       </div>
     );
   }
@@ -25,13 +25,20 @@ export const MainLayout = () => {
   const closeSidebar = () => setSidebarOpen(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-secondary-50">
+    <div className="flex h-screen overflow-hidden bg-noir relative w-full">
+      {/* Ambient Background Layer */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-noir">
+        <div className="ambient-glow-gold top-[-10%] right-[-10%]"></div>
+        <div className="ambient-glow-rose bottom-[-10%] left-[-10%]"></div>
+        <div className="ambient-glow-primary top-[20%] left-[10%]"></div>
+      </div>
+      
       <Sidebar isOpen={sidebarOpen} closeSidebar={closeSidebar} />
       
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col lg:ml-72 relative min-h-screen z-10 w-full">
         <Header toggleSidebar={toggleSidebar} />
         
-        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-secondary-50">
+        <main className="flex-1 overflow-y-auto pt-32 pb-12 px-4 md:px-margin-x max-w-[1440px] mx-auto w-full">
           <Outlet />
         </main>
       </div>

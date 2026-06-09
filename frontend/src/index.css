@@ -1,19 +1,142 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-500: #3b82f6;
-  --color-primary-600: #2563eb;
-  --color-primary-700: #1d4ed8;
-  --color-secondary-50: #f8fafc;
-  --color-secondary-100: #f1f5f9;
-  --color-secondary-800: #1e293b;
-  --color-secondary-900: #0f172a;
+  --color-primary: #f2ca50;
+  --color-on-primary: #3c2f00;
+  --color-primary-container: #d4af37;
+  --color-on-primary-container: #554300;
+  --color-inverse-primary: #735c00;
+  
+  --color-secondary: #debfc2;
+  --color-on-secondary: #3f2b2e;
+  --color-secondary-container: #574144;
+  --color-on-secondary-container: #cbaeb1;
+
+  --color-surface: #131313;
+  --color-surface-dim: #131313;
+  --color-surface-bright: #3a3939;
+  --color-surface-container-lowest: #0e0e0e;
+  --color-surface-container-low: #1c1b1b;
+  --color-surface-container: #201f1f;
+  --color-surface-container-high: #2a2a2a;
+  --color-surface-container-highest: #353534;
+  --color-on-surface: #e5e2e1;
+  --color-on-surface-variant: #d0c5af;
+  
+  --color-outline: #99907c;
+  --color-outline-variant: #4d4635;
+  --color-border-grey: #222222;
+
+  --color-background: #131313;
+  --color-on-background: #e5e2e1;
+
+  --color-noir: #0A0A0A;
+  --color-charcoal: #1A1A1A;
+  --color-alabaster: #F2F2F2;
+  --color-muted-gold: #C5A059;
+  --color-pale-rose: #E8D3D1;
+
+  --radius-sm: 0.25rem;
+  --radius-DEFAULT: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 9999px;
+
+  --spacing-container-max: 1440px;
+  --spacing-gutter: 2rem;
+  --spacing-margin-x: 4rem;
+  --spacing-stack-sm: 0.5rem;
+  --spacing-stack-md: 1.5rem;
+  --spacing-stack-lg: 3rem;
+
+  --font-display-lg: "Source Serif 4", serif;
+  --font-display-lg-mobile: "Source Serif 4", serif;
+  --font-headline-md: "Source Serif 4", serif;
+  --font-title-lg: "Source Serif 4", serif;
+  --font-body-main: "Source Serif 4", serif;
+  --font-body-sm: "Source Serif 4", serif;
+  --font-label-caps: "Inter", sans-serif;
+  --font-data-mono: "JetBrains Mono", monospace;
 }
 
 @layer base {
   body {
-    @apply bg-secondary-50 text-secondary-900 antialiased;
+    @apply antialiased;
+  }
+}
+
+@layer utilities {
+  .font-display-lg {
+    font-family: var(--font-display-lg);
+    font-size: 48px;
+    font-weight: 300;
+    line-height: 56px;
+    letter-spacing: -0.02em;
+  }
+  .font-display-lg-mobile {
+    font-family: var(--font-display-lg-mobile);
+    font-size: 32px;
+    font-weight: 300;
+    line-height: 40px;
+    letter-spacing: -0.01em;
+  }
+  .font-headline-md {
+    font-family: var(--font-headline-md);
+    font-size: 24px;
+    font-weight: 400;
+    line-height: 32px;
+  }
+  .font-title-lg {
+    font-family: var(--font-title-lg);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 28px;
+  }
+  .font-body-main {
+    font-family: var(--font-body-main);
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 24px;
+  }
+  .font-body-sm {
+    font-family: var(--font-body-sm);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+  }
+  .font-label-caps {
+    font-family: var(--font-label-caps);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 16px;
+    letter-spacing: 0.1em;
+  }
+  .font-data-mono {
+    font-family: var(--font-data-mono);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 18px;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-out forwards;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@layer components {
+  .ambient-glow-gold {
+    @apply absolute w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] bg-muted-gold/20 rounded-full blur-[120px];
+  }
+  .ambient-glow-rose {
+    @apply absolute w-[50vw] h-[50vw] max-w-[600px] max-h-[600px] bg-pale-rose/15 rounded-full blur-[100px];
+  }
+  .ambient-glow-primary {
+    @apply absolute w-[40vw] h-[40vw] max-w-[500px] max-h-[500px] bg-primary/10 rounded-full blur-[120px];
   }
 }

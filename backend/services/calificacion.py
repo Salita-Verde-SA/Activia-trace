@@ -184,3 +184,10 @@ class CalificacionService:
         
         await db.commit()
         return len(calificaciones)
+
+    @staticmethod
+    async def obtener_estado_alumno(db: AsyncSession, tenant_id: UUID, alumno_id: UUID) -> List[Any]:
+        # TODO: Implementar lógica real cruzando Asignacion (Materia) con Calificacion a traves del Padron.
+        # Por ahora devolvemos una lista vacia para evitar 404/500 en el frontend.
+        from schemas.calificacion import EstadoMateria
+        return []

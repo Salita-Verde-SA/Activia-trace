@@ -9,14 +9,14 @@ export const alumnoApi = {
     api.post(`/api/v1/avisos/${avisoId}/ack`).then(res => res.data),
 
   getMisColoquios: () => 
-    api.get<ColoquioDisponible[]>('/api/coloquios/disponibles').then(res => res.data),
+    api.get<ColoquioDisponible[]>('/api/v1/coloquios/disponibles').then(res => res.data),
 
   reservarColoquio: (instanciaId: string) => 
-    api.post(`/api/coloquios/${instanciaId}/reservar`).then(res => res.data),
+    api.post(`/api/v1/coloquios/reservar`, { coloquio_id: instanciaId }).then(res => res.data),
 
   cancelarReserva: (reservaId: string) => 
-    api.post(`/api/coloquios/reservas/${reservaId}/cancelar`).then(res => res.data),
+    api.post(`/api/v1/coloquios/reservas/${reservaId}/cancelar`).then(res => res.data),
 
   getMiEstado: () => 
-    api.get<EstadoMateria[]>('/api/v1/calificaciones/mi-estado').then(res => res.data),
+    api.get<EstadoMateria[]>('/api/calificaciones/mi-estado').then(res => res.data),
 };

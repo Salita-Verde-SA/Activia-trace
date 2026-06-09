@@ -89,6 +89,7 @@ Formuladas como "NUNCA X → hacer Y". Estas reglas son duras: violarlas invalid
 - **NUNCA editar `harnesses.yaml` sin pasar por `catalog.Load()` validando** → un catálogo inválido rompe el release.
 - **NUNCA build después de cambios** salvo pedido explícito (regla del operador).
 - **SIEMPRE marcar `(TBD)`** cuando una decisión no está tomada; nunca inventar.
+- **SIEMPRE documentar el valor agregado para la defensa del proyecto** → Cualquier implementación nueva en OpenSpec, configuración de MCP o uso de Skills clave debe ser obligatoriamente registrada en `RESUMEN_VIDEO_ENTREGA.md` para facilitar la exposición al profesor.
 
 ---
 

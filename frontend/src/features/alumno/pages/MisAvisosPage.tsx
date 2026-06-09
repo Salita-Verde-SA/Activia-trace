@@ -15,13 +15,13 @@ export const MisAvisosPage = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Mis Avisos</h1>
+        <h1 className="text-2xl font-serif text-white/90">Mis Avisos</h1>
       </div>
 
       <div className="space-y-4">
         {avisos?.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg border border-dashed border-gray-300">
-            <p className="text-gray-500">No tienes avisos pendientes.</p>
+          <div className="text-center py-12 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 border-dashed">
+            <p className="text-white/70">No tienes avisos pendientes.</p>
           </div>
         ) : (
           avisos?.map(aviso => (

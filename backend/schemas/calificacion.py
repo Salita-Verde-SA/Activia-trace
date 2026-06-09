@@ -45,3 +45,11 @@ class CalificacionResponse(BaseModel):
     origen: str
     
     model_config = ConfigDict(from_attributes=True)
+
+class EstadoMateria(BaseModel):
+    materia_id: UUID
+    materia_nombre: str
+    estado: str
+    nota_final: float | None = None
+    
+    model_config = ConfigDict(from_attributes=True)
