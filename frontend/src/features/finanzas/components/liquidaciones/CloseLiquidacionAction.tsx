@@ -16,34 +16,34 @@ export function CloseLiquidacionAction({ periodoAnio, periodoMes }: { periodoAni
     <>
       <button
         onClick={() => setShowModal(true)}
-        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm font-medium"
+        className="px-6 py-3 bg-pale-rose/10 border border-pale-rose/30 text-pale-rose rounded-xl hover:bg-pale-rose/20 hover:border-pale-rose/50 transition-all text-label-caps font-label-caps uppercase tracking-widest shadow-[0_0_10px_rgba(224,142,121,0.1)]"
       >
         Cerrar Período {periodoMes}/{periodoAnio}
       </button>
 
       {showModal && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Confirmar Cierre de Liquidación</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              ¿Está seguro que desea cerrar la liquidación del período <strong>{periodoMes}/{periodoAnio}</strong>?
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-50">
+          <div className="bg-charcoal rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] border border-white/10 p-8 w-full max-w-md">
+            <h3 className="text-title-lg font-display-lg text-alabaster uppercase tracking-widest drop-shadow-[0_2px_15px_rgba(255,255,255,0.2)] mb-4">Confirmar Cierre</h3>
+            <p className="text-body-main font-body-main text-on-surface-variant tracking-wide mb-6">
+              ¿Está seguro que desea cerrar la liquidación del período <strong className="text-alabaster">{periodoMes}/{periodoAnio}</strong>?
             </p>
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+            <div className="bg-muted-gold/10 border-l-4 border-muted-gold p-4 mb-6 rounded-r-xl">
               <div className="flex">
                 <div className="ml-3">
-                  <p className="text-sm text-yellow-700">
+                  <p className="text-body-sm font-body-main text-muted-gold tracking-wide">
                     Esta acción es irreversible. Se generarán los recibos y se marcarán todas las liquidaciones abiertas del período como CERRADA.
                   </p>
                 </div>
               </div>
             </div>
             
-            <div className="flex justify-end space-x-2 mt-4">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none">
+            <div className="flex justify-end space-x-4 mt-8">
+              <button onClick={() => setShowModal(false)} className="px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-alabaster hover:bg-white/10 hover:border-white/20 transition-all font-label-caps text-label-caps uppercase tracking-widest">
                 Cancelar
               </button>
-              <button onClick={handleClose} className="px-4 py-2 bg-red-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-red-700 focus:outline-none">
-                Confirmar Cierre
+              <button onClick={handleClose} className="px-6 py-3 bg-pale-rose/20 border border-pale-rose/50 rounded-xl text-pale-rose hover:bg-pale-rose hover:text-charcoal shadow-[0_0_15px_rgba(224,142,121,0.2)] hover:shadow-[0_0_20px_rgba(224,142,121,0.6)] transition-all font-label-caps text-label-caps uppercase tracking-widest">
+                Confirmar
               </button>
             </div>
           </div>
