@@ -43,3 +43,10 @@ Para mejorar la colaboración hombre-máquina, se incorporaron nuevas dinámicas
 
 - **Registro Automático de Innovaciones**: Se agregó una regla dura obligando al agente a registrar y documentar automáticamente cualquier hito relevante en este archivo (`RESUMEN_VIDEO_ENTREGA.md`).
 - **Validación Estricta de Permisos Backend**: El agente fue entrenado y adaptado para consultar la semilla de roles de la aplicación (`seed_rbac.py`) antes de crear permisos, evitando errores 403 y mejorando la integración de seguridad.
+- **QA Testing Automatizado Nivel UI**: Se agregó la regla obligatoria de lanzar el `browser_subagent` ante todo reporte de error visual/frontend, grabando en video la sesión para recolectar evidencia del fallo en el DOM antes de hipotetizar soluciones.
+- **Transición QA a Desarrollo**: Se forzó al orquestador a sugerir la creación de un nuevo *change* (vía `/opsx:propose`) tras analizar el reporte (`qa_report.md`). Para garantizar el gobierno humano, se configuró una directiva estricta donde el agente **debe detenerse y solicitar confirmación explícita** del usuario antes de ejecutar el comando o generar artefactos, manteniendo al humano en total control del workflow.
+
+## 5. Automatización de Calidad (Nueva Skill)
+
+- Se utilizó el agente nativo `skill-creator` para diseñar y desplegar la skill **`frontend-qa-tester`**.
+- Esta skill le inyecta una metodología estructurada al `browser_subagent`, dotándolo de todas las credenciales de prueba (`seed_test_users.py`) y asignándole reglas inflexibles (revisar siempre la consola en busca de `AxiosError`, intentar romper modales, forzar estados inválidos) y obligándolo a generar un reporte estandarizado (`qa_report.md`) de uso interno para el agente desarrollador.

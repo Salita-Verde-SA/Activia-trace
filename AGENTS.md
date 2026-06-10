@@ -89,6 +89,8 @@ Formuladas como "NUNCA X → hacer Y". Estas reglas son duras: violarlas invalid
 - **NUNCA editar `harnesses.yaml` sin pasar por `catalog.Load()` validando** → un catálogo inválido rompe el release.
 - **NUNCA build después de cambios** salvo pedido explícito (regla del operador).
 - **SIEMPRE marcar `(TBD)`** cuando una decisión no está tomada; nunca inventar.
+- **SIEMPRE lanzar el `browser_subagent`** como QA automático cuando el usuario reporte un error visual, de UI o de frontend. El objetivo es reproducir el error y grabar la sesión en video para analizar el DOM antes de intentar adivinar la solución.
+- **SIEMPRE recomendar crear un change** vía `/opsx:propose` inmediatamente después de generar y leer un reporte del tester QA (`qa_report.md`). **ATENCIÓN:** Solo debes hacer la sugerencia y ESPERAR el "OK" explícito del usuario. NUNCA ejecutes el comando ni crees los artefactos del change por tu cuenta sin su autorización.
 - **SIEMPRE documentar el valor agregado para la defensa del proyecto** → Cualquier implementación nueva en OpenSpec, configuración de MCP o uso de Skills clave debe ser obligatoriamente registrada en `RESUMEN_VIDEO_ENTREGA.md` para facilitar la exposición al profesor.
 
 ---

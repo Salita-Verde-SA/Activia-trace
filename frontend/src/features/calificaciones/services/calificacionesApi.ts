@@ -35,7 +35,7 @@ export const getUmbral = async (materiaId: string): Promise<UmbralResponse> => {
 };
 
 export const setUmbral = async (data: UmbralCreate): Promise<UmbralResponse> => {
-  const response = await api.post('/api/calificaciones/umbral', data);
+  const response = await api.put('/api/calificaciones/umbral', data);
   return response.data;
 };
 

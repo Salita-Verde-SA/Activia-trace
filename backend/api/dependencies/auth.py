@@ -85,7 +85,9 @@ def require_permission(required_permission: str):
         from datetime import datetime, timezone
         
         now = datetime.now(timezone.utc)
-        query = (
+        from models.rbac import UsuarioRol
+        
+        query_asignacion = (
             select(Permiso.id)
             .join(RolPermiso, RolPermiso.permiso_id == Permiso.id)
             .join(Rol, Rol.id == RolPermiso.rol_id)
@@ -99,8 +101,24 @@ def require_permission(required_permission: str):
                 Rol.deleted_at.is_(None),
                 Permiso.nombre == required_permission
             )
-            .limit(1)
         )
+
+        query_global = (
+            select(Permiso.id)
+            .join(RolPermiso, RolPermiso.permiso_id == Permiso.id)
+            .join(Rol, Rol.id == RolPermiso.rol_id)
+            .join(UsuarioRol, UsuarioRol.rol_id == Rol.id)
+            .where(
+                UsuarioRol.usuario_id == current_user.id,
+                UsuarioRol.tenant_id == current_user.tenant_id,
+                Rol.deleted_at.is_(None),
+                Permiso.nombre == required_permission
+            )
+        )
+
+        from sqlalchemy import union
+        query = union(query_asignacion, query_global).limit(1)
+        
         result = await session.execute(query)
         has_permission = result.scalar_one_or_none()
         
