@@ -93,8 +93,8 @@ class AuditoriaService:
         query_count = select(func.count()).select_from(query.subquery())
         total = (await self.db.execute(query_count)).scalar_one()
         
-        # Paginated
-        query_pag = query.order_by(AuditLog.created_at.desc()).limit(filtro.limit).offset(filtro.offset)
+        # Sort and paginate
+        query_pag = query.order_by(AuditLog.fecha_hora.desc()).limit(filtro.limit).offset(filtro.offset)
         logs = (await self.db.execute(query_pag)).scalars().all()
         
         items = [AuditoriaRegistro.model_validate(log, from_attributes=True) for log in logs]

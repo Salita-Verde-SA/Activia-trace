@@ -51,3 +51,6 @@ Para mejorar la colaboración hombre-máquina, se incorporaron nuevas dinámicas
 
 - Se utilizó el agente nativo `skill-creator` para diseñar y desplegar la skill **`frontend-qa-tester`**.
 - Esta skill le inyecta una metodología estructurada al `browser_subagent`, dotándolo de todas las credenciales de prueba (`seed_test_users.py`) y asignándole reglas inflexibles (revisar siempre la consola en busca de `AxiosError`, intentar romper modales, forzar estados inválidos) y obligándolo a generar un reporte estandarizado (`qa_report.md`) de uso interno para el agente desarrollador.
+
+- **Entorno de Desarrollo Dockerizado con HMR**: Se reconfigur� el \docker-compose.yml\ utilizando el stage \uilder\ de Vite para el frontend con mapeo de volumen local y la flag \--reload\ en uvicorn para el backend, permitiendo una experiencia de desarrollo veloz (Hot Module Replacement) sin necesidad de reconstruir las im�genes en cada cambio.
+

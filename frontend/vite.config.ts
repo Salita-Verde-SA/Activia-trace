@@ -14,6 +14,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src')
     }
   },
+  server: {
+    watch: {
+      usePolling: true,
+    },
+    host: true, // Needed for docker
+    strictPort: true,
+  },
   test: {
     globals: true,
     environment: 'jsdom',

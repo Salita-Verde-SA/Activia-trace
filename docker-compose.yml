@@ -4,6 +4,7 @@ services:
   api:
     build:
       context: ./backend
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     ports:
       - "47121:8000"
     depends_on:
@@ -50,8 +51,13 @@ services:
   frontend:
     build:
       context: ./frontend
+      target: builder
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
     ports:
-      - "47120:80"
+      - "47120:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       - api
 
