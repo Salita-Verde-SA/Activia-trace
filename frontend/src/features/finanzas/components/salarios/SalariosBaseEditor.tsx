@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useSalarios } from '../../hooks/useSalarios';
 import type { SalarioBase } from '../../types';
+import { AlertModal } from '../../../../shared/components/ui/AlertModal';
 
 export function SalariosBaseEditor() {
   const { salariosBaseQuery, createSalarioBase, updateSalarioBase } = useSalarios();
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [alertInfo, setAlertInfo] = useState({ isOpen: false, title: '', message: '' });
   
   const [formData, setFormData] = useState<Partial<SalarioBase>>({ rol: '', monto: 0, vigente_desde: new Date().toISOString().split('T')[0] });
 
@@ -16,20 +18,32 @@ export function SalariosBaseEditor() {
     if (editingId) {
       const existingRecord = salariosBaseQuery.data?.find(s => s.rol === formData.rol && s.id !== editingId);
       if (existingRecord) {
-        alert(`Error: Ya existe un salario base configurado para el rol ${formData.rol}. No puede asignar un rol que ya está en uso.`);
+        setAlertInfo({
+          isOpen: true,
+          title: 'Error de Validación',
+          message: `Ya existe un salario base configurado para el rol ${formData.rol}. No puede asignar un rol que ya está en uso.`
+        });
         return;
       }
       updateSalarioBase.mutate({ id: editingId, data: formData }, {
         onSuccess: () => setEditingId(null),
         onError: (err: any) => {
-          alert(err?.response?.data?.detail || "Ocurrió un error al actualizar.");
+          setAlertInfo({
+            isOpen: true,
+            title: 'Error del Servidor',
+            message: err?.response?.data?.detail || "Ocurrió un error al actualizar."
+          });
         }
       });
     } else {
       // Validate overlapping dates for new records
       const existingRecord = salariosBaseQuery.data?.find(s => s.rol === formData.rol);
       if (existingRecord) {
-        alert(`Error: Ya existe un salario base configurado para el rol ${formData.rol}. Por favor, edite el registro existente en lugar de crear uno nuevo.`);
+        setAlertInfo({
+          isOpen: true,
+          title: 'Rol Duplicado',
+          message: `Ya existe un salario base configurado para el rol ${formData.rol}. Por favor, edite el registro existente en lugar de crear uno nuevo.`
+        });
         return;
       }
 
@@ -39,7 +53,11 @@ export function SalariosBaseEditor() {
           setFormData({ rol: '', monto: 0, vigente_desde: new Date().toISOString().split('T')[0] });
         },
         onError: (err: any) => {
-          alert(err?.response?.data?.detail || "Ocurrió un error al guardar.");
+          setAlertInfo({
+            isOpen: true,
+            title: 'Error del Servidor',
+            message: err?.response?.data?.detail || "Ocurrió un error al guardar."
+          });
         }
       });
     }
@@ -164,6 +182,13 @@ export function SalariosBaseEditor() {
           </tbody>
         </table>
       </div>
+
+      <AlertModal 
+        isOpen={alertInfo.isOpen}
+        title={alertInfo.title}
+        message={alertInfo.message}
+        onClose={() => setAlertInfo({ ...alertInfo, isOpen: false })}
+      />
     </div>
   );
 }

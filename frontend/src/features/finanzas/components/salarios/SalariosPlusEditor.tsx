@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useSalarios } from '../../hooks/useSalarios';
 import type { SalarioPlus } from '../../types';
+import { AlertModal } from '../../../../shared/components/ui/AlertModal';
 
 export function SalariosPlusEditor() {
   const { salariosPlusQuery, createSalarioPlus, updateSalarioPlus } = useSalarios();
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [alertInfo, setAlertInfo] = useState({ isOpen: false, title: '', message: '' });
   
   const [formData, setFormData] = useState<Partial<SalarioPlus>>({ grupo_nombre: '', rol: '', monto: 0, vigente_desde: new Date().toISOString().split('T')[0] });
 
@@ -16,20 +18,32 @@ export function SalariosPlusEditor() {
     if (editingId) {
       const existingRecord = salariosPlusQuery.data?.find(s => s.rol === formData.rol && s.grupo_nombre === formData.grupo_nombre && s.id !== editingId);
       if (existingRecord) {
-        alert(`Error: Ya existe un salario plus configurado para el grupo "${formData.grupo_nombre}" en el rol ${formData.rol}. No puede asignar un grupo/rol que ya está en uso.`);
+        setAlertInfo({
+          isOpen: true,
+          title: 'Error de Validación',
+          message: `Ya existe un salario plus configurado para el grupo "${formData.grupo_nombre}" en el rol ${formData.rol}. No puede asignar un grupo/rol que ya está en uso.`
+        });
         return;
       }
       updateSalarioPlus.mutate({ id: editingId, data: formData }, {
         onSuccess: () => setEditingId(null),
         onError: (err: any) => {
-          alert(err?.response?.data?.detail || "Ocurrió un error al actualizar.");
+          setAlertInfo({
+            isOpen: true,
+            title: 'Error del Servidor',
+            message: err?.response?.data?.detail || "Ocurrió un error al actualizar."
+          });
         }
       });
     } else {
       // Validate overlapping dates for new records
       const existingRecord = salariosPlusQuery.data?.find(s => s.rol === formData.rol && s.grupo_nombre === formData.grupo_nombre);
       if (existingRecord) {
-        alert(`Error: Ya existe un salario plus configurado para el grupo "${formData.grupo_nombre}" en el rol ${formData.rol}. Por favor, edite el registro existente.`);
+        setAlertInfo({
+          isOpen: true,
+          title: 'Rol y Grupo Duplicados',
+          message: `Ya existe un salario plus configurado para el grupo "${formData.grupo_nombre}" en el rol ${formData.rol}. Por favor, edite el registro existente.`
+        });
         return;
       }
 
@@ -39,7 +53,11 @@ export function SalariosPlusEditor() {
           setFormData({ grupo_nombre: '', rol: '', monto: 0, vigente_desde: new Date().toISOString().split('T')[0] });
         },
         onError: (err: any) => {
-          alert(err?.response?.data?.detail || "Ocurrió un error al guardar.");
+          setAlertInfo({
+            isOpen: true,
+            title: 'Error del Servidor',
+            message: err?.response?.data?.detail || "Ocurrió un error al guardar."
+          });
         }
       });
     }
@@ -178,6 +196,13 @@ export function SalariosPlusEditor() {
           </tbody>
         </table>
       </div>
+
+      <AlertModal 
+        isOpen={alertInfo.isOpen}
+        title={alertInfo.title}
+        message={alertInfo.message}
+        onClose={() => setAlertInfo({ ...alertInfo, isOpen: false })}
+      />
     </div>
   );
 }
