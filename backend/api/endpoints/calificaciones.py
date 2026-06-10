@@ -21,7 +21,7 @@ async def obtener_umbral(
     """
     Obtiene el umbral de aprobación para una materia.
     """
-    umbral = await UmbralService.get_umbral_by_materia(
+    umbral = await UmbralService.get_umbral(
         db=db,
         tenant_id=actor.tenant_id,
         materia_id=materia_id

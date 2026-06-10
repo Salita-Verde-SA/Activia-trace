@@ -9,25 +9,31 @@ export const UmbralPanel: React.FC<UmbralPanelProps> = ({ materiaId }) => {
   const { data: umbral, isLoading } = useUmbral(materiaId);
   const setUmbralMutation = useSetUmbral();
   
-  const [pct, setPct] = useState<number>(60);
+  const [pct, setPct] = useState<number | "">("");
   const [valoresTxt, setValoresTxt] = useState<string>('');
+  const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
     if (umbral) {
-      setPct(umbral.umbral_pct);
+      setPct(umbral.umbral_pct !== null && umbral.umbral_pct !== undefined ? umbral.umbral_pct : "");
       setValoresTxt(umbral.valores_aprobatorios.join(', '));
     }
   }, [umbral]);
 
   const handleSave = async () => {
+    if (pct === "") {
+      alert("Por favor ingrese un porcentaje de aprobación válido.");
+      return;
+    }
     try {
       const valoresArray = valoresTxt.split(',').map(v => v.trim()).filter(v => v);
       await setUmbralMutation.mutateAsync({
         materia_id: materiaId,
-        umbral_pct: pct,
+        umbral_pct: Number(pct),
         valores_aprobatorios: valoresArray
       });
-      alert('Umbral guardado correctamente');
+      setIsSuccess(true);
+      setTimeout(() => setIsSuccess(false), 3000);
     } catch (error) {
       console.error('Error guardando umbral', error);
       alert('Error al guardar el umbral');
@@ -49,8 +55,8 @@ export const UmbralPanel: React.FC<UmbralPanelProps> = ({ materiaId }) => {
           <input 
             type="number" 
             min="0" max="100" 
-            value={pct} 
-            onChange={(e) => setPct(Number(e.target.value))}
+            value={pct === "" ? "" : pct} 
+            onChange={(e) => setPct(e.target.value === "" ? "" : Number(e.target.value))}
             className="w-full bg-black/20 border-white/10 rounded-md text-white/90 shadow-sm focus:border-primary-500 focus:ring-primary-500"
           />
         </div>
@@ -69,10 +75,14 @@ export const UmbralPanel: React.FC<UmbralPanelProps> = ({ materiaId }) => {
       <div className="mt-4 flex justify-end">
         <button 
           onClick={handleSave}
-          disabled={setUmbralMutation.isPending}
-          className="bg-primary-600/80 border border-primary-500/50 text-white px-4 py-2 rounded-md hover:bg-primary-600 disabled:opacity-50 transition-colors shadow-[0_0_15px_rgba(var(--color-primary-500),0.2)]"
+          disabled={setUmbralMutation.isPending || isSuccess}
+          className={`px-4 py-2 rounded-md transition-colors shadow-sm disabled:opacity-50 ${
+            isSuccess 
+              ? 'bg-emerald-600/80 border border-emerald-500/50 text-white shadow-[0_0_15px_rgba(16,185,129,0.2)]' 
+              : 'bg-primary-600/80 border border-primary-500/50 text-white hover:bg-primary-600 shadow-[0_0_15px_rgba(var(--color-primary-500),0.2)]'
+          }`}
         >
-          {setUmbralMutation.isPending ? 'Guardando...' : 'Guardar Configuración'}
+          {setUmbralMutation.isPending ? 'Guardando...' : isSuccess ? 'Guardado ✓' : 'Guardar Configuración'}
         </button>
       </div>
     </div>

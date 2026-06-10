@@ -27,9 +27,6 @@ export const confirmImportCalificaciones = async (data: ImportConfirmRequest): P
 };
 
 export const getUmbral = async (materiaId: string): Promise<UmbralResponse> => {
-  if (materiaId === PLACEHOLDER_UUID) {
-    return { id: '', materia_id: materiaId, umbral_pct: 60, valores_aprobatorios: [] } as unknown as UmbralResponse;
-  }
   const response = await api.get(`/api/calificaciones/umbral/${materiaId}`);
   return response.data;
 };

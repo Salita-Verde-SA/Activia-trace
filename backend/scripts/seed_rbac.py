@@ -12,6 +12,8 @@ PERMISOS = [
     "evaluacion:reservar",
     "avisos:confirmar",
     "calificaciones:importar",
+    "calificaciones:configurar",
+    "calificaciones:leer",
     "atrasados:ver",
     "entregas:detectar",
     "comunicacion:enviar",
@@ -36,7 +38,7 @@ ROLES_PERMISOS = {
     "ALUMNO": ["academico:estado_propio", "evaluacion:reservar", "avisos:confirmar", "avisos:leer_propios"],
     "TUTOR": ["avisos:confirmar", "atrasados:ver", "entregas:detectar", "encuentros:gestionar", "guardias:registrar", "avisos:leer_propios", "tareas:leer_propias"],
     "PROFESOR": [
-        "avisos:confirmar", "calificaciones:importar", "atrasados:ver", "entregas:detectar",
+        "avisos:confirmar", "calificaciones:importar", "calificaciones:configurar", "calificaciones:leer", "atrasados:ver", "entregas:detectar",
         "comunicacion:enviar", "encuentros:gestionar", "guardias:registrar", "tareas:gestionar",
         "avisos:leer_propios", "tareas:leer_propias"
     ],
@@ -48,7 +50,7 @@ ROLES_PERMISOS = {
     ],
     "NEXO": ["avisos:leer_propios"],
     "ADMIN": [
-        "avisos:confirmar", "calificaciones:importar", "atrasados:ver", "entregas:detectar",
+        "avisos:confirmar", "calificaciones:importar", "calificaciones:configurar", "calificaciones:leer", "atrasados:ver", "entregas:detectar",
         "comunicacion:enviar", "comunicacion:aprobar", "encuentros:gestionar", "guardias:registrar",
         "tareas:gestionar", "avisos:publicar", "equipos:gestionar", "estructura:gestionar",
         "usuarios:gestionar", "auditoria:ver", "tenant:configurar", "avisos:leer_propios", "tareas:leer_propias"
