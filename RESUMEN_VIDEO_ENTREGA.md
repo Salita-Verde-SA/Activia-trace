@@ -45,6 +45,7 @@ Para mejorar la colaboración hombre-máquina, se incorporaron nuevas dinámicas
 - **Validación Estricta de Permisos Backend**: El agente fue entrenado y adaptado para consultar la semilla de roles de la aplicación (`seed_rbac.py`) antes de crear permisos, evitando errores 403 y mejorando la integración de seguridad.
 - **QA Testing Automatizado Nivel UI**: Se agregó la regla obligatoria de lanzar el `browser_subagent` ante todo reporte de error visual/frontend, grabando en video la sesión para recolectar evidencia del fallo en el DOM antes de hipotetizar soluciones.
 - **Transición QA a Desarrollo**: Se forzó al orquestador a sugerir la creación de un nuevo *change* (vía `/opsx:propose`) tras analizar el reporte (`qa_report.md`). Para garantizar el gobierno humano, se configuró una directiva estricta donde el agente **debe detenerse y solicitar confirmación explícita** del usuario antes de ejecutar el comando o generar artefactos, manteniendo al humano en total control del workflow.
+- **Sincronización Automática con GitHub**: Se estableció la regla de que, al finalizar y archivar un *change*, el agente debe realizar automáticamente un commit con *conventional commits* y empujar (push) los cambios a GitHub para asegurar que los avances se sincronicen sin depender de acciones manuales del usuario.
 
 ## 5. Automatización de Calidad (Nueva Skill)
 
