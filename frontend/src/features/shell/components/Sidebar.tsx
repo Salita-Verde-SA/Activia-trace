@@ -50,10 +50,7 @@ export const Sidebar = ({ isOpen, closeSidebar }: { isOpen: boolean, closeSideba
           </div>
         </div>
         
-        <button className="mx-6 mb-stack-md bg-white/5 backdrop-blur-xl border border-muted-gold/30 rounded-2xl shadow-[0_0_15px_rgba(197,160,89,0.1)] text-muted-gold font-label-caps text-label-caps py-3 px-4 flex items-center justify-center space-x-2 hover:text-white hover:bg-white/10 hover:border-muted-gold/50 hover:shadow-[0_0_25px_rgba(197,160,89,0.2)] transition-all duration-300">
-          <span className="material-symbols-outlined text-[18px]">add</span>
-          <span>New Record</span>
-        </button>
+
 
         <div className="flex-1 overflow-y-auto mt-4 mb-6 px-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <ul className="space-y-2">
