@@ -28,8 +28,13 @@ export const tareasApi = {
     return data;
   },
 
+  getUsuariosAsignables: async () => {
+    const { data } = await api.get('/api/v1/tareas/asignables');
+    return data;
+  },
+
   crearTarea: async (payload: TareaCreate): Promise<TareaResponse> => {
-    const { data } = await api.post('/api/v1/tareas', payload);
+    const { data } = await api.post('/api/v1/tareas/', payload);
     return data;
   },
 
@@ -40,6 +45,11 @@ export const tareasApi = {
 
   agregarComentario: async (id: string, payload: ComentarioTareaCreate): Promise<ComentarioTareaResponse> => {
     const { data } = await api.post(`/api/v1/tareas/${id}/comentarios`, payload);
+    return data;
+  },
+
+  getComentarios: async (id: string): Promise<ComentarioTareaResponse[]> => {
+    const { data } = await api.get(`/api/v1/tareas/${id}/comentarios`);
     return data;
   },
 };

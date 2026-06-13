@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useAuth } from '@/features/auth/context/AuthContext';
-import { useUsuarios } from '@/features/admin/hooks/useUsuarios';
+import { useQuery } from '@tanstack/react-query';
+import { tareasApi } from '../services/tareasApi';
 import { PrioridadTarea } from '../types';
 
 interface Props {
@@ -10,11 +10,10 @@ interface Props {
 }
 
 export const CrearTareaModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => {
-  const { user } = useAuth();
-  const isProfesor = user?.roles?.includes('PROFESOR') && !user?.roles?.includes('ADMIN') && !user?.roles?.includes('COORDINADOR');
-  
-  // Si es profesor, solo puede asignar a tutores. Sino, a cualquiera
-  const { usuariosQuery } = useUsuarios(isProfesor ? { rol: 'TUTOR' } : undefined);
+  const usuariosQuery = useQuery({
+    queryKey: ['tareas', 'asignables'],
+    queryFn: tareasApi.getUsuariosAsignables
+  });
   
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -69,7 +68,6 @@ export const CrearTareaModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) 
               <option value={PrioridadTarea.LOW}>Baja</option>
               <option value={PrioridadTarea.MEDIUM}>Media</option>
               <option value={PrioridadTarea.HIGH}>Alta</option>
-              <option value={PrioridadTarea.URGENT}>Urgente</option>
             </select>
           </div>
           <div>

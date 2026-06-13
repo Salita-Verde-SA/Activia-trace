@@ -17,7 +17,7 @@ class UsuarioBase(BaseModel):
 
 class UsuarioCreate(UsuarioBase):
     password: str = Field(..., min_length=8)
-    tenant_id: str
+    tenant_id: uuid.UUID
 
 class UsuarioUpdate(BaseModel):
     model_config = ConfigDict(extra='forbid', from_attributes=True)
@@ -33,7 +33,7 @@ class UsuarioUpdate(BaseModel):
 
 class UsuarioResponse(UsuarioBase):
     id: uuid.UUID
-    tenant_id: str
+    tenant_id: uuid.UUID
     totp_enabled: bool
     created_at: datetime
     updated_at: datetime

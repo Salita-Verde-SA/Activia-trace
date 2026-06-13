@@ -50,6 +50,26 @@ class TareaService:
         t_query = select(Tarea).options(selectinload(Tarea.comentarios)).where(Tarea.id == tarea.id)
         tarea = (await self.db.execute(t_query)).scalar_one()
 
+        # Notificar al asignado
+        try:
+            from services.comunicaciones import ComunicacionService
+            from schemas.comunicacion import LoteCreate, ComunicacionCreate
+            
+            asignado_obj = (await self.db.execute(select(Usuario).where(Usuario.id == data.asignado_a))).scalar_one_or_none()
+            if asignado_obj:
+                lote = LoteCreate(comunicaciones=[
+                    ComunicacionCreate(
+                        destinatario=asignado_obj.email,
+                        asunto=f"Nueva tarea asignada: {tarea.titulo}",
+                        cuerpo=f"Se le ha asignado la tarea: {tarea.titulo}.\nPrioridad: {tarea.prioridad}"
+                    )
+                ])
+                await ComunicacionService.encolar_lote(self.db, self.tenant_id, lote)
+        except Exception as e:
+            # Si falla la notificacion no queremos romper la creacion de la tarea
+            import logging
+            logging.error(f"Fallo al notificar la creacion de tarea: {e}")
+
         return TareaResponse.model_validate(tarea, from_attributes=True)
 
     async def listar_mis_tareas(self, usuario_id: UUID) -> List[TareaResponse]:
@@ -60,6 +80,27 @@ class TareaService:
         
         tareas = (await self.db.execute(query)).scalars().all()
         return [TareaResponse.model_validate(t, from_attributes=True) for t in tareas]
+
+    async def listar_usuarios_asignables(self, current_user_roles: List[str]) -> list:
+        from models.rbac import Rol, UsuarioRol
+        from models.asignacion import Asignacion
+        from schemas.usuario import UsuarioResponse
+
+        query = select(Usuario).where(
+            Usuario.tenant_id == self.tenant_id,
+            Usuario.deleted_at.is_(None),
+            Usuario.activo == True
+        )
+
+        if "PROFESOR" in current_user_roles and "ADMIN" not in current_user_roles and "COORDINADOR" not in current_user_roles:
+            query = query.outerjoin(UsuarioRol, Usuario.id == UsuarioRol.usuario_id) \
+                         .outerjoin(Asignacion, Usuario.id == Asignacion.usuario_id) \
+                         .join(Rol, (Rol.id == UsuarioRol.rol_id) | (Rol.id == Asignacion.rol_id)) \
+                         .where(Rol.nombre == "TUTOR") \
+                         .distinct()
+
+        usuarios = (await self.db.execute(query)).scalars().all()
+        return [UsuarioResponse.model_validate(u, from_attributes=True) for u in usuarios]
 
     async def listar_globales(self, asignado_a: Optional[UUID] = None, estado: Optional[EstadoTarea] = None, asignado_por: Optional[UUID] = None) -> List[TareaResponse]:
         query = select(Tarea).options(selectinload(Tarea.comentarios)).where(

@@ -40,6 +40,15 @@ async def listar_asignadas_por_mi(
     service = TareaService(db, current_user.tenant_id)
     return await service.listar_globales(asignado_por=current_user.id)
 
+from schemas.usuario import UsuarioResponse
+@router.get("/asignables", response_model=List[UsuarioResponse])
+async def listar_usuarios_asignables(
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("tareas:gestionar"))
+):
+    service = TareaService(db, current_user.tenant_id)
+    return await service.listar_usuarios_asignables(current_user.roles)
+
 @router.get("/globales", response_model=List[TareaResponse])
 async def listar_globales(
     asignado_a: Optional[UUID] = Query(None),

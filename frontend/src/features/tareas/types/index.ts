@@ -1,16 +1,14 @@
 export enum PrioridadTarea {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  URGENT = 'urgent',
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
 }
 
 export enum EstadoTarea {
-  PENDING = 'pending',
-  IN_PROGRESS = 'in_progress',
-  BLOCKED = 'blocked',
-  COMPLETED = 'completed',
-  CANCELLED = 'cancelled',
+  PENDIENTE = 'PENDIENTE',
+  EN_PROGRESO = 'EN_PROGRESO',
+  RESUELTA = 'RESUELTA',
+  CANCELADA = 'CANCELADA',
 }
 
 export interface ComentarioTareaBase {

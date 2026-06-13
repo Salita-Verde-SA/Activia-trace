@@ -2,19 +2,22 @@ import React, { useState } from 'react';
 import { useTareas } from '../hooks/useTareas';
 import { EstadoTarea } from '../types';
 import { CrearTareaModal } from './CrearTareaModal';
+import { TareaDetalleModal } from './TareaDetalleModal';
 
 export const TareasBoard: React.FC<{ mode?: 'mis-tareas' | 'asignadas-por-mi' | 'globales' }> = ({ mode = 'mis-tareas' }) => {
   const { tareas, isLoading, error, actualizarEstado, crearTarea } = useTareas(mode);
   const [draggedTareaId, setDraggedTareaId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTareaId, setSelectedTareaId] = useState<string | null>(null);
 
   if (isLoading) return <div className="p-8 text-gray-500">Cargando tareas...</div>;
   if (error || !tareas) return <div className="p-8 text-red-500">Error al cargar tareas</div>;
 
   const columnas = [
-    { id: EstadoTarea.PENDING, title: 'Pendientes', color: 'bg-white/5' },
-    { id: EstadoTarea.IN_PROGRESS, title: 'En Progreso', color: 'bg-blue-500/10' },
-    { id: EstadoTarea.BLOCKED, title: 'Bloqueadas', color: 'bg-red-500/10' },
-    { id: EstadoTarea.COMPLETED, title: 'Completadas', color: 'bg-green-500/10' },
+    { id: EstadoTarea.PENDIENTE, title: 'Pendientes', color: 'bg-white/5' },
+    { id: EstadoTarea.EN_PROGRESO, title: 'En Progreso', color: 'bg-blue-500/10' },
+    { id: EstadoTarea.RESUELTA, title: 'Resueltas', color: 'bg-green-500/10' },
+    { id: EstadoTarea.CANCELADA, title: 'Canceladas', color: 'bg-red-500/10' },
   ];
 
   const handleDragStart = (e: React.DragEvent, tareaId: string) => {
@@ -41,7 +44,6 @@ export const TareasBoard: React.FC<{ mode?: 'mis-tareas' | 'asignadas-por-mi' | 
     }
   };
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
     <div className="flex flex-col h-full">
@@ -79,12 +81,13 @@ export const TareasBoard: React.FC<{ mode?: 'mis-tareas' | 'asignadas-por-mi' | 
                   key={tarea.id}
                   draggable
                   onDragStart={(e) => handleDragStart(e, tarea.id)}
+                  onClick={() => setSelectedTareaId(tarea.id)}
                   className="bg-black/20 p-3 rounded-lg border border-white/10 cursor-move hover:bg-white/5 transition-colors backdrop-blur-md"
                 >
                   <div className="flex justify-between items-start mb-2">
                     <span className={`text-xs font-bold px-2 py-1 rounded border ${
-                      tarea.prioridad === 'urgent' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
-                      tarea.prioridad === 'high' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
+                      tarea.prioridad === 'HIGH' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
+                      tarea.prioridad === 'MEDIUM' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
                       'bg-white/10 text-white/70 border-white/20'
                     }`}>
                       {tarea.prioridad}
@@ -110,6 +113,11 @@ export const TareasBoard: React.FC<{ mode?: 'mis-tareas' | 'asignadas-por-mi' | 
         onSubmit={async (data) => {
           await crearTarea.mutateAsync(data);
         }}
+      />
+      <TareaDetalleModal
+        isOpen={!!selectedTareaId}
+        onClose={() => setSelectedTareaId(null)}
+        tareaId={selectedTareaId}
       />
     </div>
   );
