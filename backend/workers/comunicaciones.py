@@ -20,7 +20,7 @@ async def procesar_comunicaciones_pendientes():
         ).limit(50) 
         
         # Postgres lock
-        # stmt = stmt.with_for_update(skip_locked=True)
+        stmt = stmt.with_for_update(skip_locked=True)
         
         result = await db.execute(stmt)
         comunicaciones = list(result.scalars().all())
