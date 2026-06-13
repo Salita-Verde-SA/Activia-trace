@@ -4,7 +4,7 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.dependencies import get_db
-from api.dependencies.auth import require_permission
+from api.dependencies.auth import require_permission, CurrentUser
 from models.user import Usuario
 from models.tareas import EstadoTarea
 from schemas.tarea import (
@@ -19,25 +19,33 @@ router = APIRouter()
 async def crear_tarea(
     data: TareaCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(require_permission("tareas:gestionar"))
+    current_user: CurrentUser = Depends(require_permission("tareas:gestionar"))
 ):
     service = TareaService(db, current_user.tenant_id)
-    return await service.crear_tarea(current_user.id, data)
+    return await service.crear_tarea(current_user.id, current_user.roles, data)
 
 @router.get("/mis-tareas", response_model=List[TareaResponse])
 async def listar_mis_tareas(
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(require_permission("tareas:leer_propias"))
+    current_user: CurrentUser = Depends(require_permission("tareas:leer_propias"))
 ):
     service = TareaService(db, current_user.tenant_id)
     return await service.listar_mis_tareas(current_user.id)
+
+@router.get("/asignadas-por-mi", response_model=List[TareaResponse])
+async def listar_asignadas_por_mi(
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("tareas:gestionar"))
+):
+    service = TareaService(db, current_user.tenant_id)
+    return await service.listar_globales(asignado_por=current_user.id)
 
 @router.get("/globales", response_model=List[TareaResponse])
 async def listar_globales(
     asignado_a: Optional[UUID] = Query(None),
     estado: Optional[EstadoTarea] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(require_permission("tareas:gestionar_global"))
+    current_user: CurrentUser = Depends(require_permission("tareas:gestionar_global"))
 ):
     service = TareaService(db, current_user.tenant_id)
     return await service.listar_globales(asignado_a, estado)

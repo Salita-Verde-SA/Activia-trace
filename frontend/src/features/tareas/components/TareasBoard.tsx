@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useTareas } from '../hooks/useTareas';
 import { EstadoTarea } from '../types';
+import { CrearTareaModal } from './CrearTareaModal';
 
-export const TareasBoard: React.FC = () => {
-  const { tareas, isLoading, error, actualizarEstado } = useTareas();
+export const TareasBoard: React.FC<{ mode?: 'mis-tareas' | 'asignadas-por-mi' | 'globales' }> = ({ mode = 'mis-tareas' }) => {
+  const { tareas, isLoading, error, actualizarEstado, crearTarea } = useTareas(mode);
   const [draggedTareaId, setDraggedTareaId] = useState<string | null>(null);
 
   if (isLoading) return <div className="p-8 text-gray-500">Cargando tareas...</div>;
@@ -40,9 +41,23 @@ export const TareasBoard: React.FC = () => {
     }
   };
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   return (
-    <div className="flex space-x-4 overflow-x-auto pb-4">
-      {columnas.map(col => (
+    <div className="flex flex-col h-full">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-serif text-white/90">Gestión de Tareas</h2>
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="bg-primary text-black px-4 py-2 rounded-lg font-bold flex items-center space-x-2 hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(242,202,80,0.3)]"
+        >
+          <span className="material-symbols-outlined">add</span>
+          <span>Crear Tarea</span>
+        </button>
+      </div>
+      
+      <div className="flex space-x-4 overflow-x-auto pb-4 flex-1">
+        {columnas.map(col => (
         <div 
           key={col.id}
           className={`flex-1 min-w-[280px] rounded-xl p-4 ${col.color} border border-white/10 backdrop-blur-sm`}
@@ -88,6 +103,14 @@ export const TareasBoard: React.FC = () => {
           </div>
         </div>
       ))}
+    </div>
+      <CrearTareaModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={async (data) => {
+          await crearTarea.mutateAsync(data);
+        }}
+      />
     </div>
   );
 };

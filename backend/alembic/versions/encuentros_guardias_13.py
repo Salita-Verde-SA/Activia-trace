@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 revision = 'encuentros_guardias_13'
 down_revision = 'comunicaciones_12'
 branch_labels = None
-depends_on = None
+depends_on = 'e483d139959a'
 
 def upgrade() -> None:
     # slots_encuentros

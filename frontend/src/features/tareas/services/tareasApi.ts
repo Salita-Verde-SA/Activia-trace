@@ -13,6 +13,16 @@ export const tareasApi = {
     return data;
   },
 
+  getTareasAsignadasPorMi: async (): Promise<TareaResponse[]> => {
+    const { data } = await api.get('/api/v1/tareas/asignadas-por-mi');
+    return data;
+  },
+
+  getTareasGlobales: async (): Promise<TareaResponse[]> => {
+    const { data } = await api.get('/api/v1/tareas/globales');
+    return data;
+  },
+
   getTarea: async (id: string): Promise<TareaResponse> => {
     const { data } = await api.get(`/api/v1/tareas/${id}`);
     return data;

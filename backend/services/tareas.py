@@ -15,11 +15,23 @@ class TareaService:
         self.db = db
         self.tenant_id = tenant_id
 
-    async def crear_tarea(self, asignado_por: UUID, data: TareaCreate) -> TareaResponse:
+    async def crear_tarea(self, asignado_por: UUID, asignado_por_roles: List[str], data: TareaCreate) -> TareaResponse:
+        from models.rbac import Rol, UsuarioRol
+        from models.asignacion import Asignacion
+
         # Verificar que el usuario asignado existe en el tenant
         usr_query = select(Usuario).where(Usuario.id == data.asignado_a, Usuario.tenant_id == self.tenant_id)
         if not (await self.db.execute(usr_query)).scalar_one_or_none():
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario asignado no encontrado")
+
+        if "PROFESOR" in asignado_por_roles and "ADMIN" not in asignado_por_roles and "COORDINADOR" not in asignado_por_roles:
+            query_roles_target = select(Rol.nombre).join(UsuarioRol).where(UsuarioRol.usuario_id == data.asignado_a, UsuarioRol.tenant_id == self.tenant_id)
+            target_roles = list((await self.db.execute(query_roles_target)).scalars().all())
+            query_asig_roles = select(Rol.nombre).join(Asignacion).where(Asignacion.usuario_id == data.asignado_a, Asignacion.tenant_id == self.tenant_id)
+            target_roles.extend((await self.db.execute(query_asig_roles)).scalars().all())
+
+            if "TUTOR" not in target_roles:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Los profesores solo pueden asignar tareas a tutores")
 
         tarea = Tarea(
             tenant_id=self.tenant_id,
@@ -49,13 +61,15 @@ class TareaService:
         tareas = (await self.db.execute(query)).scalars().all()
         return [TareaResponse.model_validate(t, from_attributes=True) for t in tareas]
 
-    async def listar_globales(self, asignado_a: Optional[UUID] = None, estado: Optional[EstadoTarea] = None) -> List[TareaResponse]:
+    async def listar_globales(self, asignado_a: Optional[UUID] = None, estado: Optional[EstadoTarea] = None, asignado_por: Optional[UUID] = None) -> List[TareaResponse]:
         query = select(Tarea).options(selectinload(Tarea.comentarios)).where(
             Tarea.tenant_id == self.tenant_id
         ).order_by(Tarea.fecha_actualizacion.desc())
         
         if asignado_a:
             query = query.where(Tarea.asignado_a == asignado_a)
+        if asignado_por:
+            query = query.where(Tarea.asignado_por == asignado_por)
         if estado:
             query = query.where(Tarea.estado == estado)
             

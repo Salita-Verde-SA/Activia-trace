@@ -64,7 +64,8 @@ function App() {
               <Route path="calificaciones" element={<CalificacionesPage />} />
               <Route path="admin/monitor" element={<MonitorGlobalPage />} />
               <Route path="admin/avisos" element={<AvisosAdminPage />} />
-              <Route path="admin/tareas" element={<TareasBoard />} />
+              <Route path="admin/tareas" element={<TareasBoard mode="globales" />} />
+              <Route path="profesor/tareas" element={<TareasBoard mode="asignadas-por-mi" />} />
               <Route path="admin/setup" element={<SetupCuatrimestreWizard onComplete={() => {}} onCancel={() => {}} />} />
               
               {/* Alumno Panel routes */}

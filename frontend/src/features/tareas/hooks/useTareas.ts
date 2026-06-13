@@ -2,12 +2,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tareasApi } from '../services/tareasApi';
 import type { TareaCreate, TareaUpdateEstado, ComentarioTareaCreate } from '../types';
 
-export const useTareas = () => {
+export const useTareas = (mode: 'mis-tareas' | 'asignadas-por-mi' | 'globales' = 'mis-tareas') => {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['tareas'],
-    queryFn: tareasApi.getTareas,
+    queryKey: ['tareas', mode],
+    queryFn: () => {
+      if (mode === 'asignadas-por-mi') return tareasApi.getTareasAsignadasPorMi();
+      if (mode === 'globales') return tareasApi.getTareasGlobales();
+      return tareasApi.getTareas();
+    },
   });
 
   const crearTarea = useMutation({
