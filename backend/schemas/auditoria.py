@@ -7,10 +7,9 @@ class AuditoriaFiltro(BaseModel):
     model_config = ConfigDict(extra='forbid')
     fecha_desde: Optional[datetime] = None
     fecha_hasta: Optional[datetime] = None
-    usuario_id: Optional[UUID] = None
+    actor_id: Optional[UUID] = None
     accion: Optional[str] = None
-    entidad: Optional[str] = None
-    entidad_id: Optional[UUID] = None
+    materia_id: Optional[UUID] = None
     limit: int = Field(default=50, ge=1, le=1000)
     offset: int = Field(default=0, ge=0)
 
@@ -18,14 +17,15 @@ class AuditoriaRegistro(BaseModel):
     model_config = ConfigDict(extra='forbid')
     id: UUID
     tenant_id: UUID
-    usuario_id: UUID
+    fecha_hora: datetime
+    actor_id: UUID
+    impersonado_id: Optional[UUID] = None
+    materia_id: Optional[UUID] = None
     accion: str
-    entidad: Optional[str] = None
-    entidad_id: Optional[UUID] = None
-    detalles: Optional[Dict[str, Any]] = None
-    ip_address: Optional[str] = None
+    detalle: Optional[Dict[str, Any]] = None
+    filas_afectadas: int
+    ip: Optional[str] = None
     user_agent: Optional[str] = None
-    created_at: datetime
 
 class AuditoriaRespuesta(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -41,7 +41,7 @@ class MetricaDiaria(BaseModel):
 
 class MetricaUsuario(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    usuario_id: UUID
+    actor_id: UUID
     estado: str
     cantidad: int
 
