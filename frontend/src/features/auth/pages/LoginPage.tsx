@@ -1,6 +1,8 @@
 import React from 'react';
 import { useLogin } from '../hooks/useLogin';
 import { LogIn } from 'lucide-react';
+import { Button } from '@/shared/components/ui/Button';
+import { Input } from '@/shared/components/ui/Input';
 
 export const LoginPage = () => {
   const loginMutation = useLogin();
@@ -9,8 +11,8 @@ export const LoginPage = () => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     loginMutation.mutate({
-      email: formData.get('email'),
-      password: formData.get('password')
+      email: formData.get('email') as string,
+      password: formData.get('password') as string
     });
   };
 
@@ -35,43 +37,36 @@ export const LoginPage = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest mb-2" htmlFor="email">
-              Correo Electrónico
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              className="block w-full rounded-2xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-alabaster shadow-inner placeholder-on-surface-variant/50 focus:border-primary focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300"
-              placeholder="tu@email.com"
-            />
-          </div>
-          <div>
-            <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest mb-2" htmlFor="password">
-              Contraseña
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              className="block w-full rounded-2xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-alabaster shadow-inner placeholder-on-surface-variant/50 focus:border-primary focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300"
-              placeholder="••••••••"
-            />
-          </div>
-          <button
-            type="submit"
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            label="Correo Electrónico"
+            required
+            placeholder="tu@email.com"
             disabled={loginMutation.isPending}
-            className="flex w-full justify-center items-center space-x-2 rounded-2xl bg-white/5 border border-primary/30 px-4 py-3 font-label-caps text-label-caps uppercase tracking-widest text-primary shadow-[0_0_15px_rgba(197,160,89,0.1)] hover:bg-white/10 hover:border-primary/50 hover:shadow-[0_0_25px_rgba(197,160,89,0.2)] hover:text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 focus:ring-offset-noir disabled:opacity-50"
+          />
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            label="Contraseña"
+            required
+            placeholder="••••••••"
+            disabled={loginMutation.isPending}
+          />
+          
+          <Button
+            type="submit"
+            isLoading={loginMutation.isPending}
+            className="w-full mt-2"
           >
             <span>{loginMutation.isPending ? 'Iniciando...' : 'Ingresar'}</span>
-            {!loginMutation.isPending && <span className="material-symbols-outlined text-[18px]">arrow_forward</span>}
-          </button>
+            {!loginMutation.isPending && <span className="material-symbols-outlined text-[18px] ml-2">arrow_forward</span>}
+          </Button>
           
           {loginMutation.isError && (
-            <div className="mt-4 p-3 rounded-xl bg-error/10 border border-error/20 text-sm text-error text-center font-body-sm">
+            <div className="mt-4 p-3 rounded-xl bg-error/10 border border-error/20 text-sm text-error text-center font-body-sm animate-fade-in">
               Credenciales inválidas. Por favor intente nuevamente.
             </div>
           )}
@@ -80,3 +75,4 @@ export const LoginPage = () => {
     </div>
   );
 };
+

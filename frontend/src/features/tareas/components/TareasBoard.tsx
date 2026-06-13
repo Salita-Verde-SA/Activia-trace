@@ -3,6 +3,7 @@ import { useTareas } from '../hooks/useTareas';
 import { EstadoTarea } from '../types';
 import { CrearTareaModal } from './CrearTareaModal';
 import { TareaDetalleModal } from './TareaDetalleModal';
+import { Button } from '@/shared/components/ui/Button';
 
 export const TareasBoard: React.FC<{ mode?: 'mis-tareas' | 'asignadas-por-mi' | 'globales' }> = ({ mode = 'mis-tareas' }) => {
   const { tareas, isLoading, error, actualizarEstado, crearTarea } = useTareas(mode);
@@ -48,14 +49,15 @@ export const TareasBoard: React.FC<{ mode?: 'mis-tareas' | 'asignadas-por-mi' | 
   return (
     <div className="flex flex-col h-full">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-serif text-white/90">Gestión de Tareas</h2>
-        <button 
+        <h2 className="text-2xl font-display-lg text-white/90">Gestión de Tareas</h2>
+        <Button 
           onClick={() => setIsModalOpen(true)}
-          className="bg-primary text-black px-4 py-2 rounded-lg font-bold flex items-center space-x-2 hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(242,202,80,0.3)]"
+          variant="primary"
+          className="flex items-center space-x-2"
         >
           <span className="material-symbols-outlined">add</span>
           <span>Crear Tarea</span>
-        </button>
+        </Button>
       </div>
       
       <div className="flex space-x-4 overflow-x-auto pb-4 flex-1">
