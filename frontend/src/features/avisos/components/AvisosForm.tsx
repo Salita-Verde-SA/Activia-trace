@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAvisos } from '../hooks/useAvisos';
+import { useRoles } from '../hooks/useRoles';
 import { AlcanceAviso, SeveridadAviso } from '../types';
 
 interface AvisosFormProps {
@@ -9,22 +10,33 @@ interface AvisosFormProps {
 
 export const AvisosForm: React.FC<AvisosFormProps> = ({ onSuccess, onCancel }) => {
   const { crearAviso } = useAvisos();
+  const { data: roles } = useRoles();
   const [titulo, setTitulo] = useState('');
   const [cuerpo, setCuerpo] = useState('');
   const [severidad, setSeveridad] = useState<SeveridadAviso>(SeveridadAviso.INFO);
-  const [alcance, setAlcance] = useState<AlcanceAviso>(AlcanceAviso.GLOBAL);
+  const [alcanceOption, setAlcanceOption] = useState<string>(AlcanceAviso.GLOBAL);
   const [requiereAck, setRequiereAck] = useState(false);
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    let alcanceFinal = alcanceOption as AlcanceAviso;
+    let rolIdFinal = undefined;
+    
+    if (alcanceOption.startsWith('ROL:')) {
+      alcanceFinal = AlcanceAviso.ROL || 'ROL' as AlcanceAviso;
+      rolIdFinal = alcanceOption.split(':')[1];
+    }
+
     try {
       await crearAviso.mutateAsync({
         titulo,
         cuerpo,
         severidad,
-        alcance,
+        alcance: alcanceFinal,
+        rol_id: rolIdFinal,
         requiere_ack: requiereAck,
         fecha_inicio: new Date(fechaInicio).toISOString(),
         fecha_fin: fechaFin ? new Date(fechaFin).toISOString() : undefined,
@@ -67,13 +79,16 @@ export const AvisosForm: React.FC<AvisosFormProps> = ({ onSuccess, onCancel }) =
           <div>
             <label className="block text-sm font-medium text-white/70 mb-1">Alcance</label>
             <select
-              value={alcance}
-              onChange={(e) => setAlcance(e.target.value as AlcanceAviso)}
+              value={alcanceOption}
+              onChange={(e) => setAlcanceOption(e.target.value)}
               className="w-full rounded-md border-white/10 bg-white/5 text-white/90 px-3 py-2 focus:border-primary-500 focus:ring-primary-500 [&>option]:bg-neutral-900 [&>option]:text-white"
             >
               <option value={AlcanceAviso.GLOBAL}>Global</option>
-              <option value={AlcanceAviso.ALUMNOS}>Solo Alumnos</option>
-              <option value={AlcanceAviso.DOCENTES}>Solo Docentes</option>
+              {roles?.map((rol) => (
+                <option key={rol.id} value={`ROL:${rol.id}`}>
+                  Rol: {rol.nombre}
+                </option>
+              ))}
             </select>
           </div>
           <div>

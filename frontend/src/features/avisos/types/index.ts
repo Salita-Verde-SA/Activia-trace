@@ -1,16 +1,16 @@
 export enum SeveridadAviso {
-  INFO = 'info',
-  WARNING = 'warning',
-  URGENT = 'urgent',
+  INFO = 'INFO',
+  WARNING = 'WARNING',
+  URGENT = 'CRITICAL',
 }
 
 export enum AlcanceAviso {
-  GLOBAL = 'global',
-  CARRERA = 'carrera',
-  COHORTE = 'cohorte',
-  MATERIA = 'materia',
-  DOCENTES = 'docentes',
-  ALUMNOS = 'alumnos',
+  GLOBAL = 'GLOBAL',
+  CARRERA = 'CARRERA',
+  COHORTE = 'COHORTE',
+  MATERIA = 'MATERIA',
+  DOCENTES = 'DOCENTES',
+  ALUMNOS = 'ALUMNOS',
 }
 
 export interface AvisoBase {

@@ -33,6 +33,13 @@ export const useAvisos = () => {
   };
 };
 
+export const useTodosAvisos = () => {
+  return useQuery({
+    queryKey: ['avisos', 'todos'],
+    queryFn: avisosApi.getTodos,
+  });
+};
+
 export const useAvisoMetrics = (avisoId?: string) => {
   return useQuery({
     queryKey: ['avisoMetrics', avisoId],

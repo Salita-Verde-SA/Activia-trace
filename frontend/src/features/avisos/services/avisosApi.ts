@@ -12,6 +12,11 @@ export const avisosApi = {
     return data;
   },
 
+  getTodos: async (): Promise<AvisoResponse[]> => {
+    const { data } = await api.get('/api/v1/avisos/');
+    return data;
+  },
+
   getAviso: async (id: string): Promise<AvisoResponse> => {
     const { data } = await api.get(`/api/v1/avisos/${id}`);
     return data;
@@ -27,7 +32,7 @@ export const avisosApi = {
   },
 
   getAvisoMetrics: async (id: string): Promise<AvisoMetrics> => {
-    const { data } = await api.get(`/api/v1/avisos/${id}/metrics`);
+    const { data } = await api.get(`/api/v1/avisos/${id}/metricas`);
     return data;
   },
 };

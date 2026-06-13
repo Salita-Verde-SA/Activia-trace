@@ -15,10 +15,18 @@ router = APIRouter()
 async def crear_aviso(
     data: AvisoCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(require_permission("avisos:gestionar"))
+    current_user: Usuario = Depends(require_permission("avisos:publicar"))
 ):
     service = AvisoService(db, current_user.tenant_id)
-    return await service.crear_aviso(data)
+    return await service.crear_aviso(data, actor_id=current_user.id)
+
+@router.get("/", response_model=List[AvisoResponse])
+async def listar_todos_avisos(
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_permission("avisos:publicar"))
+):
+    service = AvisoService(db, current_user.tenant_id)
+    return await service.listar_todos()
 
 @router.get("/mis-avisos", response_model=List[AvisoResponse])
 async def listar_mis_avisos(
@@ -41,7 +49,7 @@ async def registrar_ack(
 async def obtener_metricas(
     aviso_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(require_permission("avisos:metricas"))
+    current_user: Usuario = Depends(require_permission("avisos:publicar"))
 ):
     service = AvisoService(db, current_user.tenant_id)
     return await service.obtener_metricas_aviso(aviso_id)

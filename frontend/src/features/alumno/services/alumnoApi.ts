@@ -6,7 +6,7 @@ export const alumnoApi = {
     api.get<AvisoAlumno[]>('/api/v1/avisos/mis-avisos').then(res => res.data),
 
   ackAviso: (avisoId: string) => 
-    api.post(`/api/v1/avisos/${avisoId}/ack`).then(res => res.data),
+    api.post(`/api/v1/avisos/ack`, { aviso_id: avisoId }).then(res => res.data),
 
   getMisColoquios: () => 
     api.get<ColoquioDisponible[]>('/api/v1/coloquios/disponibles').then(res => res.data),

@@ -49,7 +49,7 @@ app.include_router(programas.router)
 app.include_router(fechas_academicas.router)
 
 
-from api.endpoints import usuarios, asignaciones, equipos, padron, calificaciones, analisis, comunicaciones, encuentros, guardias, evaluaciones, avisos, tareas, liquidaciones, facturas, salarios, auditoria, perfil, mensajeria_interna, coloquios
+from api.endpoints import usuarios, asignaciones, equipos, padron, calificaciones, analisis, comunicaciones, encuentros, guardias, evaluaciones, avisos, tareas, liquidaciones, facturas, salarios, auditoria, perfil, mensajeria_interna, coloquios, roles
 app.include_router(usuarios.router, prefix="/api")
 app.include_router(asignaciones.router, prefix="/api")
 app.include_router(equipos.router, prefix="/api")
@@ -69,3 +69,4 @@ app.include_router(auditoria.router, prefix="/api/v1/auditoria", tags=["auditori
 app.include_router(perfil.router, prefix="/api/v1/perfil", tags=["perfil"])
 app.include_router(mensajeria_interna.router, prefix="/api/v1/mensajes/internos", tags=["mensajeria_interna"])
 app.include_router(coloquios.router, prefix="/api/v1/coloquios", tags=["coloquios"])
+app.include_router(roles.router, prefix="/api/v1")

@@ -16,7 +16,7 @@ class AvisoService:
         self.db = db
         self.tenant_id = tenant_id
 
-    async def crear_aviso(self, data: AvisoCreate) -> AvisoResponse:
+    async def crear_aviso(self, data: AvisoCreate, actor_id: UUID) -> AvisoResponse:
         aviso = Aviso(
             tenant_id=self.tenant_id,
             titulo=data.titulo,
@@ -31,8 +31,27 @@ class AvisoService:
             rol_id=data.rol_id
         )
         self.db.add(aviso)
+        
+        from models.audit import AuditLog
+        
+        audit = AuditLog(
+            tenant_id=self.tenant_id,
+            actor_id=actor_id,
+            accion="PUBLICAR_AVISO",
+            materia_id=data.materia_id,
+            detalle={"cohorte_id": str(data.cohorte_id) if data.cohorte_id else None, "rol_id": str(data.rol_id) if data.rol_id else None, "aviso_id": "pending"},
+            filas_afectadas=1
+        )
+        self.db.add(audit)
+        
         await self.db.commit()
         await self.db.refresh(aviso)
+        
+        # Actualizar detalle con el aviso_id real si es necesario o dejarlo así.
+        audit.detalle["aviso_id"] = str(aviso.id)
+        self.db.add(audit)
+        await self.db.commit()
+        
         return AvisoResponse.model_validate(aviso, from_attributes=True)
 
     async def listar_activos_para_usuario(self, usuario_id: UUID) -> List[AvisoResponse]:
@@ -85,6 +104,11 @@ class AvisoService:
                 avisos_pendientes.append(aviso)
 
         return [AvisoResponse.model_validate(a, from_attributes=True) for a in avisos_pendientes]
+
+    async def listar_todos(self) -> List[AvisoResponse]:
+        avisos_query = select(Aviso).where(Aviso.tenant_id == self.tenant_id).order_by(Aviso.fecha_inicio.desc())
+        avisos = (await self.db.execute(avisos_query)).scalars().all()
+        return [AvisoResponse.model_validate(a, from_attributes=True) for a in avisos]
 
     async def registrar_acuse_recibo(self, usuario_id: UUID, data: AvisoAcknowledgmentCreate) -> dict:
         aviso_query = select(Aviso).where(

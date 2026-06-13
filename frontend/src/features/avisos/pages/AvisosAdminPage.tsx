@@ -1,15 +1,25 @@
 import React, { useState } from 'react';
-import { useAvisos } from '../hooks/useAvisos';
+import { useTodosAvisos } from '../hooks/useAvisos';
+import { useRoles } from '../hooks/useRoles';
 import { AvisosForm } from '../components/AvisosForm';
 import { AckTracker } from '../components/AckTracker';
 
 export const AvisosAdminPage: React.FC = () => {
-  const { avisos, isLoading, error } = useAvisos();
+  const { data: avisos, isLoading, error } = useTodosAvisos();
+  const { data: roles } = useRoles();
   const [showForm, setShowForm] = useState(false);
   const [selectedAvisoId, setSelectedAvisoId] = useState<string | null>(null);
 
   if (isLoading) return <div className="p-8 text-gray-500">Cargando avisos...</div>;
   if (error) return <div className="p-8 text-red-500">Error al cargar avisos</div>;
+
+  const getAlcanceDisplay = (aviso: any) => {
+    if (aviso.alcance === 'ROL' && aviso.rol_id && roles) {
+      const role = roles.find(r => r.id === aviso.rol_id);
+      return `Rol: ${role ? role.nombre : 'Desconocido'}`;
+    }
+    return `Alcance: ${aviso.alcance}`;
+  };
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -50,8 +60,8 @@ export const AvisosAdminPage: React.FC = () => {
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-serif text-lg text-white/90">{aviso.titulo}</h3>
                     <span className={`px-2 py-1 text-xs font-semibold rounded border ${
-                      aviso.severidad === 'urgent' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
-                      aviso.severidad === 'warning' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                      aviso.severidad === 'CRITICAL' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                      aviso.severidad === 'WARNING' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
                       'bg-blue-500/20 text-blue-400 border-blue-500/30'
                     }`}>
                       {aviso.severidad}
@@ -59,7 +69,7 @@ export const AvisosAdminPage: React.FC = () => {
                   </div>
                   <p className="text-white/70 text-sm line-clamp-2 mb-3">{aviso.cuerpo}</p>
                   <div className="flex justify-between text-xs text-white/50">
-                    <span>Alcance: {aviso.alcance}</span>
+                    <span>{getAlcanceDisplay(aviso)}</span>
                     <span>{new Date(aviso.fecha_inicio).toLocaleDateString()}</span>
                   </div>
                   {aviso.requiere_ack && (

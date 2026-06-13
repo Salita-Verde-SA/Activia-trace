@@ -69,7 +69,7 @@ function App() {
               
               {/* Alumno Panel routes */}
               <Route path="alumno/estado" element={<MiEstadoPage />} />
-              <Route path="alumno/avisos" element={<MisAvisosPage />} />
+              <Route path="mis-avisos" element={<MisAvisosPage />} />
               <Route path="alumno/coloquios" element={<MisColoquiosPage />} />
               
               {/* Admin Panel routes */}

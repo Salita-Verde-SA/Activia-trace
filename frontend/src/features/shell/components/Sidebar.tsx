@@ -7,7 +7,7 @@ export const Sidebar = ({ isOpen, closeSidebar }: { isOpen: boolean, closeSideba
   // Basic filtering based on roles
   const menuItems = [
     { name: 'Mi Estado', path: '/alumno/estado', icon: 'school', roles: ['ALUMNO'] },
-    { name: 'Mis Avisos', path: '/alumno/avisos', icon: 'notifications', roles: ['ALUMNO'] },
+    { name: 'Mis Avisos', path: '/mis-avisos', icon: 'notifications', roles: ['ALUMNO', 'PROFESOR', 'TUTOR', 'COORDINADOR', 'ADMIN'] },
     { name: 'Coloquios', path: '/alumno/coloquios', icon: 'calendar_today', roles: ['ALUMNO'] },
     { name: 'Calificaciones', path: '/calificaciones', icon: 'grade', roles: ['PROFESOR', 'TUTOR', 'COORDINADOR', 'ADMIN'] },
     { name: 'Monitor Global', path: '/admin/monitor', icon: 'bar_chart', roles: ['COORDINADOR', 'ADMIN'] },
