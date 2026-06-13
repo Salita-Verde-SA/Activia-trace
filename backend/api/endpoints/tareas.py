@@ -54,7 +54,7 @@ async def listar_globales(
     asignado_a: Optional[UUID] = Query(None),
     estado: Optional[EstadoTarea] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_permission("tareas:gestionar_global"))
+    current_user: CurrentUser = Depends(require_permission("tareas:gestionar"))
 ):
     service = TareaService(db, current_user.tenant_id)
     return await service.listar_globales(asignado_a, estado)
@@ -64,7 +64,7 @@ async def cambiar_estado(
     tarea_id: UUID,
     data: TareaUpdateEstado,
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(require_permission("tareas:leer_propias")) # O "tareas:gestionar_global" si es admin. El service podría chequear si le pertenece, por simplicidad asumimos que tiene acceso
+    current_user: Usuario = Depends(require_permission("tareas:leer_propias")) # O "tareas:gestionar" si es admin. El service podría chequear si le pertenece, por simplicidad asumimos que tiene acceso
 ):
     service = TareaService(db, current_user.tenant_id)
     return await service.cambiar_estado(current_user.id, tarea_id, data)

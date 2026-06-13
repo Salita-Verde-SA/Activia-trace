@@ -34,10 +34,9 @@ async def obtener_ultimas_acciones(
 async def explorar_logs(
     fecha_desde: Optional[datetime] = Query(None),
     fecha_hasta: Optional[datetime] = Query(None),
-    usuario_id: Optional[UUID] = Query(None),
+    actor_id: Optional[UUID] = Query(None),
     accion: Optional[str] = Query(None),
-    entidad: Optional[str] = Query(None),
-    entidad_id: Optional[UUID] = Query(None),
+    materia_id: Optional[UUID] = Query(None),
     limit: int = Query(50, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
@@ -46,10 +45,9 @@ async def explorar_logs(
     filtro = AuditoriaFiltro(
         fecha_desde=fecha_desde,
         fecha_hasta=fecha_hasta,
-        usuario_id=usuario_id,
+        actor_id=actor_id,
         accion=accion,
-        entidad=entidad,
-        entidad_id=entidad_id,
+        materia_id=materia_id,
         limit=limit,
         offset=offset
     )

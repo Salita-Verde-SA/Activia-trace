@@ -13,7 +13,7 @@ async def create_usuario(
     data: UsuarioCreate,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
-    _=Depends(require_permission("usuarios:crear"))
+    _=Depends(require_permission("usuarios:gestionar"))
 ):
     service = UsuarioService(db, str(current_user.tenant_id))
     return await service.create_usuario(data)
@@ -24,7 +24,7 @@ async def list_usuarios(
     limit: int = Query(100, ge=1, le=1000),
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
-    _=Depends(require_permission("usuarios:leer"))
+    _=Depends(require_permission("usuarios:gestionar"))
 ):
     service = UsuarioService(db, str(current_user.tenant_id))
     return await service.get_usuarios(skip=skip, limit=limit)
@@ -34,7 +34,7 @@ async def get_usuario(
     usuario_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
-    _=Depends(require_permission("usuarios:leer"))
+    _=Depends(require_permission("usuarios:gestionar"))
 ):
     service = UsuarioService(db, str(current_user.tenant_id))
     return await service.get_usuario(usuario_id)
@@ -45,7 +45,7 @@ async def update_usuario(
     data: UsuarioUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
-    _=Depends(require_permission("usuarios:editar"))
+    _=Depends(require_permission("usuarios:gestionar"))
 ):
     service = UsuarioService(db, str(current_user.tenant_id))
     return await service.update_usuario(usuario_id, data)
@@ -55,7 +55,7 @@ async def deactivate_usuario(
     usuario_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
-    _=Depends(require_permission("usuarios:eliminar"))
+    _=Depends(require_permission("usuarios:gestionar"))
 ):
     service = UsuarioService(db, str(current_user.tenant_id))
     return await service.deactivate_usuario(usuario_id)
