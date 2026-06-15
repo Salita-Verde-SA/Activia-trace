@@ -18,7 +18,7 @@ from models.avisos import Aviso, AcknowledgmentAviso
 from models.comunicacion import Comunicacion
 from models.calificacion import Calificacion
 from models.padron import VersionPadron, EntradaPadron
-
+from models.coloquios import ConvocatoriaColoquio, TurnoColoquio, CandidatoColoquio, ReservaColoquio
 __all__ = [
     "Base",
     "TimestampMixin",

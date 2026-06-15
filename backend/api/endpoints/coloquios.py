@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, File, UploadFile
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,13 +11,45 @@ from services.coloquios import ColoquioService
 
 router = APIRouter()
 
+@router.post("/convocatorias/{convocatoria_id}/padron/importar", status_code=status.HTTP_201_CREATED)
+async def importar_padron_candidatos(
+    convocatoria_id: UUID,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_permission("evaluacion:gestionar"))
+):
+    service = ColoquioService(db, current_user.tenant_id)
+    content = await file.read()
+    res = await service.importar_padron_candidatos(convocatoria_id, content)
+    return {"message": f"Importados {res} candidatos exitosamente."}
+
+@router.get("/convocatorias/{convocatoria_id}/agenda")
+async def listar_agenda_reservas(
+    convocatoria_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_permission("evaluacion:gestionar"))
+):
+    service = ColoquioService(db, current_user.tenant_id)
+    return await service.listar_agenda_reservas(convocatoria_id)
+
+from schemas.coloquio import ConvocatoriaColoquioCreate, ConvocatoriaColoquioResponse
+
+@router.post("/convocatorias", response_model=ConvocatoriaColoquioResponse, status_code=status.HTTP_201_CREATED)
+async def crear_convocatoria(
+    data: ConvocatoriaColoquioCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_permission("evaluacion:gestionar"))
+):
+    service = ColoquioService(db, current_user.tenant_id)
+    return await service.crear_convocatoria(data)
+
 @router.get("/disponibles", response_model=List[ColoquioDisponible])
 async def listar_disponibles(
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_permission("evaluacion:reservar"))
 ):
     service = ColoquioService(db, current_user.tenant_id)
-    return await service.listar_disponibles()
+    return await service.listar_disponibles(current_user.id)
 
 @router.post("/reservar", response_model=ReservaColoquioResponse, status_code=status.HTTP_201_CREATED)
 async def reservar_coloquio(
