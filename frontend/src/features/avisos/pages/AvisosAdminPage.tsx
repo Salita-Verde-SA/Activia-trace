@@ -3,6 +3,7 @@ import { useTodosAvisos } from '../hooks/useAvisos';
 import { useRoles } from '../hooks/useRoles';
 import { AvisosForm } from '../components/AvisosForm';
 import { AckTracker } from '../components/AckTracker';
+import { Info, AlertTriangle, AlertOctagon, CheckCircle2 } from 'lucide-react';
 
 export const AvisosAdminPage: React.FC = () => {
   const { data: avisos, isLoading, error } = useTodosAvisos();
@@ -58,14 +59,17 @@ export const AvisosAdminPage: React.FC = () => {
                   onClick={() => setSelectedAvisoId(aviso.id)}
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-serif text-lg text-white/90">{aviso.titulo}</h3>
-                    <span className={`px-2 py-1 text-xs font-semibold rounded border ${
-                      aviso.severidad === 'CRITICAL' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
-                      aviso.severidad === 'WARNING' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
-                      'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                    <h3 className="font-serif text-lg text-white/90 pr-2">{aviso.titulo}</h3>
+                    <div className={`flex items-center space-x-1 px-2.5 py-1 text-xs font-semibold rounded-md border backdrop-blur-sm shadow-sm ${
+                      aviso.severidad === 'CRITICAL' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                      aviso.severidad === 'WARNING' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                      'bg-blue-500/10 text-blue-400 border-blue-500/20'
                     }`}>
-                      {aviso.severidad}
-                    </span>
+                      {aviso.severidad === 'CRITICAL' && <AlertOctagon className="w-3.5 h-3.5" />}
+                      {aviso.severidad === 'WARNING' && <AlertTriangle className="w-3.5 h-3.5" />}
+                      {aviso.severidad === 'INFO' && <Info className="w-3.5 h-3.5" />}
+                      <span>{aviso.severidad}</span>
+                    </div>
                   </div>
                   <p className="text-white/70 text-sm line-clamp-2 mb-3">{aviso.cuerpo}</p>
                   <div className="flex justify-between text-xs text-white/50">
@@ -73,8 +77,9 @@ export const AvisosAdminPage: React.FC = () => {
                     <span>{new Date(aviso.fecha_inicio).toLocaleDateString()}</span>
                   </div>
                   {aviso.requiere_ack && (
-                    <div className="mt-3 text-xs font-medium text-primary-400">
-                      ▶ Requiere confirmación de lectura
+                    <div className="mt-4 flex items-center space-x-1.5 text-xs font-medium text-primary-400 bg-primary-500/10 w-fit px-2 py-1 rounded-md border border-primary-500/20">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Requiere confirmación de lectura</span>
                     </div>
                   )}
                 </div>
