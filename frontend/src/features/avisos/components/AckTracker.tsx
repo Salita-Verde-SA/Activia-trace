@@ -12,25 +12,25 @@ export const AckTracker: React.FC<AckTrackerProps> = ({ avisoId }) => {
   if (error || !metrics) return <div className="text-sm text-red-500">Error al cargar métricas</div>;
 
   return (
-    <div className="bg-gray-50 rounded p-4 border border-gray-200">
-      <h4 className="text-sm font-bold text-gray-700 mb-2">Seguimiento de Lectura</h4>
+    <div className="bg-white/5 backdrop-blur-md rounded-xl p-5 border border-white/10">
+      <h4 className="text-sm font-bold text-white/90 mb-4">Seguimiento de Lectura</h4>
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <p className="text-xs text-gray-500 uppercase">Alcance Total</p>
-          <p className="text-lg font-semibold">{metrics.alcance_total}</p>
+        <div className="bg-white/5 p-3 rounded-lg border border-white/5">
+          <p className="text-xs text-white/50 uppercase tracking-wider mb-1">Alcance Total</p>
+          <p className="text-xl font-semibold text-white/90">{metrics.alcance_total}</p>
         </div>
-        <div>
-          <p className="text-xs text-gray-500 uppercase">Leídos</p>
-          <p className="text-lg font-semibold text-green-600">{metrics.leidos_count} ({metrics.porcentaje_leidos.toFixed(1)}%)</p>
+        <div className="bg-white/5 p-3 rounded-lg border border-white/5">
+          <p className="text-xs text-white/50 uppercase tracking-wider mb-1">Leídos</p>
+          <p className="text-xl font-semibold text-green-400">{metrics.leidos_count} <span className="text-sm font-medium text-green-400/70">({metrics.porcentaje_leidos.toFixed(1)}%)</span></p>
         </div>
-        <div>
-          <p className="text-xs text-gray-500 uppercase">Pendientes</p>
-          <p className="text-lg font-semibold text-yellow-600">{metrics.pendientes_count}</p>
+        <div className="bg-white/5 p-3 rounded-lg border border-white/5 col-span-2">
+          <p className="text-xs text-white/50 uppercase tracking-wider mb-1">Pendientes</p>
+          <p className="text-xl font-semibold text-yellow-400">{metrics.pendientes_count}</p>
         </div>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-2.5 mt-3">
+      <div className="w-full bg-white/10 rounded-full h-2 mt-4 overflow-hidden">
         <div 
-          className="bg-green-600 h-2.5 rounded-full" 
+          className="bg-primary-500 h-2 rounded-full transition-all duration-500 ease-out"  
           style={{ width: `${metrics.porcentaje_leidos}%` }}
         ></div>
       </div>
