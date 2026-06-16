@@ -17,6 +17,33 @@
 
 ---
 
+## 🔐 Credenciales de desarrollo (app activia-trace)
+
+> Usuarios sembrados por los scripts de `backend/scripts/` para probar la app **activia-trace**
+> en local. Frontend en **http://localhost:47120** · API en **http://localhost:47121**.
+> ⚠️ **Solo para desarrollo local** — no son credenciales de producción.
+
+| Rol | Email | Password |
+|-----|-------|----------|
+| **ADMIN** | `admin@activia.com` | `admin123` |
+| **COORDINADOR** | `coord@activia.edu.ar` | `password123` |
+| **PROFESOR** | `profesor@activia.edu.ar` | `password123` |
+| **TUTOR** | `tutor@activia.edu.ar` | `password123` |
+| **NEXO** | `nexo@activia.edu.ar` | `password123` |
+| **FINANZAS** | `finanzas@activia.edu.ar` | `password123` |
+| **ALUMNO** | `alumno@activia.edu.ar` | `password123` |
+
+Para (re)generar estos usuarios sobre una base ya migrada (`alembic upgrade head`):
+
+```bash
+docker compose exec api python -m scripts.seed_test_users   # crea tenant + 6 usuarios
+docker compose exec api python -m scripts.seed_rbac         # crea roles + permisos
+docker compose exec api python -m scripts.seed_test_users   # asigna los roles a los usuarios
+docker compose exec api python -m scripts.seed_admin        # crea el admin + rol ADMIN
+```
+
+---
+
 ## ¿Qué es esto?
 
 **JR Stack** es un **instalador _methodology-first_**: un único binario en Go que toma tu agente de IA (Claude Code, OpenCode…) y le **inyecta, de forma modular y actualizable, todo el sustrato que exige una metodología de desarrollo asistido por IA.**

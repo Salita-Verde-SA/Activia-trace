@@ -1,138 +1,142 @@
-# CLAUDE.md — JR Stack (instalador del harness metodológico)
+# CLAUDE.md
 
-> Constitución operativa del proyecto. Versión canónica (Claude).
-> Espejo de `AGENTS.md`: **si modificás uno, actualizás el otro.**
-> Leé este archivo antes de cualquier acción no trivial.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> **Nota sobre el orquestador SDD.** El orquestador SDD global (coordinación,
-> delegación a sub-agentes, model-routing por fase, protocolo Engram, governance)
-> ya vive en tu `~/.claude/CLAUDE.md`. **Este archivo NO lo duplica.** Si necesitás
-> el detalle del orquestador, referenciá ese archivo global. Acá viven solo las
-> reglas **específicas de este proyecto**.
+## What this repository actually is
 
----
+The **active project is `activia-trace`** — a multi-tenant academic-management and
+traceability platform that sits as an orchestration layer over Moodle (consolidates
+grades, detects delays, manages approved outbound communication, teaching teams,
+encounters, colloquia, fee settlements and full audit). All live code is in
+[backend/](backend/) (Python 3.13 / FastAPI) and [frontend/](frontend/) (React 19).
 
-## 1. Stack y topología
+> ⚠️ **Dormant scaffolding — do not work here unless explicitly asked.** This repo was
+> forked from the **JR Stack** template (a Go CLI installer), and that legacy still
+> lives at the root: `cmd/`, `internal/`, `go.mod`, `go.sum`, `build.sh/.bat`, plus the
+> JR-Stack-specific `README.md`, `AGENTS.md`, `ARCHITECTURE.md` and `CHANGES.md`. Its
+> last commits predate all activia-trace work. **Ignore these for activia-trace tasks.**
+> The activia-trace domain docs, by contrast, ARE current: [knowledge-base/](knowledge-base/),
+> [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md), [docs/PRD.md](docs/PRD.md).
 
-- **Lenguaje**: Go 1.26.
-- **TUI**: Bubbletea + Lipgloss (sin el theme cosmético del repo viejo).
-- **Distribución**: binario único, cross-platform — Windows, macOS, Linux, WSL y Termux.
-- **Entrypoint**: `cmd/jr-stack/`.
-- **Catálogo**: embebido en el binario vía `//go:embed` (`internal/catalog/harnesses.yaml`).
+## Commands
 
-Qué es esto: un **instalador methodology-first**. Materializa el `MANUAL-METODOLOGICO.md`.
-Un comando (`jr-stack install`) instala/configura el sustrato (harnesses); un único
-orquestador de fundación deja el proyecto listo para el ciclo OPSX
-(`explore → propose → apply → verify → archive`).
+All backend commands run from [backend/](backend/); all frontend commands from [frontend/](frontend/).
 
-**NO es** (fuera de scope, decisión firme — ver ARCHITECTURE.md §1):
-GGA (code review en commit), themes/statusline/keybindings, persona como producto
-de marketing, framing "supercharge any agent" / relación con Gentleman.Dots.
-
-### Estructura de paquetes (ARCHITECTURE.md §5)
-
+### Full stack (Docker)
+```bash
+docker compose up            # api :47121→8000, frontend :47120→5173, postgres :47122→5432, worker
 ```
-cmd/jr-stack/            entrypoint CLI
-internal/
-  system/                detección OS/arch/WSL/Termux, deps, guards   [PORT]
-  catalog/               parseo del harnesses.yaml embebido           [NEW]  ← existe
-  model/                 tipos de dominio (harness, agente, modo)     [NEW]  ← existe
-  planner/               grafo de dependencias, orden, review payload [PORT]
-  agents/                adapters por agente (claude/opencode/...)    [PORT, slim]
-  harness/               install/inject por tipo de harness           [NEW]
-    skill/  config/  external/
-  filemerge/             merge por markers (inyectar sin pisar)       [PORT]
-  backup/                snapshot + restore de configs                [PORT]
-  pipeline/              ejecución por etapas + rollback              [PORT]
-  verify/                health checks post-install                   [PORT]
-  tui/                   Bubbletea (sin theme cosmético del viejo)    [PORT, slim]
-assets/                  catálogo + configs bundleadas (sdd-orchestrator, etc.)
+`postgres` auto-runs [init-test-db.sql](init-test-db.sql), which creates the `activia_trace_test`
+database the test suite needs.
+
+### Backend
+```bash
+pip install -e ".[test]"                         # install with test extras (from backend/)
+uvicorn app.main:app --reload                    # run API locally (needs reachable Postgres)
+python -m workers.main                           # run the background worker standalone
+
+pytest                                           # full test suite (asyncio_mode=auto, testpaths=tests)
+pytest tests/test_tareas.py                      # one file
+pytest tests/test_tareas.py::test_name           # one test
+pytest -k "rbac and not slow"                    # by keyword
+
+alembic upgrade head                             # apply migrations
+alembic revision --autogenerate -m "msg"         # new migration (ONE per schema change)
+alembic downgrade -1                             # roll back one
+
+python -m scripts.seed_admin                     # dev seeds (also seed_rbac, seed_test_users)
+```
+**Tests require a real Postgres**, not mocks: [tests/conftest.py](backend/tests/conftest.py)
+connects to `TEST_DATABASE_URL` (defaults to `DATABASE_URL`) and creates/drops all tables
+per session. Mocking the DB is a hard rule violation. Copy [backend/.env.example](backend/.env.example)
+to `backend/.env` first; `SECRET_KEY` and `ENCRYPTION_KEY` must be ≥32 chars.
+
+### Frontend
+```bash
+npm install
+npm run dev          # Vite dev server (5173)
+npm run build        # tsc + vite build  ← only on explicit request
+npm run lint         # eslint
+npx vitest           # tests (no npm "test" script; jsdom + Testing Library, setupTests.ts)
+npx vitest run src/features/tareas   # one path
 ```
 
-`[PORT]` = traer del repo viejo (`E:\ESCRITORIO\programar\2026\jr-stack`) y limpiar.
-`[NEW]` = construir. Se descarta: `components/gga`, `components/theme`,
-`components/persona` (marketing). `components/permissions` **se mantiene** (la
-seguridad no es opcional).
+## Backend architecture
 
----
+Strict unidirectional layering — **Routers → Services → Repositories → Models**. Routers hold
+no business logic; Services never touch the DB directly (always via a Repository).
 
-## 2. Modelo de dominio (resumen)
+- **Entrypoint** — [app/main.py](backend/app/main.py): builds the `FastAPI` app, a `lifespan`
+  that starts logging/observability and the comunicaciones worker as a background task, CORS for
+  `http://localhost:47120`, and mounts every router.
+- **Router mounting is intentionally heterogeneous** (gotcha — read `main.py` before adding routes).
+  Three router families coexist with *inconsistent* prefixes:
+  - [api/routers/](backend/api/routers/) — `auth`, and `admin/{carreras,cohortes,materias}` under `/api/admin`
+  - [api/v1/routers/](backend/api/v1/routers/) — `health`, `programas`, `fechas_academicas`
+  - [api/endpoints/](backend/api/endpoints/) — the bulk of features, each mounted with its own prefix
+    (e.g. `/api`, `/api/calificaciones`, `/api/v1/tareas`). New endpoints typically go here.
+- **`core/`** — cross-cutting infra: [config.py](backend/core/config.py) (Pydantic `Settings`),
+  [database.py](backend/core/database.py) (async engine/session), [dependencies.py](backend/core/dependencies.py)
+  (`get_db`), [crypto.py](backend/core/crypto.py) (AES-256 for PII), [security/](backend/core/security/)
+  (`jwt.py`, `password.py` Argon2), `tenancy.py`, `observability.py`, `audit.py`, `exceptions.py`.
+  Note: `core/permissions.py` is a stub (`RESERVADO`) — real RBAC lives in the auth dependency below.
 
-Detalle real en `internal/model/harness.go`. Tipos clave:
+### Multi-tenancy + soft delete (enforced in the repository, not per-query)
+[repositories/base.py](backend/repositories/base.py) `BaseRepository` is the backbone: its
+`_base_query()` automatically filters by `tenant_id` and excludes soft-deleted rows
+(`deleted_at IS NULL`); `create()` force-injects the context `tenant_id`; `delete()` does a
+soft delete. Models compose this contract via [models/mixins.py](backend/models/mixins.py):
+`TenantMixin` (FK to `tenant`, indexed), `SoftDeleteMixin`, `TimestampMixin`. A query that
+bypasses `BaseRepository` and forgets the tenant scope is a row-level isolation bug.
 
-- **`Harness`** — módulo instalable/configurable. Campos: `ID`, `Name`, `Type`,
-  `Source` (skill), `External` (tool), `Toggles` (config), `InstallModes`,
-  `DependsOn`, `Agents`. Métodos: `InMode(mode)`, `SupportsAgent(agent)`.
-- **`HarnessType`** — cómo se materializa un harness:
-  - `skill` → `SKILL.md` + assets, clonado de un repo y copiado al dir de skills del agente.
-  - `config` → texto/archivos bundleados que configuran el agente (ej. `sdd-orchestrator`, `permissions`).
-  - `external` → binario/servicio de terceros que instalamos/configuramos pero no son nuestros (Engram, OpenSpec, Context7).
-- **`InstallMode`** — `lite` | `full` | `custom`. Convención: un harness Lite lista
-  `[lite, full]` (Full incluye a Lite); uno exclusivo de Full lista `[full]`; Custom matchea todos.
-- **`Agent`** — `claude`, `opencode`, `gemini`, `codex`, `cursor`, `vscode`, `windsurf`, `antigravity`.
-- **Catálogo** (`internal/catalog`) — `Load()` parsea y valida el YAML embebido;
-  un catálogo malformado es error de build/release (falla ruidoso). Métodos:
-  `ByID`, `ForMode`, `ForAgent`.
+### Identity & RBAC (the security golden rule)
+[api/dependencies/auth.py](backend/api/dependencies/auth.py) is the single source of identity.
+`get_current_user` extracts user id, `tenant_id`, and roles **only** from the verified JWT — never
+from a URL/body/header. `require_permission("modulo:accion")` is the dependency every protected
+endpoint declares (e.g. `Depends(require_permission("tareas:gestionar"))`); it checks two grant
+paths in one `UNION` query — scoped roles via `Asignacion` (with `desde`/`hasta` validity windows)
+and global roles via `UsuarioRol` — and is **fail-closed** (403 if the permission is not explicitly
+granted). Services receive `current_user.tenant_id` and `current_user.id` and pass `tenant_id` into
+their repositories.
 
-**El harness `sdd-orchestrator` es clave**: es de tipo `config` y se compone a
-partir de **toggles modulares** (`tdd`, `engram`, `model-routing`, `delegation`,
-`governance`). El resultado es el bloque de instrucciones del orquestador que se
-inyecta en `CLAUDE.md`/`AGENTS.md` del proyecto destino.
+### Workers & integrations
+- [workers/comunicaciones.py](backend/workers/comunicaciones.py) drains the outbound-communication
+  queue (`Pend→Send→OK/Fail` / `Pend→Canc`) using `SELECT ... FOR UPDATE SKIP LOCKED` for safe
+  concurrency. It runs both inside the API process (lifespan task) and as the standalone `worker`
+  compose service.
+- [integrations/moodle_ws.py](backend/integrations/moodle_ws.py) — the dedicated Moodle Web
+  Services client.
+- **Migrations**: [alembic/env.py](backend/alembic/env.py) pulls the URL from `Settings.DATABASE_URL`
+  and runs async; models are imported via the `models` package for autogenerate.
 
----
+## Frontend architecture
 
-## 3. Reglas críticas NO negociables
+Feature-based modules under [src/features/](frontend/src/features/) — `auth`, `tareas`, `calificaciones`,
+`comunicaciones`, `coordinacion`, `finanzas`, `admin`, `alumno`, `avisos`, `equipos`, `programas`,
+`shell`. Each feature is self-contained: `components/ hooks/ services/ types/ pages/`.
 
-Formuladas como "NUNCA X → hacer Y". Estas reglas son duras: violarlas invalida el trabajo.
+- **Composition**: [src/App.tsx](frontend/src/App.tsx) wires `QueryClientProvider` (TanStack Query) +
+  `AuthProvider` + `BrowserRouter`; routing is role-based (`RoleBasedRedirect`, `react-router-dom` v7).
+- **HTTP**: one Axios client in [src/shared/services/api.ts](frontend/src/shared/services/api.ts).
+  A request interceptor attaches the `access_token` from `localStorage`; a response interceptor does
+  **refresh-token rotation** with a queued-retry mechanism on 401. `baseURL` = `VITE_API_URL` or
+  `http://localhost:47121`. All data fetching goes through feature `services/` + TanStack hooks — never
+  call Axios from a component.
+- **Forms**: React Hook Form + Zod. **Styles**: Tailwind CSS v4 (via `@tailwindcss/vite`). No `any`,
+  no class components; PascalCase component files.
 
-- **NUNCA pisar config del usuario sin backup** → SIEMPRE snapshot vía `internal/backup` antes de escribir.
-- **SIEMPRE inyectar con markers idempotentes** → usar `internal/filemerge` (merge por markers); reinstalar no debe duplicar bloques.
-- **NUNCA hardcodear paths de agente** → resolver SIEMPRE vía el adapter del agente (`internal/agents`).
-- **NUNCA commitear sin pedido explícito** del responsable; *conventional commits* exclusivamente; **NUNCA** atribución de coautoría a la IA.
-- **NUNCA meter en el repo lo que se saca** → GGA, theme, statusline, keybindings, persona-marketing y el framing "supercharge any agent" NO van. La persona puede sobrevivir solo como harness `config` opcional, sin envoltorio de marketing.
-- **SIEMPRE limpiar leftovers `gentle-ai` / `gentle-stack` / `Gentleman.Dots`** al portar código del repo viejo (paths, strings, nombres, branding).
-- **NUNCA instalar "repos"** → el instalador instala **harnesses**, y cada harness sabe cómo se materializa (skill/config/external).
-- **NUNCA editar `harnesses.yaml` sin pasar por `catalog.Load()` validando** → un catálogo inválido rompe el release.
-- **NUNCA build después de cambios** salvo pedido explícito (regla del operador).
-- **SIEMPRE marcar `(TBD)`** cuando una decisión no está tomada; nunca inventar.
+## Project rules & domain knowledge
 
----
+The binding project rules (hard rules, governance levels, conventional-commit scopes, the OPSX
+workflow) and the full domain model live outside this file:
+- Domain source of truth: [knowledge-base/](knowledge-base/) (roles & RBAC in `03_actores_y_roles.md`,
+  data model in `04_modelo_de_datos.md`, business rules `RN-XX` in `05_reglas_de_negocio.md`,
+  open questions to resolve before coding in `10_preguntas_abiertas.md`).
+- Architecture & product: [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md), [docs/PRD.md](docs/PRD.md).
 
-## 4. Governance por dominio
-
-El nivel de autonomía es proporcional a la criticidad del paquete tocado.
-
-| Nivel | Dominios (paquetes) | Comportamiento del agente |
-|---|---|---|
-| **ALTO** | `backup` (snapshot/restore), `filemerge` (merge por markers), `pipeline` (rollback) | Propone y espera review. Pueden **destruir config del usuario**. |
-| **MEDIO** | `agents` (adapters por agente), `harness/*` (installers) | Implementa con checkpoints. |
-| **BAJO** | `catalog`, `model`, `tui` | Autonomía completa si los tests pasan. |
-
-> No hay dominios CRÍTICO en este proyecto (no manejamos auth/billing/secrets de
-> producción). El máximo es ALTO porque destruir la config del usuario es el peor
-> daño posible del instalador.
-
----
-
-## 5. Mapa de navegación ("Necesito X → Leer Y")
-
-| Necesito… | Leer / mirar |
-|---|---|
-| El blueprint del diseño (fuente de verdad) | `ARCHITECTURE.md` |
-| La metodología (etapas, governance, flujo) | `../MANUAL-METODOLOGICO.md` |
-| Roadmap de changes, deps, camino crítico | `CHANGES.md` |
-| Qué harnesses existen y de qué tipo | `internal/catalog/harnesses.yaml` |
-| Los tipos de dominio | `internal/model/harness.go` |
-| Cargar/validar el catálogo | `internal/catalog/catalog.go` |
-| Infra a portar (backup, filemerge, planner, agents, pipeline, verify, tui) | repo viejo: `E:\ESCRITORIO\programar\2026\jr-stack\internal\` |
-| Configs bundleadas (sdd-orchestrator por agente) | repo viejo: `internal/assets/` |
-| Estado real de los changes | `openspec` CLI (`openspec list`, `openspec status`) — fuente de verdad |
-| El orquestador SDD global | `~/.claude/CLAUDE.md` (NO duplicar acá) |
-
----
-
-## 6. Notas
-
-- `openspec/` está versionado-ignorado por git (dogfooding interno).
-- Cada incremento del roadmap es un change OPSX (ver `CHANGES.md`).
-- Skills de dominio relevantes para este repo: `go-testing` (tests Go + Bubbletea TUI).
+Codebase invariants enforced in review (read the KB for the rest): row-level multi-tenancy on every
+table; identity always from the JWT session; RBAC `modulo:accion` fail-closed per endpoint; secrets/PII
+(CBU, DNI) AES-256, passwords Argon2id; soft delete always (append-only audit, never hard delete);
+Pydantic schemas use `model_config = ConfigDict(extra="forbid")`; snake_case Python; one Alembic
+migration per schema change; ≤500 LOC per backend file, React components <200 LOC. Do not run
+builds or commit without an explicit request.

@@ -11,6 +11,14 @@
 *.test
 *.out
 
+# Python (backend)
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+*.egg-info/
+backend/pytest_repo.log
+
 # IDE
 .idea/
 .vscode/
