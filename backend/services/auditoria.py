@@ -18,6 +18,29 @@ class AuditoriaService:
         self.tenant_id = tenant_id
         self.current_user = current_user
 
+    @staticmethod
+    async def log_action(
+        db: AsyncSession,
+        tenant_id: UUID,
+        actor_id: UUID,
+        accion: str,
+        detalle: dict = None,
+        materia_id: UUID = None,
+        ip: str = None,
+        filas_afectadas: int = 1
+    ):
+        audit = AuditLog(
+            tenant_id=tenant_id,
+            actor_id=actor_id,
+            accion=accion,
+            detalle=detalle,
+            materia_id=materia_id,
+            ip=ip,
+            filas_afectadas=filas_afectadas
+        )
+        db.add(audit)
+        await db.commit()
+
     async def _get_base_query(self):
         query = select(AuditLog).where(AuditLog.tenant_id == self.tenant_id)
         

@@ -12,6 +12,7 @@ from schemas.tarea import (
     ComentarioTareaCreate, ComentarioTareaResponse
 )
 from services.tareas import TareaService
+from services.auditoria import AuditoriaService
 
 router = APIRouter()
 
@@ -22,7 +23,9 @@ async def crear_tarea(
     current_user: CurrentUser = Depends(require_permission("tareas:gestionar"))
 ):
     service = TareaService(db, current_user.tenant_id)
-    return await service.crear_tarea(current_user.id, current_user.roles, data)
+    tarea = await service.crear_tarea(current_user.id, current_user.roles, data)
+    await AuditoriaService.log_action(db, current_user.tenant_id, current_user.id, "TAREA_CREATED", {"tarea_id": str(tarea.id), "titulo": tarea.titulo})
+    return tarea
 
 @router.get("/mis-tareas", response_model=List[TareaResponse])
 async def listar_mis_tareas(
@@ -76,7 +79,10 @@ async def editar_tarea(
     current_user: Usuario = Depends(require_permission("tareas:gestionar"))
 ):
     service = TareaService(db, current_user.tenant_id)
-    return await service.editar_tarea(current_user.id, tarea_id, data)
+    tarea = await service.editar_tarea(current_user.id, tarea_id, data)
+    if data.asignado_a is not None:
+        await AuditoriaService.log_action(db, current_user.tenant_id, current_user.id, "TAREA_ASSIGNED", {"tarea_id": str(tarea_id), "assignee_id": str(data.asignado_a)})
+    return tarea
 
 @router.patch("/{tarea_id}/estado", response_model=TareaResponse)
 async def cambiar_estado(
@@ -86,7 +92,11 @@ async def cambiar_estado(
     current_user: Usuario = Depends(require_permission("tareas:leer_propias")) # O "tareas:gestionar" si es admin. El service podría chequear si le pertenece, por simplicidad asumimos que tiene acceso
 ):
     service = TareaService(db, current_user.tenant_id)
-    return await service.cambiar_estado(current_user.id, tarea_id, data)
+    tarea_old = await service.obtener_tarea(tarea_id)
+    old_status = tarea_old.estado.value if hasattr(tarea_old.estado, 'value') else str(tarea_old.estado)
+    tarea = await service.cambiar_estado(current_user.id, tarea_id, data)
+    await AuditoriaService.log_action(db, current_user.tenant_id, current_user.id, "TAREA_STATUS_UPDATED", {"tarea_id": str(tarea_id), "old_status": old_status, "new_status": data.estado.value if hasattr(data.estado, 'value') else str(data.estado)})
+    return tarea
 
 @router.post("/{tarea_id}/comentarios", response_model=ComentarioTareaResponse, status_code=status.HTTP_201_CREATED)
 async def agregar_comentario(
@@ -96,7 +106,9 @@ async def agregar_comentario(
     current_user: Usuario = Depends(require_permission("tareas:leer_propias"))
 ):
     service = TareaService(db, current_user.tenant_id)
-    return await service.agregar_comentario(current_user.id, tarea_id, data)
+    comentario = await service.agregar_comentario(current_user.id, tarea_id, data)
+    await AuditoriaService.log_action(db, current_user.tenant_id, current_user.id, "TAREA_COMMENTED", {"tarea_id": str(tarea_id), "texto": data.texto})
+    return comentario
 
 @router.get("/{tarea_id}/comentarios", response_model=List[ComentarioTareaResponse])
 async def listar_comentarios(
