@@ -11,7 +11,7 @@ import { TareasBoard } from '@/features/tareas/components/TareasBoard';
 import { SetupCuatrimestreWizard } from '@/features/coordinacion/components/SetupCuatrimestreWizard';
 import { EstructuraAcademicaPage } from '@/features/admin/pages/EstructuraAcademicaPage';
 import { GestionUsuariosPage } from '@/features/admin/pages/GestionUsuariosPage';
-import { AuditoriaPage } from '@/features/admin/pages/AuditoriaPage';
+import { AuditoriaPage } from '@/features/auditoria/pages/AuditoriaPage';
 import { GrillaSalarialPage } from '@/features/finanzas/pages/GrillaSalarialPage';
 import { LiquidacionesDashboardPage } from '@/features/finanzas/pages/LiquidacionesDashboardPage';
 import { MiEstadoPage } from '@/features/alumno/pages/MiEstadoPage';
@@ -76,7 +76,7 @@ function App() {
               {/* Admin Panel routes */}
               <Route path="admin/estructura" element={<EstructuraAcademicaPage />} />
               <Route path="admin/usuarios" element={<GestionUsuariosPage />} />
-              <Route path="admin/auditoria" element={<AuditoriaPage />} />
+              <Route path="auditoria" element={<AuditoriaPage />} />
               
               {/* Finanzas routes */}
               <Route path="finanzas/salarios" element={<GrillaSalarialPage />} />

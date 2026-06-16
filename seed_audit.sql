@@ -1,0 +1,3 @@
+INSERT INTO audit_log (id, tenant_id, actor_id, accion, detalle, ip, filas_afectadas) VALUES (gen_random_uuid(), '8dbcf61f-a395-4fe9-a965-1460375878ca', 'e5ebca42-a297-4b2d-b05f-854c0838f775', 'LOGIN', '{"status": "success"}', '192.168.1.100', 1);
+INSERT INTO audit_log (id, tenant_id, actor_id, accion, detalle, ip, filas_afectadas) VALUES (gen_random_uuid(), '8dbcf61f-a395-4fe9-a965-1460375878ca', 'e5ebca42-a297-4b2d-b05f-854c0838f775', 'CREATE_USER', '{"email": "nuevo@activia.edu.ar"}', '192.168.1.100', 1);
+INSERT INTO audit_log (id, tenant_id, actor_id, accion, detalle, ip, filas_afectadas) VALUES (gen_random_uuid(), '8dbcf61f-a395-4fe9-a965-1460375878ca', 'e5ebca42-a297-4b2d-b05f-854c0838f775', 'CHANGE_ROLE', '{"role": "PROFESOR"}', '192.168.1.100', 1);
