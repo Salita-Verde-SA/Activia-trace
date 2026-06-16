@@ -17,8 +17,8 @@ class UsuarioService:
     async def get_usuario(self, usuario_id: uuid.UUID) -> Usuario | None:
         return await self.usuario_repo.get(usuario_id)
 
-    async def get_usuarios(self, skip: int = 0, limit: int = 100) -> list[Usuario]:
-        return await self.usuario_repo.list(skip=skip, limit=limit)
+    async def get_usuarios(self, skip: int = 0, limit: int = 100, search: str | None = None, rol: str | None = None) -> list[Usuario]:
+        return await self.usuario_repo.list_filtered(skip=skip, limit=limit, search=search, rol=rol)
 
     async def create_usuario(self, data: UsuarioCreate) -> Usuario:
         # Validar unicidad de email_hash en el tenant
@@ -29,23 +29,23 @@ class UsuarioService:
         email_hash = get_blind_index(data.email)
         password_hash = get_password_hash(data.password)
 
-        usuario = Usuario(
-            tenant_id=self.tenant_id,
-            email=data.email,
-            email_hash=email_hash,
-            password_hash=password_hash,
-            nombre=data.nombre,
-            apellido=data.apellido,
-            dni=data.dni,
-            cuil=data.cuil,
-            cbu=data.cbu,
-            alias_cbu=data.alias_cbu,
-            legajo=data.legajo,
-            activo=data.activo,
-            totp_enabled=False
-        )
+        usuario_data = {
+            "tenant_id": self.tenant_id,
+            "email": data.email,
+            "email_hash": email_hash,
+            "password_hash": password_hash,
+            "nombre": data.nombre,
+            "apellido": data.apellido,
+            "dni": data.dni,
+            "cuil": data.cuil,
+            "cbu": data.cbu,
+            "alias_cbu": data.alias_cbu,
+            "legajo": data.legajo,
+            "activo": data.activo,
+            "totp_enabled": False
+        }
 
-        created = await self.usuario_repo.create(usuario)
+        created = await self.usuario_repo.create(**usuario_data)
         
         # Guardar auditoría (implícito o explícito dependiendo de cómo se haya implementado AuditLog)
         
@@ -57,7 +57,29 @@ class UsuarioService:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
         update_data = data.model_dump(exclude_unset=True)
-        updated = await self.usuario_repo.update(usuario_id, update_data)
+        roles_nombres = update_data.pop("roles", None)
+        
+        updated = usuario
+        if update_data:
+            updated = await self.usuario_repo.update(usuario_id, **update_data)
+            
+        if roles_nombres is not None:
+            from models.rbac import Rol, UsuarioRol
+            from sqlalchemy import select, delete
+            
+            stmt = select(Rol.id).where(Rol.tenant_id == self.tenant_id, Rol.nombre.in_(roles_nombres))
+            result = await self.db.execute(stmt)
+            rol_ids = result.scalars().all()
+            
+            del_stmt = delete(UsuarioRol).where(UsuarioRol.usuario_id == usuario_id, UsuarioRol.tenant_id == self.tenant_id)
+            await self.db.execute(del_stmt)
+            
+            for r_id in rol_ids:
+                ur = UsuarioRol(usuario_id=usuario_id, rol_id=r_id, tenant_id=self.tenant_id)
+                self.db.add(ur)
+            
+            await self.db.commit()
+            
         return updated
 
     async def actualizar_perfil(self, usuario_id: uuid.UUID, data: UsuarioPerfilUpdate) -> Usuario:

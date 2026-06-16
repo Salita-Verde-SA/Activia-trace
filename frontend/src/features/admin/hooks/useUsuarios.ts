@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usuariosApi } from '../services/usuariosApi';
 import type { Usuario } from '../types';
 
-export function useUsuarios(params?: { rol?: string; email?: string }) {
+export function useUsuarios(params?: { rol?: string; search?: string }) {
   const queryClient = useQueryClient();
 
   const usuariosQuery = useQuery({

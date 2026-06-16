@@ -3,31 +3,37 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from api.dependencies.auth import require_permission, get_current_user, CurrentUser
 from core.dependencies import get_db
-from schemas.usuario import UsuarioResponse, UsuarioCreate, UsuarioUpdate
+from schemas.usuario import UsuarioResponse, UsuarioCreate, UsuarioUpdate, UsuarioCreateRequest
 from services.usuario import UsuarioService
 
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 
 @router.post("/", response_model=UsuarioResponse, status_code=status.HTTP_201_CREATED)
 async def create_usuario(
-    data: UsuarioCreate,
+    data: UsuarioCreateRequest,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
     _=Depends(require_permission("usuarios:gestionar"))
 ):
     service = UsuarioService(db, str(current_user.tenant_id))
-    return await service.create_usuario(data)
+    
+    password = data.password or "ActiviaTemp123!"
+    create_data = UsuarioCreate(**data.model_dump(exclude={'password'}), password=password, tenant_id=current_user.tenant_id)
+    
+    return await service.create_usuario(create_data)
 
 @router.get("/", response_model=list[UsuarioResponse])
 async def list_usuarios(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
+    search: str | None = Query(None),
+    rol: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
     _=Depends(require_permission("usuarios:gestionar"))
 ):
     service = UsuarioService(db, str(current_user.tenant_id))
-    return await service.get_usuarios(skip=skip, limit=limit)
+    return await service.get_usuarios(skip=skip, limit=limit, search=search, rol=rol)
 
 @router.get("/{usuario_id}", response_model=UsuarioResponse)
 async def get_usuario(

@@ -24,3 +24,24 @@ El sistema DEBE proveer endpoints CRUD protegidos bajo `/api/admin/usuarios` par
 - **WHEN** un usuario con permisos de administración de usuarios hace un GET a `/api/admin/usuarios`
 - **THEN** el sistema devuelve la lista de usuarios del tenant con sus datos básicos (descifrados en memoria para la respuesta)
 
+### Requirement: Comunicación API de Usuarios
+El frontend SHALL comunicarse con los endpoints de usuarios previniendo redirecciones innecesarias y el backend SHALL aceptar payloads desacoplados de la identidad del tenant.
+
+#### Scenario: Listado de usuarios
+- **WHEN** el frontend solicita el listado de usuarios
+- **THEN** la petición se realiza a `/api/usuarios/` (con trailing slash) para evitar un HTTP 307 Redirect que descarta el token de autorización.
+
+#### Scenario: Creación de usuario por Admin
+- **WHEN** el administrador envía el formulario de nuevo usuario sin especificar contraseña ni tenant
+- **THEN** el backend asume el `tenant_id` del administrador, auto-genera una contraseña segura, y responde con código 201 Created.
+
+### Requirement: Actualización de Roles de Usuario
+El backend SHALL permitir la actualización de la lista de roles globales para un usuario a través del mismo endpoint de actualización de perfil (`PATCH /api/usuarios/{id}`).
+
+#### Scenario: Administrador asigna nuevos roles
+- **GIVEN** que existe un usuario sin roles asignados
+- **WHEN** se envía un PATCH con `{"roles": ["ALUMNO", "FINANZAS"]}`
+- **THEN** el sistema remueve todos los roles anteriores del usuario (si los hubiera)
+- **AND** asigna las asociaciones correctas en la tabla `UsuarioRol` consultando los `rol_id` en el contexto del `tenant` actual.
+- **AND** retorna código `200 OK` con la información del usuario actualizada.
+

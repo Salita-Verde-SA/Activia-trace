@@ -4,9 +4,9 @@ import type { Usuario } from '../types';
 import { AddUserForm, EditRolesModal } from '../components/usuarios/AddUserForm';
 
 export function GestionUsuariosPage() {
-  const [filterEmail, setFilterEmail] = useState('');
+  const [filterSearch, setFilterSearch] = useState('');
   const [filterRol, setFilterRol] = useState('');
-  const { usuariosQuery } = useUsuarios({ email: filterEmail, rol: filterRol });
+  const { usuariosQuery } = useUsuarios({ search: filterSearch, rol: filterRol });
   
   const [isAdding, setIsAdding] = useState(false);
   const [editingUser, setEditingUser] = useState<Usuario | null>(null);
@@ -28,12 +28,12 @@ export function GestionUsuariosPage() {
 
       <div className="flex space-x-4 bg-white/5 backdrop-blur-md p-4 border border-white/10 rounded-xl">
         <div>
-          <label className="block text-sm font-medium text-white/70">Email</label>
+          <label className="block text-sm font-medium text-white/70">Nombre o Apellido</label>
           <input
             type="text"
-            value={filterEmail}
-            onChange={(e) => setFilterEmail(e.target.value)}
-            placeholder="Buscar por email..."
+            value={filterSearch}
+            onChange={(e) => setFilterSearch(e.target.value)}
+            placeholder="Buscar por nombre..."
             className="mt-1 block w-64 rounded-md border-white/10 bg-white/5 text-white/90 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           />
         </div>

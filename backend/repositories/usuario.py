@@ -30,3 +30,26 @@ class UsuarioRepository(BaseRepository[Usuario]):
         stmt = select(Usuario).where(Usuario.tenant_id == self.tenant_id, Usuario.email_hash == email_hash, Usuario.deleted_at.is_(None))
         result = await self.session.execute(stmt)
         return result.scalars().first()
+
+    async def list_filtered(self, skip: int = 0, limit: int = 100, search: str | None = None, rol: str | None = None) -> list[Usuario]:
+        stmt = self._base_query()
+        
+        if search:
+            from sqlalchemy import or_
+            stmt = stmt.where(or_(
+                Usuario.nombre.ilike(f"%{search}%"),
+                Usuario.apellido.ilike(f"%{search}%")
+            ))
+            
+        if rol:
+            from models.rbac import Rol, UsuarioRol
+            stmt = stmt.join(UsuarioRol, Usuario.id == UsuarioRol.usuario_id)\
+                       .join(Rol, Rol.id == UsuarioRol.rol_id)\
+                       .where(Rol.nombre == rol)
+                       
+        stmt = stmt.offset(skip).limit(limit)
+        result = await self.session.execute(stmt)
+        # Using unique() is important because of joins, though we don't eager load relationships here
+        # Actually since roles_rel is selectin, it's a separate query, but joining might cause duplicates if not careful, though users have one rol here.
+        return list(result.scalars().unique().all())
+

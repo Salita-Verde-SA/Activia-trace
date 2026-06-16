@@ -19,6 +19,9 @@ class UsuarioCreate(UsuarioBase):
     password: str = Field(..., min_length=8)
     tenant_id: uuid.UUID
 
+class UsuarioCreateRequest(UsuarioBase):
+    password: str | None = Field(None, min_length=8)
+
 class UsuarioUpdate(BaseModel):
     model_config = ConfigDict(extra='forbid', from_attributes=True)
 
@@ -30,6 +33,7 @@ class UsuarioUpdate(BaseModel):
     alias_cbu: str | None = Field(None, max_length=255)
     legajo: str | None = Field(None, max_length=100)
     activo: bool | None = None
+    roles: list[str] | None = None
 
 class UsuarioResponse(UsuarioBase):
     id: uuid.UUID
@@ -37,6 +41,7 @@ class UsuarioResponse(UsuarioBase):
     totp_enabled: bool
     created_at: datetime
     updated_at: datetime
+    roles: list[str] = []
 
 class UsuarioPerfilUpdate(BaseModel):
     model_config = ConfigDict(extra='forbid')

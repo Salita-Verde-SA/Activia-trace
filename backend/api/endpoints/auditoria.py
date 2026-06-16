@@ -34,7 +34,7 @@ async def obtener_ultimas_acciones(
 async def explorar_logs(
     fecha_desde: Optional[datetime] = Query(None),
     fecha_hasta: Optional[datetime] = Query(None),
-    actor_id: Optional[UUID] = Query(None),
+    actor_id: Optional[str] = Query(None),
     accion: Optional[str] = Query(None),
     materia_id: Optional[UUID] = Query(None),
     limit: int = Query(50, ge=1, le=1000),

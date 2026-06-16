@@ -27,6 +27,12 @@ class Usuario(Base, TenantMixin, TimestampMixin, SoftDeleteMixin):
     alias_cbu = Column(EncryptedString, nullable=True)
     asignaciones = relationship('Asignacion', cascade='all, delete-orphan', foreign_keys='Asignacion.usuario_id')
     hilos_participa = relationship('HiloMensajeInterno', secondary='hilo_usuario', back_populates='participantes')
+    roles_rel = relationship('Rol', secondary='usuario_rol', lazy='selectin')
+    
+    @property
+    def roles(self):
+        return [r.nombre for r in self.roles_rel] if self.roles_rel else []
+    
     
     # Datos de negocio
     legajo = Column(String, nullable=True)

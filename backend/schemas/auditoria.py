@@ -7,7 +7,7 @@ class AuditoriaFiltro(BaseModel):
     model_config = ConfigDict(extra='forbid')
     fecha_desde: Optional[datetime] = None
     fecha_hasta: Optional[datetime] = None
-    actor_id: Optional[UUID] = None
+    actor_id: Optional[str] = None
     accion: Optional[str] = None
     materia_id: Optional[UUID] = None
     limit: int = Field(default=50, ge=1, le=1000)

@@ -19,54 +19,54 @@ export function AddUserForm({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 border rounded bg-white shadow-sm space-y-4">
-      <h3 className="text-lg font-medium border-b pb-2">Nuevo Usuario</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="p-6 border border-white/10 rounded-xl bg-white/5 backdrop-blur-md shadow-sm space-y-4 mb-6">
+      <h3 className="text-xl font-serif text-white/90 border-b border-white/10 pb-3">Nuevo Usuario</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Email</label>
+          <label className="block text-sm font-medium text-white/70">Email</label>
           <input 
             type="email" 
             required 
             value={formData.email}
             onChange={e => setFormData({...formData, email: e.target.value})}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-white/10 bg-black/20 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Nombre</label>
+          <label className="block text-sm font-medium text-white/70">Nombre</label>
           <input 
             type="text" 
             required 
             value={formData.nombre}
             onChange={e => setFormData({...formData, nombre: e.target.value})}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-white/10 bg-black/20 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Apellido</label>
+          <label className="block text-sm font-medium text-white/70">Apellido</label>
           <input 
             type="text" 
             required 
             value={formData.apellido}
             onChange={e => setFormData({...formData, apellido: e.target.value})}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-white/10 bg-black/20 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Legajo (Opcional)</label>
+          <label className="block text-sm font-medium text-white/70">Legajo (Opcional)</label>
           <input 
             type="text" 
             value={formData.legajo}
             onChange={e => setFormData({...formData, legajo: e.target.value})}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-white/10 bg-black/20 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           />
         </div>
       </div>
-      <div className="flex space-x-2 pt-2">
-        <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm">
-          Guardar
+      <div className="flex space-x-3 pt-4">
+        <button type="submit" className="px-4 py-2 bg-primary-600/80 border border-primary-500/50 text-white shadow-[0_0_15px_rgba(var(--color-primary-500),0.2)] rounded-md hover:bg-primary-600 transition-colors text-sm font-medium">
+          Guardar Usuario
         </button>
-        <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-sm">
+        <button type="button" onClick={onClose} className="px-4 py-2 bg-white/5 border border-white/10 rounded-md text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors">
           Cancelar
         </button>
       </div>
@@ -94,33 +94,33 @@ export function EditRolesModal({ usuario, onClose }: { usuario: Usuario, onClose
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Editar Roles - {usuario.nombre} {usuario.apellido}</h3>
-        <p className="text-sm text-gray-500 mb-4">Seleccione los roles globales para este usuario.</p>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl p-6 w-full max-w-md">
+        <h3 className="text-xl font-serif text-white/90 mb-2">Editar Roles</h3>
+        <p className="text-sm text-white/50 mb-6">Seleccione los roles globales para {usuario.nombre} {usuario.apellido}</p>
         
-        <div className="space-y-2 max-h-60 overflow-y-auto border rounded p-4 mb-4">
+        <div className="space-y-3 max-h-60 overflow-y-auto border border-white/10 bg-black/20 rounded-lg p-4 mb-6">
           {availableRoles.map(rol => (
-            <div key={rol} className="flex items-center">
+            <div key={rol} className="flex items-center group">
               <input
                 type="checkbox"
                 id={`rol-${rol}`}
                 checked={roles.includes(rol)}
                 onChange={() => toggleRole(rol)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-primary-500 focus:ring-primary-500/50 bg-black/50 border-white/20 rounded transition-colors"
               />
-              <label htmlFor={`rol-${rol}`} className="ml-2 block text-sm text-gray-900">
+              <label htmlFor={`rol-${rol}`} className="ml-3 block text-sm font-medium text-white/70 group-hover:text-white transition-colors cursor-pointer">
                 {rol}
               </label>
             </div>
           ))}
         </div>
 
-        <div className="flex justify-end space-x-2 mt-4">
-          <button onClick={onClose} className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none">
+        <div className="flex justify-end space-x-3 mt-6">
+          <button onClick={onClose} className="px-4 py-2 bg-white/5 border border-white/10 rounded-md text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors">
             Cancelar
           </button>
-          <button onClick={handleSave} className="px-4 py-2 bg-blue-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 focus:outline-none">
+          <button onClick={handleSave} className="px-4 py-2 bg-primary-600/80 border border-primary-500/50 text-white shadow-[0_0_15px_rgba(var(--color-primary-500),0.2)] rounded-md hover:bg-primary-600 transition-colors text-sm font-medium">
             Guardar Roles
           </button>
         </div>

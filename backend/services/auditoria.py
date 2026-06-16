@@ -91,9 +91,9 @@ class AuditoriaService:
         if filtro.fecha_hasta:
             query = query.where(AuditLog.fecha_hora <= filtro.fecha_hasta)
         if filtro.actor_id:
-            query = query.where(AuditLog.actor_id == filtro.actor_id)
+            query = query.where(cast(AuditLog.actor_id, String).ilike(f"%{filtro.actor_id}%"))
         if filtro.accion:
-            query = query.where(AuditLog.accion == filtro.accion)
+            query = query.where(AuditLog.accion.ilike(f"%{filtro.accion}%"))
         if filtro.materia_id:
             query = query.where(AuditLog.materia_id == filtro.materia_id)
             
