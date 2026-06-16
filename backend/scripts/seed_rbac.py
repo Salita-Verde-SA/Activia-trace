@@ -45,7 +45,7 @@ ROLES_PERMISOS = {
     "COORDINADOR": [
         "avisos:confirmar", "calificaciones:importar", "atrasados:ver", "entregas:detectar",
         "comunicacion:enviar", "comunicacion:aprobar", "encuentros:gestionar", "guardias:registrar",
-        "tareas:gestionar", "avisos:publicar", "equipos:gestionar", "auditoria:ver",
+        "tareas:gestionar", "avisos:publicar", "equipos:gestionar", "estructura:gestionar", "auditoria:ver",
         "avisos:leer_propios", "tareas:leer_propias"
     ],
     "NEXO": ["avisos:leer_propios"],

@@ -47,3 +47,14 @@ async def update_cohorte(
 ):
     service = EstructuraService(db, current_user.tenant_id)
     return await service.update_cohorte(request, current_user, id, schema)
+
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_permission("estructura:gestionar"))])
+async def delete_cohorte(
+    request: Request,
+    id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    service = EstructuraService(db, current_user.tenant_id)
+    await service.delete_cohorte(request, current_user, id)
+    return None

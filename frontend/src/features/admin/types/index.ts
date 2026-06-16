@@ -3,7 +3,7 @@ export interface Carrera {
   tenant_id: string;
   codigo: string;
   nombre: string;
-  activa: boolean;
+  estado: 'Activa' | 'Inactiva';
   created_at: string;
 }
 
@@ -13,7 +13,7 @@ export interface Cohorte {
   carrera_id: string;
   nombre: string;
   anio: number;
-  activa: boolean;
+  estado: 'Activa' | 'Inactiva';
   created_at: string;
 }
 
@@ -22,6 +22,7 @@ export interface Materia {
   tenant_id: string;
   codigo: string;
   nombre: string;
+  estado: 'Activa' | 'Inactiva';
   created_at: string;
 }
 

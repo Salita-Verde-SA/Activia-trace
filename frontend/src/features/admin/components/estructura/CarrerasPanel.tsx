@@ -3,11 +3,11 @@ import { useEstructura } from '../../hooks/useEstructura';
 import type { Carrera } from '../../types';
 
 export function CarrerasPanel() {
-  const { carrerasQuery, createCarrera, updateCarrera } = useEstructura();
+  const { carrerasQuery, createCarrera, updateCarrera, deleteCarrera } = useEstructura();
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  const [formData, setFormData] = useState<Partial<Carrera>>({ codigo: '', nombre: '', activa: true });
+  const [formData, setFormData] = useState<Partial<Carrera>>({ codigo: '', nombre: '', estado: 'Activa' });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,10 +16,11 @@ export function CarrerasPanel() {
         onSuccess: () => setEditingId(null)
       });
     } else {
-      createCarrera.mutate(formData, {
+      const { estado, ...createData } = formData;
+      createCarrera.mutate(createData, {
         onSuccess: () => {
           setIsCreating(false);
-          setFormData({ codigo: '', nombre: '', activa: true });
+          setFormData({ codigo: '', nombre: '', estado: 'Activa' });
         }
       });
     }
@@ -27,7 +28,13 @@ export function CarrerasPanel() {
 
   const handleEdit = (carrera: Carrera) => {
     setEditingId(carrera.id);
-    setFormData({ codigo: carrera.codigo, nombre: carrera.nombre, activa: carrera.activa });
+    setFormData({ codigo: carrera.codigo, nombre: carrera.nombre, estado: carrera.estado });
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm('¿Estás seguro de eliminar esta carrera?')) {
+      deleteCarrera.mutate(id);
+    }
   };
 
   if (carrerasQuery.isLoading) return <div className="p-4">Cargando...</div>;
@@ -73,8 +80,8 @@ export function CarrerasPanel() {
               <input 
                 type="checkbox" 
                 id="activa"
-                checked={formData.activa}
-                onChange={e => setFormData({...formData, activa: e.target.checked})}
+                checked={formData.estado === 'Activa'}
+                onChange={e => setFormData({...formData, estado: e.target.checked ? 'Activa' : 'Inactiva'})}
                 className="rounded border-white/10 bg-black/20 text-primary-500 focus:ring-primary-500"
               />
               <label htmlFor="activa" className="ml-2 block text-sm text-white/90">Activa</label>
@@ -111,12 +118,13 @@ export function CarrerasPanel() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-white/90">{carrera.codigo}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-white/90">{carrera.nombre}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded border ${carrera.activa ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
-                    {carrera.activa ? 'Activa' : 'Inactiva'}
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded border ${carrera.estado === 'Activa' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
+                    {carrera.estado === 'Activa' ? 'Activa' : 'Inactiva'}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                   <button onClick={() => handleEdit(carrera)} className="text-primary-400 hover:text-primary-300 transition-colors">Editar</button>
+                  <button onClick={() => handleDelete(carrera.id)} className="text-red-400 hover:text-red-300 transition-colors">Eliminar</button>
                 </td>
               </tr>
             ))}

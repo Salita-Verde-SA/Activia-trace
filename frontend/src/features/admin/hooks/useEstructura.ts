@@ -22,6 +22,11 @@ export function useEstructura() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'carreras'] }),
   });
 
+  const deleteCarrera = useMutation({
+    mutationFn: (id: string) => estructuraApi.deleteCarrera(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'carreras'] }),
+  });
+
   // Cohortes
   const cohortesQuery = useQuery({
     queryKey: ['admin', 'cohortes'],
@@ -36,6 +41,11 @@ export function useEstructura() {
   const updateCohorte = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Cohorte> }) => 
       estructuraApi.updateCohorte(id, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'cohortes'] }),
+  });
+
+  const deleteCohorte = useMutation({
+    mutationFn: (id: string) => estructuraApi.deleteCohorte(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'cohortes'] }),
   });
 
@@ -56,17 +66,25 @@ export function useEstructura() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'materias'] }),
   });
 
+  const deleteMateria = useMutation({
+    mutationFn: (id: string) => estructuraApi.deleteMateria(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'materias'] }),
+  });
+
   return {
     carrerasQuery,
     createCarrera,
     updateCarrera,
+    deleteCarrera,
     
     cohortesQuery,
     createCohorte,
     updateCohorte,
+    deleteCohorte,
     
     materiasQuery,
     createMateria,
     updateMateria,
+    deleteMateria,
   };
 }

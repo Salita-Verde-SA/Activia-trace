@@ -4,13 +4,16 @@ import type { Carrera, Cohorte, Materia } from '../types';
 export const estructuraApi = {
   getCarreras: () => api.get<Carrera[]>('/api/admin/carreras').then(res => res.data),
   createCarrera: (data: Partial<Carrera>) => api.post<Carrera>('/api/admin/carreras', data).then(res => res.data),
-  updateCarrera: (id: string, data: Partial<Carrera>) => api.put<Carrera>(`/api/admin/carreras/${id}`, data).then(res => res.data),
+  updateCarrera: (id: string, data: Partial<Carrera>) => api.patch<Carrera>(`/api/admin/carreras/${id}`, data).then(res => res.data),
+  deleteCarrera: (id: string) => api.delete(`/api/admin/carreras/${id}`).then(res => res.data),
   
   getCohortes: () => api.get<Cohorte[]>('/api/admin/cohortes').then(res => res.data),
   createCohorte: (data: Partial<Cohorte>) => api.post<Cohorte>('/api/admin/cohortes', data).then(res => res.data),
-  updateCohorte: (id: string, data: Partial<Cohorte>) => api.put<Cohorte>(`/api/admin/cohortes/${id}`, data).then(res => res.data),
+  updateCohorte: (id: string, data: Partial<Cohorte>) => api.patch<Cohorte>(`/api/admin/cohortes/${id}`, data).then(res => res.data),
+  deleteCohorte: (id: string) => api.delete(`/api/admin/cohortes/${id}`).then(res => res.data),
   
   getMaterias: () => api.get<Materia[]>('/api/admin/materias').then(res => res.data),
   createMateria: (data: Partial<Materia>) => api.post<Materia>('/api/admin/materias', data).then(res => res.data),
-  updateMateria: (id: string, data: Partial<Materia>) => api.put<Materia>(`/api/admin/materias/${id}`, data).then(res => res.data),
+  updateMateria: (id: string, data: Partial<Materia>) => api.patch<Materia>(`/api/admin/materias/${id}`, data).then(res => res.data),
+  deleteMateria: (id: string) => api.delete(`/api/admin/materias/${id}`).then(res => res.data),
 };

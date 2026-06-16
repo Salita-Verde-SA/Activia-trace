@@ -3,23 +3,29 @@ import { useEstructura } from '../../hooks/useEstructura';
 import type { Cohorte } from '../../types';
 
 export function CohortesPanel() {
-  const { cohortesQuery, carrerasQuery, createCohorte, updateCohorte } = useEstructura();
+  const { cohortesQuery, carrerasQuery, createCohorte, updateCohorte, deleteCohorte } = useEstructura();
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  const [formData, setFormData] = useState<Partial<Cohorte>>({ carrera_id: '', nombre: '', anio: new Date().getFullYear(), activa: true });
+  const [formData, setFormData] = useState<Partial<Cohorte>>({ carrera_id: '', nombre: '', anio: new Date().getFullYear(), estado: 'Activa' });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId) {
-      updateCohorte.mutate({ id: editingId, data: formData }, {
+      const { carrera_id, estado, ...updateData } = formData;
+      updateCohorte.mutate({ id: editingId, data: { ...updateData, estado } }, {
         onSuccess: () => setEditingId(null)
       });
     } else {
-      createCohorte.mutate(formData, {
+      const { estado, ...rest } = formData;
+      const createData = {
+        ...rest,
+        vig_desde: `${formData.anio || new Date().getFullYear()}-01-01`
+      };
+      createCohorte.mutate(createData, {
         onSuccess: () => {
           setIsCreating(false);
-          setFormData({ carrera_id: '', nombre: '', anio: new Date().getFullYear(), activa: true });
+          setFormData({ carrera_id: '', nombre: '', anio: new Date().getFullYear(), estado: 'Activa' });
         }
       });
     }
@@ -27,7 +33,13 @@ export function CohortesPanel() {
 
   const handleEdit = (cohorte: Cohorte) => {
     setEditingId(cohorte.id);
-    setFormData({ carrera_id: cohorte.carrera_id, nombre: cohorte.nombre, anio: cohorte.anio, activa: cohorte.activa });
+    setFormData({ carrera_id: cohorte.carrera_id, nombre: cohorte.nombre, anio: cohorte.anio, estado: cohorte.estado });
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm('¿Estás seguro de eliminar esta cohorte?')) {
+      deleteCohorte.mutate(id);
+    }
   };
 
   if (cohortesQuery.isLoading || carrerasQuery.isLoading) return <div className="p-4">Cargando...</div>;
@@ -58,7 +70,7 @@ export function CohortesPanel() {
                 className="mt-1 block w-full rounded-md border-white/10 bg-white/5 text-white/90 shadow-sm focus:border-primary-500 focus:ring-primary-500 [&>option]:bg-neutral-900 [&>option]:text-white"
               >
                 <option value="">Seleccione carrera...</option>
-                {carrerasQuery.data?.filter(c => c.activa).map(c => (
+                {carrerasQuery.data?.filter(c => c.estado === 'Activa').map(c => (
                   <option key={c.id} value={c.id}>{c.codigo} - {c.nombre}</option>
                 ))}
               </select>
@@ -87,8 +99,8 @@ export function CohortesPanel() {
               <input 
                 type="checkbox" 
                 id="activa_cohorte"
-                checked={formData.activa}
-                onChange={e => setFormData({...formData, activa: e.target.checked})}
+                checked={formData.estado === 'Activa'}
+                onChange={e => setFormData({...formData, estado: e.target.checked ? 'Activa' : 'Inactiva'})}
                 className="rounded border-white/10 bg-black/20 text-primary-500 focus:ring-primary-500"
               />
               <label htmlFor="activa_cohorte" className="ml-2 block text-sm text-white/90">Activa</label>
@@ -129,12 +141,13 @@ export function CohortesPanel() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-white/90">{cohorte.nombre}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">{cohorte.anio}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded border ${cohorte.activa ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
-                      {cohorte.activa ? 'Activa' : 'Inactiva'}
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded border ${cohorte.estado === 'Activa' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
+                      {cohorte.estado === 'Activa' ? 'Activa' : 'Inactiva'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                     <button onClick={() => handleEdit(cohorte)} className="text-primary-400 hover:text-primary-300 transition-colors">Editar</button>
+                    <button onClick={() => handleDelete(cohorte.id)} className="text-red-400 hover:text-red-300 transition-colors">Eliminar</button>
                   </td>
                 </tr>
               );

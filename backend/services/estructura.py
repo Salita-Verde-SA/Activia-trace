@@ -55,6 +55,16 @@ class EstructuraService:
         await self.db.refresh(updated_carrera)
         return updated_carrera
 
+    async def delete_carrera(self, request: Request, current_user: CurrentUser, id: uuid.UUID):
+        carrera = await self.get_carrera(id)
+        await self.carrera_repo.delete(carrera.id)
+        await log_audit_event(
+            db=self.db, request=request, current_user=current_user,
+            accion="CARRERA_ELIMINAR", detalle={"id": str(carrera.id)}
+        )
+        await self.db.commit()
+        return {"detail": "Carrera eliminada"}
+
     # --- COHORTE ---
     async def create_cohorte(self, request: Request, current_user: CurrentUser, schema: CohorteCreate):
         carrera = await self.get_carrera(schema.carrera_id)
@@ -99,6 +109,16 @@ class EstructuraService:
         await self.db.refresh(updated_cohorte)
         return updated_cohorte
 
+    async def delete_cohorte(self, request: Request, current_user: CurrentUser, id: uuid.UUID):
+        cohorte = await self.get_cohorte(id)
+        await self.cohorte_repo.delete(cohorte.id)
+        await log_audit_event(
+            db=self.db, request=request, current_user=current_user,
+            accion="COHORTE_ELIMINAR", detalle={"id": str(cohorte.id)}
+        )
+        await self.db.commit()
+        return {"detail": "Cohorte eliminada"}
+
     # --- MATERIA ---
     async def create_materia(self, request: Request, current_user: CurrentUser, schema: MateriaCreate):
         if await self.materia_repo.get_by_codigo(schema.codigo):
@@ -136,3 +156,13 @@ class EstructuraService:
         await self.db.commit()
         await self.db.refresh(updated_materia)
         return updated_materia
+
+    async def delete_materia(self, request: Request, current_user: CurrentUser, id: uuid.UUID):
+        materia = await self.get_materia(id)
+        await self.materia_repo.delete(materia.id)
+        await log_audit_event(
+            db=self.db, request=request, current_user=current_user,
+            accion="MATERIA_ELIMINAR", detalle={"id": str(materia.id)}
+        )
+        await self.db.commit()
+        return {"detail": "Materia eliminada"}
