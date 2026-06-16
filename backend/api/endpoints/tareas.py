@@ -8,7 +8,7 @@ from api.dependencies.auth import require_permission, CurrentUser
 from models.user import Usuario
 from models.tareas import EstadoTarea
 from schemas.tarea import (
-    TareaCreate, TareaResponse, TareaUpdateEstado, 
+    TareaCreate, TareaResponse, TareaUpdateEstado, TareaUpdate,
     ComentarioTareaCreate, ComentarioTareaResponse
 )
 from services.tareas import TareaService
@@ -58,6 +58,25 @@ async def listar_globales(
 ):
     service = TareaService(db, current_user.tenant_id)
     return await service.listar_globales(asignado_a, estado)
+
+@router.get("/{tarea_id}", response_model=TareaResponse)
+async def obtener_tarea(
+    tarea_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_permission("tareas:leer_propias"))
+):
+    service = TareaService(db, current_user.tenant_id)
+    return await service.obtener_tarea(tarea_id)
+
+@router.patch("/{tarea_id}", response_model=TareaResponse)
+async def editar_tarea(
+    tarea_id: UUID,
+    data: TareaUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_permission("tareas:gestionar"))
+):
+    service = TareaService(db, current_user.tenant_id)
+    return await service.editar_tarea(current_user.id, tarea_id, data)
 
 @router.patch("/{tarea_id}/estado", response_model=TareaResponse)
 async def cambiar_estado(

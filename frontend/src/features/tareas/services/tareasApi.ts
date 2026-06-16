@@ -3,6 +3,7 @@ import type {
   TareaResponse,
   TareaCreate,
   TareaUpdateEstado,
+  TareaUpdate,
   ComentarioTareaCreate,
   ComentarioTareaResponse,
 } from '../types';
@@ -40,6 +41,11 @@ export const tareasApi = {
 
   actualizarEstado: async (id: string, payload: TareaUpdateEstado): Promise<TareaResponse> => {
     const { data } = await api.patch(`/api/v1/tareas/${id}/estado`, payload);
+    return data;
+  },
+
+  updateTarea: async (id: string, payload: TareaUpdate): Promise<TareaResponse> => {
+    const { data } = await api.patch(`/api/v1/tareas/${id}`, payload);
     return data;
   },
 

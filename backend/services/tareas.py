@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 from models.tareas import Tarea, ComentarioTarea, EstadoTarea
 from models.user import Usuario
-from schemas.tarea import TareaCreate, TareaResponse, TareaUpdateEstado, ComentarioTareaCreate, ComentarioTareaResponse
+from schemas.tarea import TareaCreate, TareaResponse, TareaUpdateEstado, TareaUpdate, ComentarioTareaCreate, ComentarioTareaResponse
 
 class TareaService:
     def __init__(self, db: AsyncSession, tenant_id: UUID):
@@ -86,18 +86,25 @@ class TareaService:
         from models.asignacion import Asignacion
         from schemas.usuario import UsuarioResponse
 
-        query = select(Usuario).where(
+        query = select(Usuario).outerjoin(UsuarioRol, Usuario.id == UsuarioRol.usuario_id) \
+                               .join(Rol, Rol.id == UsuarioRol.rol_id) \
+                               .where(
             Usuario.tenant_id == self.tenant_id,
             Usuario.deleted_at.is_(None),
-            Usuario.activo == True
-        )
+            Usuario.activo == True,
+            Rol.nombre.in_(["ADMIN", "COORDINADOR", "PROFESOR", "TUTOR"])
+        ).distinct()
 
         if "PROFESOR" in current_user_roles and "ADMIN" not in current_user_roles and "COORDINADOR" not in current_user_roles:
-            query = query.outerjoin(UsuarioRol, Usuario.id == UsuarioRol.usuario_id) \
+            query = select(Usuario).outerjoin(UsuarioRol, Usuario.id == UsuarioRol.usuario_id) \
                          .outerjoin(Asignacion, Usuario.id == Asignacion.usuario_id) \
                          .join(Rol, (Rol.id == UsuarioRol.rol_id) | (Rol.id == Asignacion.rol_id)) \
-                         .where(Rol.nombre == "TUTOR") \
-                         .distinct()
+                         .where(
+                             Usuario.tenant_id == self.tenant_id,
+                             Usuario.deleted_at.is_(None),
+                             Usuario.activo == True,
+                             Rol.nombre == "TUTOR"
+                         ).distinct()
 
         usuarios = (await self.db.execute(query)).scalars().all()
         return [UsuarioResponse.model_validate(u, from_attributes=True) for u in usuarios]
@@ -116,6 +123,16 @@ class TareaService:
             
         tareas = (await self.db.execute(query)).scalars().all()
         return [TareaResponse.model_validate(t, from_attributes=True) for t in tareas]
+
+    async def obtener_tarea(self, tarea_id: UUID) -> TareaResponse:
+        query = select(Tarea).options(selectinload(Tarea.comentarios)).where(
+            Tarea.id == tarea_id,
+            Tarea.tenant_id == self.tenant_id
+        )
+        tarea = (await self.db.execute(query)).scalar_one_or_none()
+        if not tarea:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tarea no encontrada")
+        return TareaResponse.model_validate(tarea, from_attributes=True)
 
     async def cambiar_estado(self, usuario_id: UUID, tarea_id: UUID, data: TareaUpdateEstado) -> TareaResponse:
         query = select(Tarea).options(selectinload(Tarea.comentarios)).where(
@@ -145,6 +162,31 @@ class TareaService:
         
         # Reload to get updated comments
         tarea = (await self.db.execute(query)).scalar_one()
+        return TareaResponse.model_validate(tarea, from_attributes=True)
+
+    async def editar_tarea(self, usuario_id: UUID, tarea_id: UUID, data: TareaUpdate) -> TareaResponse:
+        query = select(Tarea).options(selectinload(Tarea.comentarios)).where(
+            Tarea.id == tarea_id,
+            Tarea.tenant_id == self.tenant_id
+        )
+        tarea = (await self.db.execute(query)).scalar_one_or_none()
+        if not tarea:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tarea no encontrada")
+        
+        if data.titulo is not None:
+            tarea.titulo = data.titulo
+        if data.descripcion is not None:
+            tarea.descripcion = data.descripcion
+        if data.asignado_a is not None:
+            tarea.asignado_a = data.asignado_a
+        if data.prioridad is not None:
+            tarea.prioridad = data.prioridad
+            
+        tarea.fecha_actualizacion = datetime.now(timezone.utc)
+        
+        await self.db.commit()
+        await self.db.refresh(tarea)
+        
         return TareaResponse.model_validate(tarea, from_attributes=True)
 
     async def agregar_comentario(self, usuario_id: UUID, tarea_id: UUID, data: ComentarioTareaCreate) -> ComentarioTareaResponse:

@@ -48,3 +48,10 @@ export interface TareaUpdateEstado {
   estado: EstadoTarea;
   comentario?: string;
 }
+
+export interface TareaUpdate {
+  titulo?: string;
+  descripcion?: string;
+  asignado_a?: string;
+  prioridad?: PrioridadTarea;
+}

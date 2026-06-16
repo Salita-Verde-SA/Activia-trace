@@ -45,3 +45,10 @@ class TareaUpdateEstado(BaseModel):
     model_config = ConfigDict(extra='forbid')
     estado: EstadoTarea
     comentario: Optional[str] = None
+
+class TareaUpdate(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    titulo: Optional[str] = None
+    descripcion: Optional[str] = None
+    asignado_a: Optional[UUID] = None
+    prioridad: Optional[PrioridadTarea] = None

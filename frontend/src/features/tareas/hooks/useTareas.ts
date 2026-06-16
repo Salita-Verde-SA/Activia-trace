@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tareasApi } from '../services/tareasApi';
-import type { TareaCreate, TareaUpdateEstado, ComentarioTareaCreate } from '../types';
+import type { TareaCreate, TareaUpdateEstado, TareaUpdate, ComentarioTareaCreate } from '../types';
 
 export const useTareas = (mode: 'mis-tareas' | 'asignadas-por-mi' | 'globales' = 'mis-tareas') => {
   const queryClient = useQueryClient();
@@ -29,6 +29,15 @@ export const useTareas = (mode: 'mis-tareas' | 'asignadas-por-mi' | 'globales' =
     },
   });
 
+  const updateTarea = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: TareaUpdate }) =>
+      tareasApi.updateTarea(id, payload),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['tareas'] });
+      queryClient.invalidateQueries({ queryKey: ['tareas', id] });
+    },
+  });
+
   const agregarComentario = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: ComentarioTareaCreate }) =>
       tareasApi.agregarComentario(id, payload),
@@ -44,6 +53,7 @@ export const useTareas = (mode: 'mis-tareas' | 'asignadas-por-mi' | 'globales' =
     error: query.error,
     crearTarea,
     actualizarEstado,
+    updateTarea,
     agregarComentario,
   };
 };
