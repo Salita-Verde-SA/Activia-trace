@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useEstructura } from '../../hooks/useEstructura';
 import type { Carrera } from '../../types';
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 export function CarrerasPanel() {
   const { carrerasQuery, createCarrera, updateCarrera, deleteCarrera } = useEstructura();
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<Partial<Carrera>>({ codigo: '', nombre: '', estado: 'Activa' });
 
@@ -32,9 +34,7 @@ export function CarrerasPanel() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('¿Estás seguro de eliminar esta carrera?')) {
-      deleteCarrera.mutate(id);
-    }
+    setDeletingId(id);
   };
 
   if (carrerasQuery.isLoading) return <div className="p-4">Cargando...</div>;
@@ -136,6 +136,20 @@ export function CarrerasPanel() {
           </tbody>
         </table>
       </div>
+
+      <ConfirmModal
+        isOpen={deletingId !== null}
+        title="Eliminar Carrera"
+        message="¿Estás seguro de eliminar esta carrera? Esta acción no se puede deshacer."
+        onConfirm={() => {
+          if (deletingId) {
+            deleteCarrera.mutate(deletingId, {
+              onSuccess: () => setDeletingId(null)
+            });
+          }
+        }}
+        onCancel={() => setDeletingId(null)}
+      />
     </div>
   );
 }

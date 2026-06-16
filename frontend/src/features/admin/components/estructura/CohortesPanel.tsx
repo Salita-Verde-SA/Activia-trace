@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useEstructura } from '../../hooks/useEstructura';
 import type { Cohorte } from '../../types';
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 export function CohortesPanel() {
   const { cohortesQuery, carrerasQuery, createCohorte, updateCohorte, deleteCohorte } = useEstructura();
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<Partial<Cohorte>>({ carrera_id: '', nombre: '', anio: new Date().getFullYear(), estado: 'Activa' });
 
@@ -37,9 +39,7 @@ export function CohortesPanel() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('¿Estás seguro de eliminar esta cohorte?')) {
-      deleteCohorte.mutate(id);
-    }
+    setDeletingId(id);
   };
 
   if (cohortesQuery.isLoading || carrerasQuery.isLoading) return <div className="p-4">Cargando...</div>;
@@ -160,6 +160,20 @@ export function CohortesPanel() {
           </tbody>
         </table>
       </div>
+
+      <ConfirmModal
+        isOpen={deletingId !== null}
+        title="Eliminar Cohorte"
+        message="¿Estás seguro de eliminar esta cohorte? Esta acción no se puede deshacer."
+        onConfirm={() => {
+          if (deletingId) {
+            deleteCohorte.mutate(deletingId, {
+              onSuccess: () => setDeletingId(null)
+            });
+          }
+        }}
+        onCancel={() => setDeletingId(null)}
+      />
     </div>
   );
 }

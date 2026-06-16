@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useEstructura } from '../../hooks/useEstructura';
 import type { Materia } from '../../types';
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 export function MateriasPanel() {
   const { materiasQuery, createMateria, updateMateria, deleteMateria } = useEstructura();
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<Partial<Materia>>({ codigo: '', nombre: '', estado: 'Activa' });
 
@@ -32,9 +34,7 @@ export function MateriasPanel() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('¿Estás seguro de eliminar esta materia?')) {
-      deleteMateria.mutate(id);
-    }
+    setDeletingId(id);
   };
 
   if (materiasQuery.isLoading) return <div className="p-4">Cargando...</div>;
@@ -136,6 +136,20 @@ export function MateriasPanel() {
           </tbody>
         </table>
       </div>
+
+      <ConfirmModal
+        isOpen={deletingId !== null}
+        title="Eliminar Materia"
+        message="¿Estás seguro de eliminar esta materia? Esta acción no se puede deshacer."
+        onConfirm={() => {
+          if (deletingId) {
+            deleteMateria.mutate(deletingId, {
+              onSuccess: () => setDeletingId(null)
+            });
+          }
+        }}
+        onCancel={() => setDeletingId(null)}
+      />
     </div>
   );
 }
