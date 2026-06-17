@@ -21,9 +21,17 @@ export interface ColoquioDisponible {
   mi_reserva_id: string | null;
 }
 
+export interface CalificacionSimplificada {
+  actividad_nombre: string;
+  nota_numerica: number | null;
+  nota_textual: string | null;
+  aprobado: boolean;
+}
+
 export interface EstadoMateria {
   materia_id: string;
   materia_nombre: string;
   estado: string;
   nota_final: number | null;
+  calificaciones: CalificacionSimplificada[];
 }

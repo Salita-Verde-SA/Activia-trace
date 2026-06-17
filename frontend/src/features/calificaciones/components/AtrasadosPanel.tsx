@@ -9,30 +9,30 @@ interface AtrasadosPanelProps {
 
 export const AtrasadosPanel: React.FC<AtrasadosPanelProps> = ({ materiaId, onContactar, onContactarTodos }) => {
   const { data: reporte, isLoading, error } = useAtrasados(materiaId);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
 
   if (isLoading) return <div>Cargando reporte de atrasados...</div>;
   if (error) return <div className="text-red-500">Error al cargar alumnos atrasados.</div>;
   if (!reporte) return null;
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === reporte.alumnos_atrasados.length) {
-      setSelectedIds(new Set());
+    if (selectedEmails.size === reporte.alumnos_atrasados.length) {
+      setSelectedEmails(new Set());
     } else {
-      setSelectedIds(new Set(reporte.alumnos_atrasados.map(a => a.entrada_padron_id)));
+      setSelectedEmails(new Set(reporte.alumnos_atrasados.map(a => a.email)));
     }
   };
 
-  const toggleSelect = (id: string) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedIds(next);
+  const toggleSelect = (email: string) => {
+    const next = new Set(selectedEmails);
+    if (next.has(email)) next.delete(email);
+    else next.add(email);
+    setSelectedEmails(next);
   };
 
   const handleContactarSeleccionados = () => {
-    if (selectedIds.size > 0) {
-      onContactarTodos(Array.from(selectedIds));
+    if (selectedEmails.size > 0) {
+      onContactarTodos(Array.from(selectedEmails));
     }
   };
 
@@ -45,12 +45,12 @@ export const AtrasadosPanel: React.FC<AtrasadosPanelProps> = ({ materiaId, onCon
             {reporte.total_alumnos_atrasados} de {reporte.total_alumnos_padron} estudiantes tienen actividades desaprobadas o faltantes.
           </p>
         </div>
-        <button 
+        <button
           onClick={handleContactarSeleccionados}
-          disabled={selectedIds.size === 0}
+          disabled={selectedEmails.size === 0}
           className="bg-red-500/20 border border-red-500/50 text-red-400 px-4 py-2 rounded-md font-semibold hover:bg-red-500/30 disabled:opacity-50 transition-colors"
         >
-          Contactar ({selectedIds.size})
+          Contactar ({selectedEmails.size})
         </button>
       </div>
 
@@ -59,9 +59,9 @@ export const AtrasadosPanel: React.FC<AtrasadosPanelProps> = ({ materiaId, onCon
           <thead className="border-b border-white/10">
             <tr>
               <th className="px-4 py-3 text-left">
-                <input 
-                  type="checkbox" 
-                  checked={selectedIds.size === reporte.alumnos_atrasados.length && reporte.alumnos_atrasados.length > 0}
+                <input
+                  type="checkbox"
+                  checked={selectedEmails.size === reporte.alumnos_atrasados.length && reporte.alumnos_atrasados.length > 0}
                   onChange={toggleSelectAll}
                   className="rounded bg-black/20 border-white/10 text-red-500 focus:ring-red-500/50 focus:ring-offset-0"
                 />
@@ -75,10 +75,10 @@ export const AtrasadosPanel: React.FC<AtrasadosPanelProps> = ({ materiaId, onCon
             {reporte.alumnos_atrasados.map((alumno) => (
               <tr key={alumno.entrada_padron_id} className="hover:bg-white/5 transition-colors">
                 <td className="px-4 py-3">
-                  <input 
+                  <input
                     type="checkbox"
-                    checked={selectedIds.has(alumno.entrada_padron_id)}
-                    onChange={() => toggleSelect(alumno.entrada_padron_id)}
+                    checked={selectedEmails.has(alumno.email)}
+                    onChange={() => toggleSelect(alumno.email)}
                     className="rounded bg-black/20 border-white/10 text-red-500 focus:ring-red-500/50 focus:ring-offset-0"
                   />
                 </td>
@@ -96,8 +96,8 @@ export const AtrasadosPanel: React.FC<AtrasadosPanelProps> = ({ materiaId, onCon
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <button 
-                    onClick={() => onContactar(alumno.entrada_padron_id)}
+                  <button
+                    onClick={() => onContactar(alumno.email)}
                     className="text-primary-400 hover:text-primary-300 font-semibold text-sm transition-colors"
                   >
                     Contactar

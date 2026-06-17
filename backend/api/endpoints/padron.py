@@ -1,15 +1,28 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Any
+from sqlalchemy import select
+from typing import Any, List
 import uuid
+from pydantic import BaseModel
 
 from core.dependencies import get_db
 from api.dependencies.auth import require_permission
 from models.user import Usuario
-from schemas.padron import VersionPadronResponse
+from models.padron import VersionPadron
+from models.estructura import Materia, Cohorte
+from schemas.padron import VersionPadronResponse, PadronActivoItem
 from services.padron import PadronService
 from integrations.moodle_ws import MoodleClient
 from core.config import settings
+
+
+class CatalogoItem(BaseModel):
+    id: uuid.UUID
+    nombre: str
+
+class CatalogoPadronResponse(BaseModel):
+    materias: List[CatalogoItem]
+    cohortes: List[CatalogoItem]
 
 router = APIRouter(prefix="/padron", tags=["padron"])
 
@@ -19,7 +32,7 @@ async def importar_manual(
     cohorte_id: uuid.UUID = Form(...),
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
-    actor: Usuario = Depends(require_permission("padron:gestionar"))
+    actor: Usuario = Depends(require_permission("calificaciones:importar"))
 ) -> Any:
     """
     Importa manualmente un padrón desde un archivo CSV.
@@ -67,6 +80,64 @@ async def sincronizar_moodle(
         moodle_client=client
     )
     return version
+
+@router.get("/activos", response_model=List[PadronActivoItem])
+async def listar_padrones_activos(
+    db: AsyncSession = Depends(get_db),
+    actor: Usuario = Depends(require_permission("calificaciones:importar"))
+) -> Any:
+    versiones_result = await db.execute(
+        select(VersionPadron).where(
+            VersionPadron.tenant_id == actor.tenant_id,
+            VersionPadron.activa == True,
+            VersionPadron.deleted_at.is_(None),
+        )
+    )
+    versiones = versiones_result.scalars().all()
+    if not versiones:
+        return []
+
+    materia_ids = list({v.materia_id for v in versiones})
+    cohorte_ids = list({v.cohorte_id for v in versiones})
+
+    materias_result = await db.execute(select(Materia).where(Materia.id.in_(materia_ids)))
+    materias = {m.id: m.nombre for m in materias_result.scalars().all()}
+
+    cohortes_result = await db.execute(select(Cohorte).where(Cohorte.id.in_(cohorte_ids)))
+    cohortes = {c.id: c.nombre for c in cohortes_result.scalars().all()}
+
+    return [
+        PadronActivoItem(
+            version_padron_id=v.id,
+            materia_id=v.materia_id,
+            materia_nombre=materias.get(v.materia_id, str(v.materia_id)),
+            cohorte_id=v.cohorte_id,
+            cohorte_nombre=cohortes.get(v.cohorte_id, str(v.cohorte_id)),
+        )
+        for v in versiones
+    ]
+
+@router.get("/catalogo", response_model=CatalogoPadronResponse)
+async def catalogo_padron(
+    db: AsyncSession = Depends(get_db),
+    actor: Usuario = Depends(require_permission("calificaciones:importar"))
+) -> Any:
+    from models.estructura import EstadoEstructura
+    materias_result = await db.execute(
+        select(Materia).where(
+            Materia.tenant_id == actor.tenant_id,
+            Materia.estado == EstadoEstructura.ACTIVA,
+        )
+    )
+    cohortes_result = await db.execute(
+        select(Cohorte).where(
+            Cohorte.tenant_id == actor.tenant_id,
+            Cohorte.estado == EstadoEstructura.ACTIVA,
+        )
+    )
+    materias = [CatalogoItem(id=m.id, nombre=m.nombre) for m in materias_result.scalars().all()]
+    cohortes = [CatalogoItem(id=c.id, nombre=c.nombre) for c in cohortes_result.scalars().all()]
+    return CatalogoPadronResponse(materias=materias, cohortes=cohortes)
 
 @router.delete("/vaciar", response_model=dict)
 async def vaciar_padron(

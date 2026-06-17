@@ -68,26 +68,29 @@ class PadronService:
         db.add(version)
         await db.flush()
 
-        emails = [e.email for e in entradas_data]
-        if emails:
+        from core.crypto import get_blind_index
+        emails_normalized = [e.email.strip().lower() for e in entradas_data if e.email]
+        if emails_normalized:
+            hashes = [get_blind_index(e) for e in emails_normalized]
             result = await db.execute(
-                select(Usuario.id, Usuario.email)
+                select(Usuario.id, Usuario.email_hash)
                 .where(
-                    Usuario.tenant_id == tenant_id, 
+                    Usuario.tenant_id == tenant_id,
                     Usuario.deleted_at.is_(None),
-                    Usuario.email.in_(emails) # NOTA: si email está encriptado en bd, la búsqueda .in_() puede requerir lógica especial según el `EncryptedString` usado.
+                    Usuario.email_hash.in_(hashes),
                 )
             )
-            usuario_map = {row.email: row.id for row in result}
+            usuario_map = {row.email_hash: row.id for row in result}
         else:
             usuario_map = {}
 
         entradas = []
         for e_data in entradas_data:
+            usuario_id = usuario_map.get(get_blind_index(e_data.email.strip().lower())) if e_data.email else None
             entrada = EntradaPadron(
                 tenant_id=tenant_id,
                 version_id=version.id,
-                usuario_id=usuario_map.get(e_data.email),
+                usuario_id=usuario_id,
                 nombre=e_data.nombre,
                 apellidos=e_data.apellidos,
                 email=e_data.email,
@@ -124,8 +127,15 @@ class PadronService:
         cohorte_id: UUID,
         file_content: bytes
     ) -> VersionPadron:
-        content = file_content.decode('utf-8')
-        reader = csv.DictReader(io.StringIO(content))
+        try:
+            content = file_content.decode('utf-8-sig')
+        except UnicodeDecodeError:
+            content = file_content.decode('latin-1')
+        try:
+            dialect = csv.Sniffer().sniff(content[:2048], delimiters=',;\t')
+        except csv.Error:
+            dialect = csv.excel
+        reader = csv.DictReader(io.StringIO(content), dialect=dialect)
         
         entradas_data = []
         for row in reader:

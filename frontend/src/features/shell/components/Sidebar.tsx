@@ -14,6 +14,7 @@ export const Sidebar = ({ isOpen, closeSidebar }: { isOpen: boolean, closeSideba
     { name: 'Avisos', path: '/admin/avisos', icon: 'campaign', roles: ['COORDINADOR', 'ADMIN'] },
     { name: 'Tareas', path: '/admin/tareas', icon: 'task', roles: ['COORDINADOR', 'ADMIN'] },
     { name: 'Gestión de Tareas', path: '/profesor/tareas', icon: 'task', roles: ['PROFESOR'] },
+    { name: 'Coloquios', path: '/admin/coloquios', icon: 'event_seat', roles: ['ADMIN', 'COORDINADOR'] },
     { name: 'Estructura Académica', path: '/admin/estructura', icon: 'account_tree', roles: ['ADMIN'] },
     { name: 'Usuarios', path: '/admin/usuarios', icon: 'group', roles: ['ADMIN'] },
     { name: 'Auditoría', path: '/auditoria', icon: 'history_edu', roles: ['ADMIN', 'COORDINADOR'] },

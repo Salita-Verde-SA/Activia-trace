@@ -1,3 +1,11 @@
+export interface PadronActivoItem {
+  version_padron_id: string;
+  materia_id: string;
+  materia_nombre: string;
+  cohorte_id: string;
+  cohorte_nombre: string;
+}
+
 export interface ColumnMap {
   nombre_columna: string;
   es_numerica: boolean;

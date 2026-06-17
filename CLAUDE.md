@@ -1,138 +1,148 @@
-# CLAUDE.md — JR Stack (instalador del harness metodológico)
+# CLAUDE.md
 
-> Constitución operativa del proyecto. Versión canónica (Claude).
-> Espejo de `AGENTS.md`: **si modificás uno, actualizás el otro.**
-> Leé este archivo antes de cualquier acción no trivial.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> **Nota sobre el orquestador SDD.** El orquestador SDD global (coordinación,
-> delegación a sub-agentes, model-routing por fase, protocolo Engram, governance)
-> ya vive en tu `~/.claude/CLAUDE.md`. **Este archivo NO lo duplica.** Si necesitás
-> el detalle del orquestador, referenciá ese archivo global. Acá viven solo las
-> reglas **específicas de este proyecto**.
+## Project
+
+**Activia-trace** — multi-tenant academic management platform for UTN. Tracks students, grades, colloquia, communications, payroll, and audit logs.
+
+Stack: Python 3.13 FastAPI (async) + PostgreSQL 15 + React 19 + TypeScript + Vite + Tailwind v4. Deployed via Docker Compose.
 
 ---
 
-## 1. Stack y topología
+## Commands
 
-- **Lenguaje**: Go 1.26.
-- **TUI**: Bubbletea + Lipgloss (sin el theme cosmético del repo viejo).
-- **Distribución**: binario único, cross-platform — Windows, macOS, Linux, WSL y Termux.
-- **Entrypoint**: `cmd/jr-stack/`.
-- **Catálogo**: embebido en el binario vía `//go:embed` (`internal/catalog/harnesses.yaml`).
-
-Qué es esto: un **instalador methodology-first**. Materializa el `MANUAL-METODOLOGICO.md`.
-Un comando (`jr-stack install`) instala/configura el sustrato (harnesses); un único
-orquestador de fundación deja el proyecto listo para el ciclo OPSX
-(`explore → propose → apply → verify → archive`).
-
-**NO es** (fuera de scope, decisión firme — ver ARCHITECTURE.md §1):
-GGA (code review en commit), themes/statusline/keybindings, persona como producto
-de marketing, framing "supercharge any agent" / relación con Gentleman.Dots.
-
-### Estructura de paquetes (ARCHITECTURE.md §5)
-
-```
-cmd/jr-stack/            entrypoint CLI
-internal/
-  system/                detección OS/arch/WSL/Termux, deps, guards   [PORT]
-  catalog/               parseo del harnesses.yaml embebido           [NEW]  ← existe
-  model/                 tipos de dominio (harness, agente, modo)     [NEW]  ← existe
-  planner/               grafo de dependencias, orden, review payload [PORT]
-  agents/                adapters por agente (claude/opencode/...)    [PORT, slim]
-  harness/               install/inject por tipo de harness           [NEW]
-    skill/  config/  external/
-  filemerge/             merge por markers (inyectar sin pisar)       [PORT]
-  backup/                snapshot + restore de configs                [PORT]
-  pipeline/              ejecución por etapas + rollback              [PORT]
-  verify/                health checks post-install                   [PORT]
-  tui/                   Bubbletea (sin theme cosmético del viejo)    [PORT, slim]
-assets/                  catálogo + configs bundleadas (sdd-orchestrator, etc.)
+### Docker (preferred)
+```bash
+docker-compose up          # all services: api:47121, frontend:47120, postgres:47122
+docker-compose up api      # backend only
+docker-compose up frontend # frontend only
 ```
 
-`[PORT]` = traer del repo viejo (`E:\ESCRITORIO\programar\2026\jr-stack`) y limpiar.
-`[NEW]` = construir. Se descarta: `components/gga`, `components/theme`,
-`components/persona` (marketing). `components/permissions` **se mantiene** (la
-seguridad no es opcional).
+### Backend (manual)
+```bash
+cd backend
+pip install -e .
+alembic upgrade head       # apply migrations
+uvicorn app.main:app --reload --port 8000
+```
+
+Migrations:
+```bash
+alembic upgrade head       # apply all
+alembic downgrade -1       # rollback one
+alembic revision --autogenerate -m "description"  # generate from model changes
+```
+
+Tests:
+```bash
+cd backend && pytest tests/
+pytest tests/test_coloquios.py  # single file
+```
+
+### Frontend (manual)
+```bash
+cd frontend
+npm install
+npm run dev    # Vite on port 5173
+npm run lint   # ESLint
+npm test       # Vitest
+npm test -- --run src/features/auth  # single feature
+```
 
 ---
 
-## 2. Modelo de dominio (resumen)
+## Architecture
 
-Detalle real en `internal/model/harness.go`. Tipos clave:
+### Layers (backend)
 
-- **`Harness`** — módulo instalable/configurable. Campos: `ID`, `Name`, `Type`,
-  `Source` (skill), `External` (tool), `Toggles` (config), `InstallModes`,
-  `DependsOn`, `Agents`. Métodos: `InMode(mode)`, `SupportsAgent(agent)`.
-- **`HarnessType`** — cómo se materializa un harness:
-  - `skill` → `SKILL.md` + assets, clonado de un repo y copiado al dir de skills del agente.
-  - `config` → texto/archivos bundleados que configuran el agente (ej. `sdd-orchestrator`, `permissions`).
-  - `external` → binario/servicio de terceros que instalamos/configuramos pero no son nuestros (Engram, OpenSpec, Context7).
-- **`InstallMode`** — `lite` | `full` | `custom`. Convención: un harness Lite lista
-  `[lite, full]` (Full incluye a Lite); uno exclusivo de Full lista `[full]`; Custom matchea todos.
-- **`Agent`** — `claude`, `opencode`, `gemini`, `codex`, `cursor`, `vscode`, `windsurf`, `antigravity`.
-- **Catálogo** (`internal/catalog`) — `Load()` parsea y valida el YAML embebido;
-  un catálogo malformado es error de build/release (falla ruidoso). Métodos:
-  `ByID`, `ForMode`, `ForAgent`.
+```
+backend/
+  app/main.py          → FastAPI app, lifespan, CORS, router registration
+  core/                → config, database session, dependencies, crypto, audit, observability
+  models/              → SQLAlchemy ORM models (all inherit Base + mixins)
+  models/mixins.py     → TenantMixin, TimestampMixin, SoftDeleteMixin (on every entity)
+  schemas/             → Pydantic request/response models
+  api/routers/         → auth.py + admin/ (carreras, cohortes, materias)
+  api/endpoints/       → 21 feature endpoint modules
+  api/dependencies/    → auth.py: get_current_user(), require_permission()
+  services/            → business logic (one service class per domain)
+  repositories/        → data access (BaseRepository + specializations)
+  workers/             → background job loops (comunicaciones)
+  alembic/versions/    → 30+ migration files
+```
 
-**El harness `sdd-orchestrator` es clave**: es de tipo `config` y se compone a
-partir de **toggles modulares** (`tdd`, `engram`, `model-routing`, `delegation`,
-`governance`). El resultado es el bloque de instrucciones del orquestador que se
-inyecta en `CLAUDE.md`/`AGENTS.md` del proyecto destino.
+### Critical invariants
 
----
+**Multi-tenancy**: `tenant_id` is on every entity. Always derived from JWT payload, never from request params. All queries must filter by `tenant_id`.
 
-## 3. Reglas críticas NO negociables
+**RBAC**: Roles are tenant-scoped. Permissions are global (`modulo:accion` strings). `Asignacion` adds time-bounded role assignment (`desde`/`hasta`); `UsuarioRol` is permanent. `require_permission()` checks both.
 
-Formuladas como "NUNCA X → hacer Y". Estas reglas son duras: violarlas invalida el trabajo.
+**Soft deletes**: `deleted_at` column on all entities. Never `DELETE`. Always filter `deleted_at IS NULL` in queries.
 
-- **NUNCA pisar config del usuario sin backup** → SIEMPRE snapshot vía `internal/backup` antes de escribir.
-- **SIEMPRE inyectar con markers idempotentes** → usar `internal/filemerge` (merge por markers); reinstalar no debe duplicar bloques.
-- **NUNCA hardcodear paths de agente** → resolver SIEMPRE vía el adapter del agente (`internal/agents`).
-- **NUNCA commitear sin pedido explícito** del responsable; *conventional commits* exclusivamente; **NUNCA** atribución de coautoría a la IA.
-- **NUNCA meter en el repo lo que se saca** → GGA, theme, statusline, keybindings, persona-marketing y el framing "supercharge any agent" NO van. La persona puede sobrevivir solo como harness `config` opcional, sin envoltorio de marketing.
-- **SIEMPRE limpiar leftovers `gentle-ai` / `gentle-stack` / `Gentleman.Dots`** al portar código del repo viejo (paths, strings, nombres, branding).
-- **NUNCA instalar "repos"** → el instalador instala **harnesses**, y cada harness sabe cómo se materializa (skill/config/external).
-- **NUNCA editar `harnesses.yaml` sin pasar por `catalog.Load()` validando** → un catálogo inválido rompe el release.
-- **NUNCA build después de cambios** salvo pedido explícito (regla del operador).
-- **SIEMPRE marcar `(TBD)`** cuando una decisión no está tomada; nunca inventar.
+**Audit log**: `AuditLog` is append-only enforced by a DB trigger (prevents UPDATE/DELETE). Log every write action.
 
----
+**Encrypted PII**: `EncryptedString` column type (see `core/crypto.py`) on `email`, `dni`, `cuil`, `cbu`, `alias`. Email also has a plaintext hash column for unique constraints.
 
-## 4. Governance por dominio
+**Identity from session**: Never trust user-supplied `user_id` or `tenant_id` in request body. Always extract from `get_current_user()`.
 
-El nivel de autonomía es proporcional a la criticidad del paquete tocado.
+### Frontend structure
 
-| Nivel | Dominios (paquetes) | Comportamiento del agente |
-|---|---|---|
-| **ALTO** | `backup` (snapshot/restore), `filemerge` (merge por markers), `pipeline` (rollback) | Propone y espera review. Pueden **destruir config del usuario**. |
-| **MEDIO** | `agents` (adapters por agente), `harness/*` (installers) | Implementa con checkpoints. |
-| **BAJO** | `catalog`, `model`, `tui` | Autonomía completa si los tests pasan. |
+```
+frontend/src/
+  App.tsx              → providers + routing; RoleBasedRedirect routes by role
+  features/            → one directory per domain
+    [feature]/
+      pages/           → route components
+      components/      → UI components
+      services/        → API calls (axios + react-query hooks)
+      types/           → TypeScript interfaces
+  shared/
+    services/api.ts    → Axios instance with auth interceptors
+    components/        → shared UI (modals, tables, etc.)
+```
 
-> No hay dominios CRÍTICO en este proyecto (no manejamos auth/billing/secrets de
-> producción). El máximo es ALTO porque destruir la config del usuario es el peor
-> daño posible del instalador.
+Role-based routing: ADMIN→monitor, FINANZAS→salarios, PROFESOR→calificaciones, ALUMNO→estado.
 
----
+React Query is the server state layer. All data fetching goes through custom hooks wrapping `useQuery`/`useMutation`.
 
-## 5. Mapa de navegación ("Necesito X → Leer Y")
+### Key domain models
 
-| Necesito… | Leer / mirar |
+| Model | Notes |
 |---|---|
-| El blueprint del diseño (fuente de verdad) | `ARCHITECTURE.md` |
-| La metodología (etapas, governance, flujo) | `../MANUAL-METODOLOGICO.md` |
-| Roadmap de changes, deps, camino crítico | `CHANGES.md` |
-| Qué harnesses existen y de qué tipo | `internal/catalog/harnesses.yaml` |
-| Los tipos de dominio | `internal/model/harness.go` |
-| Cargar/validar el catálogo | `internal/catalog/catalog.go` |
-| Infra a portar (backup, filemerge, planner, agents, pipeline, verify, tui) | repo viejo: `E:\ESCRITORIO\programar\2026\jr-stack\internal\` |
-| Configs bundleadas (sdd-orchestrator por agente) | repo viejo: `internal/assets/` |
-| Estado real de los changes | `openspec` CLI (`openspec list`, `openspec status`) — fuente de verdad |
-| El orquestador SDD global | `~/.claude/CLAUDE.md` (NO duplicar acá) |
+| `Usuario` | UUID PK; encrypted email/dni/cuil/cbu; TOTP 2FA |
+| `Asignacion` | Time-bounded role (desde/hasta vigency window) |
+| `AuditLog` | Immutable; tracks actor, impersonator, accion, detalle (JSON) |
+| `Coloquio` | Exam event with quota enforcement; reserva system |
+| `Comunicacion` | Outbound message queue; async worker processes it |
+| `Aviso` | Multi-role notice with acknowledgment tracking |
+| `Tarea` | Internal tutor↔coordinator task workflow |
+| `Liquidacion` | Payroll period with salary grid |
+
+### Adding a new feature
+
+1. **Model**: add to `backend/models/`, inherit `Base + TenantMixin + TimestampMixin + SoftDeleteMixin`
+2. **Migration**: `alembic revision --autogenerate -m "feat: description"` → review generated file
+3. **Schema**: add request/response Pydantic models in `backend/schemas/`
+4. **Repository**: extend `BaseRepository` or add query methods
+5. **Service**: business logic; enforce tenant isolation here
+6. **Endpoint**: add to `backend/api/endpoints/`; wire `require_permission()` dependency
+7. **Register router**: in `app/main.py`
+8. **Frontend**: new feature directory following the `pages/components/services/types` pattern; add route in `App.tsx`
+
+### Ports
+
+| Service | Docker port |
+|---|---|
+| Frontend (Vite) | 47120 |
+| API (FastAPI) | 47121 |
+| PostgreSQL | 47122 |
 
 ---
 
-## 6. Notas
+## Conventions
 
-- `openspec/` está versionado-ignorado por git (dogfooding interno).
-- Cada incremento del roadmap es un change OPSX (ver `CHANGES.md`).
-- Skills de dominio relevantes para este repo: `go-testing` (tests Go + Bubbletea TUI).
+- Conventional commits only; never commit without explicit request
+- All business rules and permission checks in the service layer, not endpoints
+- `openspec/` is git-ignored (internal change management tooling)
+- Knowledge base docs in Spanish in `knowledge-base/` — consult before implementing new domain logic

@@ -40,7 +40,7 @@ class EstadoTurno(str, enum.Enum):
     ACTIVO = "Activo"
     CANCELADO = "Cancelado"
 
-class TurnoColoquio(Base, TenantMixin, TimestampMixin):
+class TurnoColoquio(Base, TenantMixin, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "turno_coloquio"
 
     id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

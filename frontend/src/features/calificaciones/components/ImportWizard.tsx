@@ -45,12 +45,16 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ materiaId, cohorteId
   };
 
   const handleConfirm = async () => {
+    if (!file) return;
     try {
       await confirmMutation.mutateAsync({
-        materia_id: materiaId,
-        cohorte_id: cohorteId,
-        version_padron_id: versionPadronId,
-        columnas: columnConfig
+        data: {
+          materia_id: materiaId,
+          cohorte_id: cohorteId,
+          version_padron_id: versionPadronId,
+          columnas: columnConfig,
+        },
+        file,
       });
       onComplete();
     } catch (error) {

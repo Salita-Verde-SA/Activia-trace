@@ -8,36 +8,35 @@ interface EnvioTrackerProps {
 }
 
 export const EnvioTracker: React.FC<EnvioTrackerProps> = ({ loteId, onClose }) => {
-  // Polling cada 3 segundos si hay pendientes o enviando
   const [shouldPoll, setShouldPoll] = useState(true);
 
-  const { data: lote, isLoading } = useQuery({
+  const { data: comunicaciones, isLoading } = useQuery({
     queryKey: ['lote', loteId],
     queryFn: () => getLoteStatus(loteId),
     refetchInterval: shouldPoll ? 3000 : false,
   });
 
   useEffect(() => {
-    if (lote) {
-      const isComplete = lote.comunicaciones.every(
+    if (comunicaciones) {
+      const isComplete = comunicaciones.every(
         c => c.estado === 'Enviado' || c.estado === 'Error' || c.estado === 'Cancelado'
       );
       if (isComplete) {
         setShouldPoll(false);
       }
     }
-  }, [lote]);
+  }, [comunicaciones]);
 
   if (isLoading) {
     return <div className="p-4 bg-white rounded shadow text-center">Consultando estado del lote...</div>;
   }
 
-  if (!lote) return null;
+  if (!comunicaciones) return null;
 
-  const totales = lote.comunicaciones.length;
-  const enviados = lote.comunicaciones.filter(c => c.estado === 'Enviado').length;
-  const errores = lote.comunicaciones.filter(c => c.estado === 'Error').length;
-  const pendientes = lote.comunicaciones.filter(c => c.estado === 'Pendiente' || c.estado === 'Enviando').length;
+  const totales = comunicaciones.length;
+  const enviados = comunicaciones.filter(c => c.estado === 'Enviado').length;
+  const errores = comunicaciones.filter(c => c.estado === 'Error').length;
+  const pendientes = comunicaciones.filter(c => c.estado === 'Pendiente' || c.estado === 'Enviando').length;
 
   const pct = Math.round(((enviados + errores) / totales) * 100) || 0;
 

@@ -12,6 +12,59 @@ class ColoquioService:
         self.session = session
         self.tenant_id = tenant_id
 
+    async def listar_convocatorias(self):
+        from models.coloquios import ConvocatoriaColoquio, TurnoColoquio
+        from models.estructura import Materia
+        from sqlalchemy.orm import selectinload
+        
+        query = (
+            select(ConvocatoriaColoquio)
+            .options(selectinload(ConvocatoriaColoquio.turnos))
+            .where(
+                and_(
+                    ConvocatoriaColoquio.tenant_id == self.tenant_id,
+                    ConvocatoriaColoquio.deleted_at.is_(None)
+                )
+            )
+            .order_by(ConvocatoriaColoquio.created_at.desc())
+        )
+        
+        result = await self.session.execute(query)
+        convocatorias = result.scalars().all()
+        
+        # Obtener nombres de materias
+        materias_ids = [c.materia_id for c in convocatorias]
+        materias_map = {}
+        if materias_ids:
+            materias_query = select(Materia.id, Materia.nombre).where(Materia.id.in_(materias_ids))
+            materias_result = await self.session.execute(materias_query)
+            materias_map = {row.id: row.nombre for row in materias_result}
+            
+        res = []
+        for c in convocatorias:
+            item = {
+                "id": str(c.id),
+                "materia_id": str(c.materia_id),
+                "materia_nombre": materias_map.get(c.materia_id, "Desconocida"),
+                "nombre": c.nombre,
+                "descripcion": c.descripcion,
+                "fecha_apertura_reservas": c.fecha_apertura_reservas,
+                "fecha_cierre_reservas": c.fecha_cierre_reservas,
+                "estado": c.estado.value,
+                "turnos": [
+                    {
+                        "id": str(t.id),
+                        "fecha_hora_inicio": t.fecha_hora_inicio,
+                        "fecha_hora_fin": t.fecha_hora_fin,
+                        "cupo_maximo": t.cupo_maximo,
+                        "cupos_ocupados": t.cupos_ocupados,
+                        "estado": t.estado.value
+                    } for t in c.turnos if not t.deleted_at
+                ]
+            }
+            res.append(item)
+        return res
+
     async def importar_padron_candidatos(self, convocatoria_id: UUID, file_content: bytes) -> int:
         from models.coloquios import ConvocatoriaColoquio, CandidatoColoquio
         from models.user import Usuario
@@ -34,25 +87,26 @@ class ColoquioService:
         if not emails:
             raise HTTPException(status_code=400, detail="El archivo no contiene registros válidos (columna email faltante).")
 
-        # Buscar usuarios
+        # Buscar usuarios por email_hash (índice ciego determinista sobre PII cifrada)
+        from core.crypto import get_blind_index
+        emails_normalized = [e.strip().lower() for e in emails]
+        hashes = [get_blind_index(e) for e in emails_normalized if e]
+
         result = await self.session.execute(
-            select(Usuario.id, Usuario.email)
+            select(Usuario.id, Usuario.email_hash)
             .where(
                 and_(
                     Usuario.tenant_id == self.tenant_id,
+                    Usuario.email_hash.in_(hashes),
                     Usuario.deleted_at.is_(None)
                 )
             )
         )
-        
-        # In-memory mapping as email might be encrypted and difficult to query with in_ directly if not deterministic
-        usuario_map = {}
-        for row in result:
-            if row.email in emails:
-                usuario_map[row.email] = row.id
+
+        usuario_map = {row.email_hash: row.id for row in result}
 
         if not usuario_map:
-            raise HTTPException(status_code=400, detail="No se encontraron usuarios coincidentes en el sistema.")
+            raise HTTPException(status_code=400, detail="No se encontraron usuarios coincidentes en el sistema. Verificá que los emails existan en el tenant.")
 
         # Obtener candidatos existentes para no duplicar
         existing_result = await self.session.execute(
@@ -68,7 +122,7 @@ class ColoquioService:
         existing_ids = {row.usuario_id for row in existing_result}
 
         nuevos_candidatos = 0
-        for email, u_id in usuario_map.items():
+        for _, u_id in usuario_map.items():
             if u_id not in existing_ids:
                 candidato = CandidatoColoquio(
                     tenant_id=self.tenant_id,
@@ -81,6 +135,40 @@ class ColoquioService:
 
         await self.session.commit()
         return nuevos_candidatos
+
+    async def asignar_candidatos_ids(self, convocatoria_id: UUID, alumnos_ids: list[UUID]) -> int:
+        from models.coloquios import ConvocatoriaColoquio, CandidatoColoquio
+        
+        convocatoria = await self.session.get(ConvocatoriaColoquio, convocatoria_id)
+        if not convocatoria or convocatoria.tenant_id != self.tenant_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Convocatoria no encontrada")
+            
+        existing_result = await self.session.execute(
+            select(CandidatoColoquio.usuario_id)
+            .where(
+                and_(
+                    CandidatoColoquio.tenant_id == self.tenant_id,
+                    CandidatoColoquio.convocatoria_id == convocatoria_id,
+                    CandidatoColoquio.deleted_at.is_(None)
+                )
+            )
+        )
+        existing_ids = {row.usuario_id for row in existing_result}
+        
+        nuevos = 0
+        for u_id in alumnos_ids:
+            if u_id not in existing_ids:
+                candidato = CandidatoColoquio(
+                    tenant_id=self.tenant_id,
+                    convocatoria_id=convocatoria_id,
+                    usuario_id=u_id,
+                    habilitado=True
+                )
+                self.session.add(candidato)
+                nuevos += 1
+                
+        await self.session.commit()
+        return nuevos
 
     async def crear_convocatoria(self, data: 'ConvocatoriaColoquioCreate') -> 'ConvocatoriaColoquioResponse':
         from models.coloquios import ConvocatoriaColoquio, TurnoColoquio, EstadoConvocatoria, EstadoTurno
@@ -118,6 +206,20 @@ class ColoquioService:
             nombre=convocatoria.nombre,
             estado=convocatoria.estado.value
         )
+
+    async def publicar_convocatoria(self, convocatoria_id: UUID):
+        from models.coloquios import ConvocatoriaColoquio, EstadoConvocatoria
+
+        convocatoria = await self.session.get(ConvocatoriaColoquio, convocatoria_id)
+        if not convocatoria or convocatoria.tenant_id != self.tenant_id or convocatoria.deleted_at:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Convocatoria no encontrada")
+        if convocatoria.estado != EstadoConvocatoria.BORRADOR:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La convocatoria ya está publicada")
+
+        convocatoria.estado = EstadoConvocatoria.PUBLICADA
+        await self.session.commit()
+        await self.session.refresh(convocatoria)
+        return convocatoria
 
     async def listar_disponibles(self, alumno_id: UUID) -> list['ColoquioDisponible']:
         from models.coloquios import ConvocatoriaColoquio, TurnoColoquio, CandidatoColoquio, ReservaColoquio, EstadoTurno, EstadoConvocatoria, EstadoReserva
@@ -219,15 +321,33 @@ class ColoquioService:
 
         turno.cupos_ocupados += 1
 
-        reserva = ReservaColoquio(
-            tenant_id=self.tenant_id,
-            convocatoria_id=turno.convocatoria_id,
-            turno_id=turno.id,
-            usuario_id=alumno_id,
-            estado=EstadoReserva.RESERVADA
+        # Buscar reserva cancelada previa para reutilizar la fila (evita violar UniqueConstraint)
+        query_cancelada = select(ReservaColoquio).where(
+            and_(
+                ReservaColoquio.tenant_id == self.tenant_id,
+                ReservaColoquio.convocatoria_id == turno.convocatoria_id,
+                ReservaColoquio.usuario_id == alumno_id,
+                ReservaColoquio.estado == EstadoReserva.CANCELADA,
+            )
         )
-        
-        self.session.add(reserva)
+        result_cancelada = await self.session.execute(query_cancelada)
+        reserva_cancelada = result_cancelada.scalar_one_or_none()
+
+        if reserva_cancelada:
+            reserva_cancelada.turno_id = turno.id
+            reserva_cancelada.estado = EstadoReserva.RESERVADA
+            reserva_cancelada.deleted_at = None
+            reserva = reserva_cancelada
+        else:
+            reserva = ReservaColoquio(
+                tenant_id=self.tenant_id,
+                convocatoria_id=turno.convocatoria_id,
+                turno_id=turno.id,
+                usuario_id=alumno_id,
+                estado=EstadoReserva.RESERVADA
+            )
+            self.session.add(reserva)
+
         await self.session.commit()
         await self.session.refresh(reserva)
         

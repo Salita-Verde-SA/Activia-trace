@@ -12,6 +12,7 @@ let failedQueue: Array<{
   resolve: (value?: unknown) => void;
   reject: (reason?: any) => void;
 }> = [];
+let proactiveRefreshPromise: Promise<string | null> | null = null;
 
 const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach(prom => {
@@ -24,9 +25,53 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
+const isTokenExpired = (token: string): boolean => {
+  try {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const { exp } = JSON.parse(atob(base64));
+    return exp * 1000 < Date.now() + 30_000; // refresh 30s before expiry
+  } catch {
+    return false;
+  }
+};
+
+const doProactiveRefresh = (): Promise<string | null> => {
+  if (proactiveRefreshPromise) return proactiveRefreshPromise;
+
+  proactiveRefreshPromise = (async () => {
+    try {
+      const refresh_token = localStorage.getItem('refresh_token');
+      if (!refresh_token) return null;
+
+      const { data } = await axios.post(
+        `${api.defaults.baseURL}/api/auth/refresh`,
+        { refresh_token }
+      );
+      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
+      api.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
+      return data.access_token as string;
+    } catch {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      window.dispatchEvent(new Event('auth:unauthorized'));
+      return null;
+    } finally {
+      proactiveRefreshPromise = null;
+    }
+  })();
+
+  return proactiveRefreshPromise;
+};
+
 api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('access_token');
+  async (config) => {
+    let token = localStorage.getItem('access_token');
+
+    if (token && isTokenExpired(token)) {
+      token = await doProactiveRefresh();
+    }
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -61,17 +106,16 @@ api.interceptors.response.use(
           throw new Error('No refresh token available');
         }
 
-        // Use axios explicitly to avoid interceptors loop
         const { data } = await axios.post(`${api.defaults.baseURL}/api/auth/refresh`, {
           refresh_token
         });
 
         localStorage.setItem('access_token', data.access_token);
         localStorage.setItem('refresh_token', data.refresh_token);
-        
+
         api.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
         originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
-        
+
         processQueue(null, data.access_token);
         return api(originalRequest);
       } catch (err) {
