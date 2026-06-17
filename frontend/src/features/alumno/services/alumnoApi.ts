@@ -12,7 +12,7 @@ export const alumnoApi = {
     api.get<ColoquioDisponible[]>('/api/v1/coloquios/disponibles').then(res => res.data),
 
   reservarColoquio: (instanciaId: string) => 
-    api.post(`/api/v1/coloquios/reservar`, { coloquio_id: instanciaId }).then(res => res.data),
+    api.post(`/api/v1/coloquios/reservar`, { turno_id: instanciaId }).then(res => res.data),
 
   cancelarReserva: (reservaId: string) => 
     api.post(`/api/v1/coloquios/reservas/${reservaId}/cancelar`).then(res => res.data),

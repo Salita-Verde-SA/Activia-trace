@@ -120,15 +120,21 @@ class ColoquioService:
         )
 
     async def listar_disponibles(self, alumno_id: UUID) -> list['ColoquioDisponible']:
-        from models.coloquios import ConvocatoriaColoquio, TurnoColoquio, CandidatoColoquio, EstadoTurno, EstadoConvocatoria
+        from models.coloquios import ConvocatoriaColoquio, TurnoColoquio, CandidatoColoquio, ReservaColoquio, EstadoTurno, EstadoConvocatoria, EstadoReserva
         from models.estructura import Materia
         from schemas.coloquio import ColoquioDisponible
         
         query = (
-            select(TurnoColoquio, ConvocatoriaColoquio, Materia.nombre.label("materia_nombre"))
+            select(TurnoColoquio, ConvocatoriaColoquio, Materia.nombre.label("materia_nombre"), ReservaColoquio.id.label("mi_reserva_id"))
             .join(ConvocatoriaColoquio, ConvocatoriaColoquio.id == TurnoColoquio.convocatoria_id)
             .join(Materia, Materia.id == ConvocatoriaColoquio.materia_id)
             .join(CandidatoColoquio, CandidatoColoquio.convocatoria_id == ConvocatoriaColoquio.id)
+            .outerjoin(ReservaColoquio, and_(
+                ReservaColoquio.turno_id == TurnoColoquio.id,
+                ReservaColoquio.usuario_id == alumno_id,
+                ReservaColoquio.estado == EstadoReserva.RESERVADA,
+                ReservaColoquio.deleted_at.is_(None)
+            ))
             .where(
                 and_(
                     TurnoColoquio.tenant_id == self.tenant_id,
@@ -145,7 +151,7 @@ class ColoquioService:
         rows = result.all()
         
         disponibles = []
-        for turno, convocatoria, materia_nombre in rows:
+        for turno, convocatoria, materia_nombre, mi_reserva_id in rows:
             cupo_disponible = turno.cupo_maximo - turno.cupos_ocupados
             disponibles.append(ColoquioDisponible(
                 turno_id=turno.id,
@@ -156,7 +162,8 @@ class ColoquioService:
                 fecha_hora_inicio=turno.fecha_hora_inicio,
                 fecha_hora_fin=turno.fecha_hora_fin,
                 cupo_total=turno.cupo_maximo,
-                cupo_disponible=max(0, cupo_disponible)
+                cupo_disponible=max(0, cupo_disponible),
+                mi_reserva_id=mi_reserva_id
             ))
             
         return disponibles

@@ -9,12 +9,16 @@ export interface AvisoAlumno {
 }
 
 export interface ColoquioDisponible {
-  id: string;
+  turno_id: string;
+  convocatoria_id: string;
   materia_id: string;
   materia_nombre: string;
-  fecha: string;
+  nombre_convocatoria: string;
+  fecha_hora_inicio: string;
+  fecha_hora_fin: string;
   cupo_total: number;
   cupo_disponible: number;
+  mi_reserva_id: string | null;
 }
 
 export interface EstadoMateria {

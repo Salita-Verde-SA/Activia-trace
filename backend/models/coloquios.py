@@ -26,7 +26,7 @@ class ConvocatoriaColoquio(Base, TenantMixin, TimestampMixin, SoftDeleteMixin):
     fecha_cierre_reservas: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     
     estado: Mapped[EstadoConvocatoria] = mapped_column(
-        Enum(EstadoConvocatoria, native_enum=False, length=20), 
+        Enum(EstadoConvocatoria, name="estadoconvocatoria", values_callable=lambda x: [e.value for e in x]), 
         nullable=False, 
         default=EstadoConvocatoria.BORRADOR
     )
@@ -53,7 +53,7 @@ class TurnoColoquio(Base, TenantMixin, TimestampMixin):
     cupos_ocupados: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     
     estado: Mapped[EstadoTurno] = mapped_column(
-        Enum(EstadoTurno, native_enum=False, length=20), 
+        Enum(EstadoTurno, name="estadoturno", values_callable=lambda x: [e.value for e in x]), 
         nullable=False, 
         default=EstadoTurno.ACTIVO
     )
@@ -94,7 +94,7 @@ class ReservaColoquio(Base, TenantMixin, TimestampMixin, SoftDeleteMixin):
     usuario_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("usuario.id"), nullable=False, index=True)
     
     estado: Mapped[EstadoReserva] = mapped_column(
-        Enum(EstadoReserva, native_enum=False, length=20), 
+        Enum(EstadoReserva, name="estadoreserva", values_callable=lambda x: [e.value for e in x]), 
         nullable=False, 
         default=EstadoReserva.RESERVADA
     )
