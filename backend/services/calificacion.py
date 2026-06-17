@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update, func
 from uuid import UUID
 import csv
 import io
@@ -126,7 +126,23 @@ class CalificacionService:
         columnas_a_importar = [c for c in data.columnas if not c.ignorar]
         calificaciones = []
         origen = "REPORTE_FINALIZACION" if data.es_reporte_finalizacion else "IMPORTADO_CSV"
-        
+
+        # Idempotencia: soft-delete de las calificaciones vivas de estas entradas y
+        # actividades antes de insertar, para no acumular duplicados al re-importar.
+        actividades_import = [c.nombre_columna for c in columnas_a_importar]
+        entrada_ids = list(entradas.values())
+        if entrada_ids and actividades_import:
+            await db.execute(
+                update(Calificacion)
+                .where(
+                    Calificacion.tenant_id == tenant_id,
+                    Calificacion.entrada_padron_id.in_(entrada_ids),
+                    Calificacion.actividad_nombre.in_(actividades_import),
+                    Calificacion.deleted_at.is_(None),
+                )
+                .values(deleted_at=func.now())
+            )
+
         for row in reader:
             email = (row.get("email") or row.get("Email Address") or "").lower().strip()
             entrada_id = entradas.get(email)
@@ -212,9 +228,12 @@ class CalificacionService:
         entrada_ids = [e.id for e in entradas]
         version_ids = list({e.version_id for e in entradas})
 
+        # Solo la versión de padrón activa por materia: evita arrastrar versiones
+        # históricas (que duplicarían cada actividad en "Mi Estado").
         versiones_result = await db.execute(
             select(VersionPadron).where(
                 VersionPadron.id.in_(version_ids),
+                VersionPadron.activa == True,
                 VersionPadron.deleted_at.is_(None),
             )
         )
@@ -225,6 +244,12 @@ class CalificacionService:
             select(Materia).where(Materia.id.in_(materia_ids))
         )
         materias = {m.id: m.nombre for m in materias_result.scalars().all()}
+
+        # Umbral vigente por materia para derivar `aprobado` (no usar el flag persistido).
+        umbrales = {
+            mid: await UmbralService.get_umbral(db, tenant_id, mid)
+            for mid in materia_ids
+        }
 
         califs_result = await db.execute(
             select(Calificacion).where(
@@ -249,7 +274,12 @@ class CalificacionService:
         estados = []
         for materia_id in califs_por_materia:
             califs = califs_por_materia[materia_id]
-            aprobadas = sum(1 for c in califs if c.aprobado)
+            umbral = umbrales.get(materia_id)
+            aprob = {
+                c.id: CalificacionService.calcular_aprobacion(c.nota_numerica, c.nota_textual, umbral)
+                for c in califs
+            }
+            aprobadas = sum(1 for c in califs if aprob[c.id])
             total = len(califs)
             if total == 0:
                 estado = "sin_datos"
@@ -273,7 +303,7 @@ class CalificacionService:
                         actividad_nombre=c.actividad_nombre,
                         nota_numerica=c.nota_numerica,
                         nota_textual=c.nota_textual,
-                        aprobado=c.aprobado,
+                        aprobado=aprob[c.id],
                     ) for c in califs
                 ],
             ))

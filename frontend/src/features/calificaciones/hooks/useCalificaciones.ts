@@ -69,8 +69,11 @@ export const useSetUmbral = () => {
   return useMutation({
     mutationFn: (data: UmbralCreate) => setUmbral(data),
     onSuccess: (_, variables) => {
+      // El umbral recalcula aprobado/reprobado en sábana, atrasados y ranking → refrescar todos.
       queryClient.invalidateQueries({ queryKey: ['umbral', variables.materia_id] });
       queryClient.invalidateQueries({ queryKey: ['atrasados', variables.materia_id] });
+      queryClient.invalidateQueries({ queryKey: ['sabana', variables.materia_id] });
+      queryClient.invalidateQueries({ queryKey: ['ranking', variables.materia_id] });
     },
   });
 };

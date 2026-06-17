@@ -29,7 +29,9 @@ class Comunicacion(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "estado != 'Error' OR error_msg IS NOT NULL",
+            # El enum PG usa los NOMBRES de miembro como labels ('ERROR'), igual que la
+            # migración comunicaciones_12; comparar contra el valor 'Error' rompe create_all.
+            "estado != 'ERROR' OR error_msg IS NOT NULL",
             name="chk_error_msg_if_error"
         ),
     )

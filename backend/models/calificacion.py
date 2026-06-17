@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Float, Boolean, ForeignKey
+from sqlalchemy import Column, String, Float, Boolean, ForeignKey, Index, text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from models.base import Base
 from models.mixins import TenantMixin, TimestampMixin, SoftDeleteMixin
@@ -23,3 +23,14 @@ class Calificacion(Base, TenantMixin, TimestampMixin, SoftDeleteMixin):
     nota_textual = Column(String(255), nullable=True)
     aprobado = Column(Boolean, nullable=False, default=False)
     origen = Column(String(50), nullable=False) # Ej: 'IMPORTADO_CSV', 'REPORTE_FINALIZACION'
+
+    __table_args__ = (
+        # Una sola calificación viva por alumno y actividad; el predicado parcial deja
+        # convivir filas soft-deleted (historial) con la viva actual.
+        Index(
+            "uq_calificacion_entrada_actividad_viva",
+            "tenant_id", "entrada_padron_id", "actividad_nombre",
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+    )

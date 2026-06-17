@@ -109,17 +109,20 @@ class AnalisisService:
     async def obtener_ranking_actividades(db: AsyncSession, tenant_id: UUID, materia_id: UUID) -> RankingActividadesResponse:
         entradas, calificaciones = await AnalisisService._get_calificaciones_padron_activo(db, tenant_id, materia_id)
         total_alumnos = len(entradas)
-        
+
         if total_alumnos == 0:
             return RankingActividadesResponse(materia_id=materia_id, actividades=[])
-            
+
+        umbral = await UmbralService.get_umbral(db, tenant_id, materia_id)
+
         eval_por_actividad = defaultdict(int)
         aprob_por_actividad = defaultdict(int)
-        
+
         for c in calificaciones:
             act = c.actividad_nombre
             eval_por_actividad[act] += 1
-            if c.aprobado:
+            # Recalcular contra el umbral vigente, no usar el flag persistido en import.
+            if CalificacionService.calcular_aprobacion(c.nota_numerica, c.nota_textual, umbral):
                 aprob_por_actividad[act] += 1
                 
         ranking = []
@@ -138,20 +141,23 @@ class AnalisisService:
     @staticmethod
     async def obtener_sabana_notas(db: AsyncSession, tenant_id: UUID, materia_id: UUID) -> SabanaResponse:
         entradas, calificaciones = await AnalisisService._get_calificaciones_padron_activo(db, tenant_id, materia_id)
-        
+
+        umbral = await UmbralService.get_umbral(db, tenant_id, materia_id)
+
         actividades_set = set()
         for c in calificaciones:
             actividades_set.add(c.actividad_nombre)
-            
+
         actividades_headers = sorted(list(actividades_set))
-        
+
         calif_por_alumno = defaultdict(dict)
         for c in calificaciones:
             calif_por_alumno[c.entrada_padron_id][c.actividad_nombre] = CalificacionSimplificada(
                 actividad_nombre=c.actividad_nombre,
                 nota_numerica=c.nota_numerica,
                 nota_textual=c.nota_textual,
-                aprobado=c.aprobado
+                # Recalcular contra el umbral vigente, no usar el flag persistido en import.
+                aprobado=CalificacionService.calcular_aprobacion(c.nota_numerica, c.nota_textual, umbral)
             )
             
         sabana_alumnos = []

@@ -14,17 +14,20 @@ Stack: Python 3.13 FastAPI (async) + PostgreSQL 15 + React 19 + TypeScript + Vit
 
 ### Docker (preferred)
 ```bash
-docker-compose up          # all services: api:47121, frontend:47120, postgres:47122
-docker-compose up api      # backend only
+docker-compose up          # all services: api:47121, frontend:47120, postgres:47122, worker
+docker-compose up api      # backend only (postgres starts as dependency)
 docker-compose up frontend # frontend only
+docker-compose up worker   # background comunicaciones queue processor
 ```
+Backend services read `./backend/.env`. The compose `api`/`worker`/`postgres` use the same `activia_trace` DB; the frontend container runs Vite dev (HMR) behind port 47120.
 
 ### Backend (manual)
 ```bash
 cd backend
-pip install -e .
+pip install -e ".[test]"   # base deps + pytest extras (omit [test] for runtime only)
 alembic upgrade head       # apply migrations
 uvicorn app.main:app --reload --port 8000
+python -m workers.main     # run the background worker separately
 ```
 
 Migrations:
@@ -34,11 +37,13 @@ alembic downgrade -1       # rollback one
 alembic revision --autogenerate -m "description"  # generate from model changes
 ```
 
-Tests:
+Tests (need a running Postgres — set `TEST_DATABASE_URL` in `.env`, else falls back to `DATABASE_URL`):
 ```bash
 cd backend && pytest tests/
-pytest tests/test_coloquios.py  # single file
+pytest tests/test_coloquios.py            # single file
+pytest tests/test_coloquios.py::test_name # single test
 ```
+`conftest.py` drops + recreates all tables from `Base.metadata` per session (no Alembic needed for tests); `asyncio_mode = auto`. `init-test-db.sql` seeds the test DB on first compose boot.
 
 ### Frontend (manual)
 ```bash
@@ -46,8 +51,9 @@ cd frontend
 npm install
 npm run dev    # Vite on port 5173
 npm run lint   # ESLint
-npm test       # Vitest
-npm test -- --run src/features/auth  # single feature
+npx vitest                          # watch mode (no "test" npm script exists)
+npx vitest run                      # single CI run
+npx vitest run src/features/auth    # single feature
 ```
 
 ---
@@ -64,12 +70,13 @@ backend/
   models/mixins.py     → TenantMixin, TimestampMixin, SoftDeleteMixin (on every entity)
   schemas/             → Pydantic request/response models
   api/routers/         → auth.py + admin/ (carreras, cohortes, materias)
-  api/endpoints/       → 21 feature endpoint modules
+  api/endpoints/       → ~20 feature endpoint modules (analisis, coloquios, liquidaciones, …)
   api/dependencies/    → auth.py: get_current_user(), require_permission()
+  integrations/        → moodle_ws.py (Moodle Web Services client)
   services/            → business logic (one service class per domain)
   repositories/        → data access (BaseRepository + specializations)
-  workers/             → background job loops (comunicaciones)
-  alembic/versions/    → 30+ migration files
+  workers/             → main.py loop + comunicaciones.py (outbound queue processor)
+  alembic/versions/    → Alembic migrations (~24); one per schema change
 ```
 
 ### Critical invariants
