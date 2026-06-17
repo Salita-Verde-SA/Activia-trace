@@ -13,6 +13,7 @@ class ColoquioDisponible(BaseModel):
     fecha_hora_fin: datetime
     cupo_total: int
     cupo_disponible: int
+    mi_reserva_id: Optional[uuid.UUID] = None
 
     class Config:
         from_attributes = True

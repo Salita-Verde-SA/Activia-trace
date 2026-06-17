@@ -17,6 +17,7 @@ import { LiquidacionesDashboardPage } from '@/features/finanzas/pages/Liquidacio
 import { MiEstadoPage } from '@/features/alumno/pages/MiEstadoPage';
 import { MisAvisosPage } from '@/features/alumno/pages/MisAvisosPage';
 import { MisColoquiosPage } from '@/features/alumno/pages/MisColoquiosPage';
+import ColoquiosAdminPage from '@/features/admin/pages/ColoquiosAdminPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -76,6 +77,7 @@ function App() {
               {/* Admin Panel routes */}
               <Route path="admin/estructura" element={<EstructuraAcademicaPage />} />
               <Route path="admin/usuarios" element={<GestionUsuariosPage />} />
+              <Route path="admin/coloquios" element={<ColoquiosAdminPage />} />
               <Route path="auditoria" element={<AuditoriaPage />} />
               
               {/* Finanzas routes */}

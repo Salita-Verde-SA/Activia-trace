@@ -21,7 +21,3 @@ export interface ComunicacionResponse {
   error_msg?: string;
 }
 
-export interface LoteResponse {
-  lote_id: string;
-  comunicaciones: ComunicacionResponse[];
-}

@@ -1,7 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from uuid import UUID
-from typing import List, Dict, Any
 from collections import defaultdict
 
 from models.calificacion import Calificacion
@@ -11,6 +10,7 @@ from schemas.analisis import (
     RankingActividadesResponse, ActividadRanking,
     SabanaResponse, SabanaAlumno
 )
+from services.calificacion import UmbralService, CalificacionService
 
 class AnalisisService:
     @staticmethod
@@ -18,7 +18,7 @@ class AnalisisService:
         stmt_vp = select(VersionPadron).where(
             VersionPadron.tenant_id == tenant_id,
             VersionPadron.materia_id == materia_id,
-            VersionPadron.es_activa == True,
+            VersionPadron.activa == True,
             VersionPadron.deleted_at.is_(None)
         )
         vp_result = await db.execute(stmt_vp)
@@ -52,34 +52,52 @@ class AnalisisService:
     @staticmethod
     async def obtener_alumnos_atrasados(db: AsyncSession, tenant_id: UUID, materia_id: UUID) -> ReporteAtrasadosResponse:
         entradas, calificaciones = await AnalisisService._get_calificaciones_padron_activo(db, tenant_id, materia_id)
-        
+
+        umbral = await UmbralService.get_umbral(db, tenant_id, materia_id)
+
         calif_por_alumno = defaultdict(list)
         for c in calificaciones:
             calif_por_alumno[c.entrada_padron_id].append(c)
-            
+
         alumnos_atrasados = []
         for e in entradas:
             notas_alumno = calif_por_alumno.get(e.id, [])
-            no_aprobadas = [
-                CalificacionSimplificada(
-                    actividad_nombre=n.actividad_nombre,
-                    nota_numerica=n.nota_numerica,
-                    nota_textual=n.nota_textual,
-                    aprobado=n.aprobado
-                ) for n in notas_alumno if not n.aprobado
-            ]
-            
+
+            if not notas_alumno:
+                # Sin ninguna calificación registrada → faltante total (RN-06)
+                alumnos_atrasados.append(
+                    AlumnoAtrasado(
+                        entrada_padron_id=e.id,
+                        email=e.email,
+                        nombre=e.nombre,
+                        apellido=e.apellidos,
+                        actividades_no_aprobadas=[]
+                    )
+                )
+                continue
+
+            no_aprobadas = []
+            for n in notas_alumno:
+                aprobado = CalificacionService.calcular_aprobacion(n.nota_numerica, n.nota_textual, umbral)
+                if not aprobado:
+                    no_aprobadas.append(CalificacionSimplificada(
+                        actividad_nombre=n.actividad_nombre,
+                        nota_numerica=n.nota_numerica,
+                        nota_textual=n.nota_textual,
+                        aprobado=False,
+                    ))
+
             if no_aprobadas:
                 alumnos_atrasados.append(
                     AlumnoAtrasado(
                         entrada_padron_id=e.id,
                         email=e.email,
                         nombre=e.nombre,
-                        apellido=e.apellido,
+                        apellido=e.apellidos,
                         actividades_no_aprobadas=no_aprobadas
                     )
                 )
-                
+
         return ReporteAtrasadosResponse(
             materia_id=materia_id,
             total_alumnos_padron=len(entradas),
@@ -142,7 +160,7 @@ class AnalisisService:
                 entrada_padron_id=e.id,
                 email=e.email,
                 nombre=e.nombre,
-                apellido=e.apellido,
+                apellido=e.apellidos,
                 calificaciones=calif_por_alumno.get(e.id, {})
             ))
             

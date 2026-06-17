@@ -23,17 +23,15 @@ export const ComunicacionComposer: React.FC<ComunicacionComposerProps> = ({ alum
   });
 
   const handleSend = async () => {
-    // Para simplificar, generamos una comunicacion idéntica para todos los seleccionados
-    // En el futuro, el backend expandiría las variables. Por ahora enviamos a todos.
-    const comunicaciones: ComunicacionCreate[] = alumnoIds.map(id => ({
-      destinatario: id, // Usamos el ID como destinatario simulado (o un email lookup)
+    const comunicaciones: ComunicacionCreate[] = alumnoIds.map(email => ({
+      destinatario: email,
       asunto,
       cuerpo,
     }));
 
     try {
-      const result = await loteMutation.mutateAsync(comunicaciones);
-      onSuccess(result.lote_id);
+      const loteId = await loteMutation.mutateAsync(comunicaciones);
+      onSuccess(loteId);
     } catch (error) {
       console.error('Error enviando comunicaciones', error);
       alert('Error enviando el mensaje.');

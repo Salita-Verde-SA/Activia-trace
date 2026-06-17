@@ -46,10 +46,17 @@ class CalificacionResponse(BaseModel):
     
     model_config = ConfigDict(from_attributes=True)
 
+class CalificacionSimplificada(BaseModel):
+    actividad_nombre: str
+    nota_numerica: float | None = None
+    nota_textual: str | None = None
+    aprobado: bool
+
 class EstadoMateria(BaseModel):
     materia_id: UUID
     materia_nombre: str
     estado: str
     nota_final: float | None = None
-    
+    calificaciones: List[CalificacionSimplificada] = []
+
     model_config = ConfigDict(from_attributes=True)

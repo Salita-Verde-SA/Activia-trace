@@ -11,6 +11,29 @@ from services.coloquios import ColoquioService
 
 router = APIRouter()
 
+@router.get("/convocatorias", status_code=status.HTTP_200_OK)
+async def listar_convocatorias(
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_permission("evaluacion:gestionar"))
+):
+    service = ColoquioService(db, current_user.tenant_id)
+    return await service.listar_convocatorias()
+
+from pydantic import BaseModel
+class AsignarPadronRequest(BaseModel):
+    alumnos_ids: List[UUID]
+
+@router.post("/convocatorias/{convocatoria_id}/padron", status_code=status.HTTP_201_CREATED)
+async def asignar_padron(
+    convocatoria_id: UUID,
+    req: AsignarPadronRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_permission("evaluacion:gestionar"))
+):
+    service = ColoquioService(db, current_user.tenant_id)
+    res = await service.asignar_candidatos_ids(convocatoria_id, req.alumnos_ids)
+    return {"message": f"Asignados {res} candidatos exitosamente."}
+
 @router.post("/convocatorias/{convocatoria_id}/padron/importar", status_code=status.HTTP_201_CREATED)
 async def importar_padron_candidatos(
     convocatoria_id: UUID,
@@ -42,6 +65,15 @@ async def crear_convocatoria(
 ):
     service = ColoquioService(db, current_user.tenant_id)
     return await service.crear_convocatoria(data)
+
+@router.patch("/convocatorias/{convocatoria_id}/publicar", status_code=status.HTTP_200_OK)
+async def publicar_convocatoria(
+    convocatoria_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_permission("evaluacion:gestionar"))
+):
+    service = ColoquioService(db, current_user.tenant_id)
+    return await service.publicar_convocatoria(convocatoria_id)
 
 @router.get("/disponibles", response_model=List[ColoquioDisponible])
 async def listar_disponibles(

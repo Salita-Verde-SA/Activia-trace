@@ -32,5 +32,12 @@ class VersionPadronResponse(VersionPadronBase):
     cargado_por: UUID
     cargado_at: datetime
     activa: bool
-    
+
     model_config = ConfigDict(from_attributes=True)
+
+class PadronActivoItem(BaseModel):
+    version_padron_id: UUID
+    materia_id: UUID
+    materia_nombre: str
+    cohorte_id: UUID
+    cohorte_nombre: str

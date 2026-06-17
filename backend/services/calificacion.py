@@ -4,13 +4,12 @@ from uuid import UUID
 import csv
 import io
 import logging
-from typing import List, Dict, Any
+from typing import List, Any
 
 from models.calificacion import Calificacion, UmbralMateria
 from models.padron import EntradaPadron
 from models.audit import AuditLog
 from schemas.calificacion import UmbralCreate, ColumnMap, ImportConfirmRequest, PreviewResponse
-from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
 
@@ -87,13 +86,19 @@ class CalificacionService:
             default_text = [t.lower().strip() for t in umbral.valores_aprobatorios]
 
         if nota_numerica is not None:
-            # Assuming scale is uniform with umbral (e.g., both 0-100 or both 0-10).
-            # We implemented a small normalization in confirmation logic if umbral_pct > 10.
-            return nota_numerica >= default_pct
-            
+            nota_norm = nota_numerica * 10.0 if nota_numerica <= 10.0 and default_pct > 10.0 else nota_numerica
+            return nota_norm >= default_pct
+
         if nota_textual is not None:
+            # If the text value looks like a number, evaluate it numerically against the umbral.
+            try:
+                nota_as_num = float(nota_textual.replace(',', '.'))
+                nota_norm = nota_as_num * 10.0 if nota_as_num <= 10.0 and default_pct > 10.0 else nota_as_num
+                return nota_norm >= default_pct
+            except ValueError:
+                pass
             return nota_textual.lower().strip() in default_text
-            
+
         return False
 
     @staticmethod
@@ -187,7 +192,90 @@ class CalificacionService:
 
     @staticmethod
     async def obtener_estado_alumno(db: AsyncSession, tenant_id: UUID, alumno_id: UUID) -> List[Any]:
-        # TODO: Implementar lógica real cruzando Asignacion (Materia) con Calificacion a traves del Padron.
-        # Por ahora devolvemos una lista vacia para evitar 404/500 en el frontend.
-        from schemas.calificacion import EstadoMateria
-        return []
+        from models.padron import EntradaPadron, VersionPadron
+        from models.calificacion import Calificacion
+        from models.estructura import Materia
+        from schemas.calificacion import EstadoMateria, CalificacionSimplificada
+        from collections import defaultdict
+
+        entradas_result = await db.execute(
+            select(EntradaPadron).where(
+                EntradaPadron.tenant_id == tenant_id,
+                EntradaPadron.usuario_id == alumno_id,
+                EntradaPadron.deleted_at.is_(None),
+            )
+        )
+        entradas = entradas_result.scalars().all()
+        if not entradas:
+            return []
+
+        entrada_ids = [e.id for e in entradas]
+        version_ids = list({e.version_id for e in entradas})
+
+        versiones_result = await db.execute(
+            select(VersionPadron).where(
+                VersionPadron.id.in_(version_ids),
+                VersionPadron.deleted_at.is_(None),
+            )
+        )
+        versiones = {v.id: v for v in versiones_result.scalars().all()}
+
+        materia_ids = list({v.materia_id for v in versiones.values()})
+        materias_result = await db.execute(
+            select(Materia).where(Materia.id.in_(materia_ids))
+        )
+        materias = {m.id: m.nombre for m in materias_result.scalars().all()}
+
+        califs_result = await db.execute(
+            select(Calificacion).where(
+                Calificacion.tenant_id == tenant_id,
+                Calificacion.entrada_padron_id.in_(entrada_ids),
+                Calificacion.deleted_at.is_(None),
+            )
+        )
+        califs_por_entrada = defaultdict(list)
+        for c in califs_result.scalars().all():
+            califs_por_entrada[c.entrada_padron_id].append(c)
+
+        # Group by materia
+        califs_por_materia: dict[UUID, list] = defaultdict(list)
+        for entrada in entradas:
+            version = versiones.get(entrada.version_id)
+            if not version:
+                continue
+            for c in califs_por_entrada.get(entrada.id, []):
+                califs_por_materia[version.materia_id].append(c)
+
+        estados = []
+        for materia_id in califs_por_materia:
+            califs = califs_por_materia[materia_id]
+            aprobadas = sum(1 for c in califs if c.aprobado)
+            total = len(califs)
+            if total == 0:
+                estado = "sin_datos"
+            elif aprobadas == total:
+                estado = "promocionado"
+            elif aprobadas > 0:
+                estado = "regular"
+            else:
+                estado = "en_riesgo"
+
+            nota_final_vals = [c.nota_numerica for c in califs if c.nota_numerica is not None]
+            nota_final = round(sum(nota_final_vals) / len(nota_final_vals), 2) if nota_final_vals else None
+
+            estados.append(EstadoMateria(
+                materia_id=materia_id,
+                materia_nombre=materias.get(materia_id, str(materia_id)),
+                estado=estado,
+                nota_final=nota_final,
+                calificaciones=[
+                    CalificacionSimplificada(
+                        actividad_nombre=c.actividad_nombre,
+                        nota_numerica=c.nota_numerica,
+                        nota_textual=c.nota_textual,
+                        aprobado=c.aprobado,
+                    ) for c in califs
+                ],
+            ))
+
+        return estados
