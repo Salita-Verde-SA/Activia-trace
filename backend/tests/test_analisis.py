@@ -144,3 +144,19 @@ async def test_endpoints_rbac(mocker):
     
     await reporte_atrasados(MATERIA_ID, mocker.AsyncMock(), actor)
     mock_svc.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_atrasados_incluye_usuario_id(mocker):
+    """El reporte de atrasados expone el usuario_id del alumno (desde EntradaPadron)."""
+    mock_get = mocker.patch("services.analisis.AnalisisService._get_calificaciones_padron_activo")
+    _patch_umbral(mocker, umbral_pct=60.0)
+
+    uid = uuid4()
+    e1 = EntradaPadron(id=uuid4(), email="e1@test.com", nombre="E1", usuario_id=uid)
+    califs = [Calificacion(entrada_padron_id=e1.id, actividad_nombre="TP1", nota_numerica=4.0, aprobado=False)]
+    mock_get.return_value = ([e1], califs)
+
+    res = await AnalisisService.obtener_alumnos_atrasados(mocker.AsyncMock(), TENANT_ID, MATERIA_ID)
+
+    assert res.alumnos_atrasados[0].usuario_id == uid

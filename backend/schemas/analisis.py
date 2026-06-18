@@ -10,6 +10,7 @@ class CalificacionSimplificada(BaseModel):
 
 class AlumnoAtrasado(BaseModel):
     entrada_padron_id: UUID
+    usuario_id: UUID | None = None
     email: str
     nombre: str | None = None
     apellido: str | None = None

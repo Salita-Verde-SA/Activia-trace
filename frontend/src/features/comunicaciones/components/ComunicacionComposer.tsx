@@ -43,52 +43,52 @@ export const ComunicacionComposer: React.FC<ComunicacionComposerProps> = ({ alum
     .replace('{{apellido}}', 'Pérez');
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl mx-auto border">
-      <h2 className="text-2xl font-bold mb-4">Contactar Alumnos ({alumnoIds.length} destinatarios)</h2>
-      
+    <div className="bg-gray-900/95 backdrop-blur-md p-6 rounded-xl shadow-xl w-full max-w-2xl mx-auto border border-white/10">
+      <h2 className="text-2xl font-serif text-white/90 mb-4">Contactar Alumnos ({alumnoIds.length} destinatarios)</h2>
+
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Asunto</label>
-        <input 
-          type="text" 
+        <label className="block text-sm font-medium text-white/90 mb-1">Asunto</label>
+        <input
+          type="text"
           value={asunto}
           onChange={e => setAsunto(e.target.value)}
           placeholder="Aviso importante sobre tu desempeño..."
-          className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="w-full bg-black/20 border-white/10 rounded-md text-white/90 shadow-sm focus:border-primary-500 focus:ring-primary-500 placeholder:text-white/30"
         />
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Cuerpo del mensaje</label>
-          <p className="text-xs text-gray-500 mb-2">Puedes usar variables como {'{{nombre}}'} o {'{{apellido}}'}</p>
-          <textarea 
+          <label className="block text-sm font-medium text-white/90 mb-1">Cuerpo del mensaje</label>
+          <p className="text-xs text-white/50 mb-2">Puedes usar variables como {'{{nombre}}'} o {'{{apellido}}'}</p>
+          <textarea
             rows={8}
             value={cuerpo}
             onChange={e => setCuerpo(e.target.value)}
-            className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="w-full bg-black/20 border-white/10 rounded-md text-white/90 shadow-sm focus:border-primary-500 focus:ring-primary-500 placeholder:text-white/30"
             placeholder="Hola {{nombre}}, notamos que tienes actividades atrasadas..."
           />
         </div>
-        
+
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Vista Previa (Ejemplo)</label>
-          <div className="bg-gray-50 border rounded-md p-3 text-sm min-h-[12rem] whitespace-pre-wrap">
-            {previewBody || <span className="text-gray-400 italic">Escribe para ver la vista previa...</span>}
+          <label className="block text-sm font-medium text-white/90 mb-1">Vista Previa (Ejemplo)</label>
+          <div className="bg-black/20 border border-white/10 rounded-md p-3 text-sm text-white/80 min-h-[12rem] whitespace-pre-wrap">
+            {previewBody || <span className="text-white/30 italic">Escribe para ver la vista previa...</span>}
           </div>
         </div>
       </div>
 
       <div className="flex justify-end space-x-2">
-        <button 
+        <button
           onClick={onCancel}
-          className="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100"
+          className="px-4 py-2 border border-white/10 rounded text-white/70 hover:bg-white/5 transition-colors"
         >
           Cancelar
         </button>
-        <button 
+        <button
           onClick={handleSend}
           disabled={!asunto || !cuerpo || loteMutation.isPending}
-          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+          className="px-4 py-2 bg-red-600/90 text-white rounded hover:bg-red-600 disabled:opacity-50 transition-colors"
         >
           {loteMutation.isPending ? 'Enviando...' : 'Enviar Comunicaciones'}
         </button>

@@ -3,36 +3,39 @@ import { useAtrasados } from '../hooks/useCalificaciones';
 
 interface AtrasadosPanelProps {
   materiaId: string;
-  onContactar: (alumnoId: string) => void;
-  onContactarTodos: (alumnoIds: string[]) => void;
+  onContactar: (usuarioId: string) => void;
+  onContactarTodos: (usuarioIds: string[]) => void;
 }
 
 export const AtrasadosPanel: React.FC<AtrasadosPanelProps> = ({ materiaId, onContactar, onContactarTodos }) => {
   const { data: reporte, isLoading, error } = useAtrasados(materiaId);
-  const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
+  const [selectedUsuarioIds, setSelectedUsuarioIds] = useState<Set<string>>(new Set());
 
   if (isLoading) return <div>Cargando reporte de atrasados...</div>;
   if (error) return <div className="text-red-500">Error al cargar alumnos atrasados.</div>;
   if (!reporte) return null;
 
+  // Solo los alumnos con usuario vinculado pueden recibir un aviso dirigido.
+  const contactables = reporte.alumnos_atrasados.filter(a => a.usuario_id);
+
   const toggleSelectAll = () => {
-    if (selectedEmails.size === reporte.alumnos_atrasados.length) {
-      setSelectedEmails(new Set());
+    if (selectedUsuarioIds.size === contactables.length) {
+      setSelectedUsuarioIds(new Set());
     } else {
-      setSelectedEmails(new Set(reporte.alumnos_atrasados.map(a => a.email)));
+      setSelectedUsuarioIds(new Set(contactables.map(a => a.usuario_id as string)));
     }
   };
 
-  const toggleSelect = (email: string) => {
-    const next = new Set(selectedEmails);
-    if (next.has(email)) next.delete(email);
-    else next.add(email);
-    setSelectedEmails(next);
+  const toggleSelect = (usuarioId: string) => {
+    const next = new Set(selectedUsuarioIds);
+    if (next.has(usuarioId)) next.delete(usuarioId);
+    else next.add(usuarioId);
+    setSelectedUsuarioIds(next);
   };
 
   const handleContactarSeleccionados = () => {
-    if (selectedEmails.size > 0) {
-      onContactarTodos(Array.from(selectedEmails));
+    if (selectedUsuarioIds.size > 0) {
+      onContactarTodos(Array.from(selectedUsuarioIds));
     }
   };
 
@@ -47,10 +50,10 @@ export const AtrasadosPanel: React.FC<AtrasadosPanelProps> = ({ materiaId, onCon
         </div>
         <button
           onClick={handleContactarSeleccionados}
-          disabled={selectedEmails.size === 0}
+          disabled={selectedUsuarioIds.size === 0}
           className="bg-red-500/20 border border-red-500/50 text-red-400 px-4 py-2 rounded-md font-semibold hover:bg-red-500/30 disabled:opacity-50 transition-colors"
         >
-          Contactar ({selectedEmails.size})
+          Contactar ({selectedUsuarioIds.size})
         </button>
       </div>
 
@@ -61,7 +64,7 @@ export const AtrasadosPanel: React.FC<AtrasadosPanelProps> = ({ materiaId, onCon
               <th className="px-4 py-3 text-left">
                 <input
                   type="checkbox"
-                  checked={selectedEmails.size === reporte.alumnos_atrasados.length && reporte.alumnos_atrasados.length > 0}
+                  checked={selectedUsuarioIds.size === contactables.length && contactables.length > 0}
                   onChange={toggleSelectAll}
                   className="rounded bg-black/20 border-white/10 text-red-500 focus:ring-red-500/50 focus:ring-offset-0"
                 />
@@ -77,9 +80,10 @@ export const AtrasadosPanel: React.FC<AtrasadosPanelProps> = ({ materiaId, onCon
                 <td className="px-4 py-3">
                   <input
                     type="checkbox"
-                    checked={selectedEmails.has(alumno.email)}
-                    onChange={() => toggleSelect(alumno.email)}
-                    className="rounded bg-black/20 border-white/10 text-red-500 focus:ring-red-500/50 focus:ring-offset-0"
+                    disabled={!alumno.usuario_id}
+                    checked={!!alumno.usuario_id && selectedUsuarioIds.has(alumno.usuario_id)}
+                    onChange={() => alumno.usuario_id && toggleSelect(alumno.usuario_id)}
+                    className="rounded bg-black/20 border-white/10 text-red-500 focus:ring-red-500/50 focus:ring-offset-0 disabled:opacity-40"
                   />
                 </td>
                 <td className="px-4 py-3">
@@ -96,12 +100,16 @@ export const AtrasadosPanel: React.FC<AtrasadosPanelProps> = ({ materiaId, onCon
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <button
-                    onClick={() => onContactar(alumno.email)}
-                    className="text-primary-400 hover:text-primary-300 font-semibold text-sm transition-colors"
-                  >
-                    Contactar
-                  </button>
+                  {alumno.usuario_id ? (
+                    <button
+                      onClick={() => onContactar(alumno.usuario_id as string)}
+                      className="text-primary-400 hover:text-primary-300 font-semibold text-sm transition-colors"
+                    >
+                      Contactar
+                    </button>
+                  ) : (
+                    <span className="text-white/30 text-xs italic" title="Alumno sin usuario vinculado">Sin usuario</span>
+                  )}
                 </td>
               </tr>
             ))}

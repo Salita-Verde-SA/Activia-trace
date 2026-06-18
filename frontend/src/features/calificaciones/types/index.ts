@@ -48,6 +48,7 @@ export interface CalificacionSimplificada {
 
 export interface AlumnoAtrasado {
   entrada_padron_id: string;
+  usuario_id?: string | null;
   email: string;
   nombre?: string;
   apellido?: string;

@@ -10,7 +10,7 @@ from schemas.comunicacion import LoteCreate, LoteResponse, ComunicacionResponse
 from services.comunicaciones import ComunicacionService
 from services.auditoria import AuditoriaService
 
-router = APIRouter(prefix="/comunicaciones", tags=["comunicaciones"])
+router = APIRouter(tags=["comunicaciones"])
 
 @router.post("/lotes", response_model=UUID, status_code=status.HTTP_201_CREATED)
 async def encolar_lote(

@@ -5,8 +5,7 @@ import { AtrasadosPanel } from '../components/AtrasadosPanel';
 import { SabanaPanel } from '../components/SabanaPanel';
 import ImportarPadronComisionModal from '../components/ImportarPadronComisionModal';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { ComunicacionComposer } from '@/features/comunicaciones/components/ComunicacionComposer';
-import { EnvioTracker } from '@/features/comunicaciones/components/EnvioTracker';
+import { AvisoRiesgoComposer } from '../components/AvisoRiesgoComposer';
 import { usePadronesActivos } from '../hooks/useCalificaciones';
 import type { PadronActivoItem } from '../types';
 
@@ -16,8 +15,7 @@ export const CalificacionesPage: React.FC = () => {
   const [selectedPadron, setSelectedPadron] = useState<PadronActivoItem | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [showImportPadron, setShowImportPadron] = useState(false);
-  const [comunicacionDestinatarios, setComunicacionDestinatarios] = useState<string[] | null>(null);
-  const [activeLoteId, setActiveLoteId] = useState<string | null>(null);
+  const [riesgoUsuarioIds, setRiesgoUsuarioIds] = useState<string[] | null>(null);
 
   const materiaId = selectedPadron?.materia_id ?? '';
   const cohorteId = selectedPadron?.cohorte_id ?? '';
@@ -29,12 +27,8 @@ export const CalificacionesPage: React.FC = () => {
     setShowImport(false);
   };
 
-  const handleContactar = (alumnoId: string) => setComunicacionDestinatarios([alumnoId]);
-  const handleContactarTodos = (alumnoIds: string[]) => setComunicacionDestinatarios(alumnoIds);
-  const handleComunicacionSuccess = (loteId: string) => {
-    setComunicacionDestinatarios(null);
-    setActiveLoteId(loteId);
-  };
+  const handleContactar = (usuarioId: string) => setRiesgoUsuarioIds([usuarioId]);
+  const handleContactarTodos = (usuarioIds: string[]) => setRiesgoUsuarioIds(usuarioIds);
 
   return (
     <div className="p-6 max-w-7xl mx-auto relative">
@@ -114,22 +108,12 @@ export const CalificacionesPage: React.FC = () => {
         </>
       )}
 
-      {comunicacionDestinatarios && (
+      {riesgoUsuarioIds && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <ComunicacionComposer
-            alumnoIds={comunicacionDestinatarios}
-            materiaId={materiaId}
-            onSuccess={handleComunicacionSuccess}
-            onCancel={() => setComunicacionDestinatarios(null)}
-          />
-        </div>
-      )}
-
-      {activeLoteId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <EnvioTracker
-            loteId={activeLoteId}
-            onClose={() => setActiveLoteId(null)}
+          <AvisoRiesgoComposer
+            usuarioIds={riesgoUsuarioIds}
+            onSuccess={() => setRiesgoUsuarioIds(null)}
+            onCancel={() => setRiesgoUsuarioIds(null)}
           />
         </div>
       )}

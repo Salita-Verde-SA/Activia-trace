@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from models.avisos import Aviso, AcknowledgmentAviso, AlcanceAviso
 from models.asignacion import Asignacion
 from models.user import Usuario
-from schemas.aviso import AvisoCreate, AvisoResponse, AvisoAcknowledgmentCreate, AvisoMetrics
+from schemas.aviso import AvisoCreate, AvisoResponse, AvisoAcknowledgmentCreate, AvisoMetrics, AvisoAlumnoResponse
 
 class AvisoService:
     def __init__(self, db: AsyncSession, tenant_id: UUID):
@@ -28,7 +28,8 @@ class AvisoService:
             alcance=data.alcance,
             materia_id=data.materia_id,
             cohorte_id=data.cohorte_id,
-            rol_id=data.rol_id
+            rol_id=data.rol_id,
+            usuario_id=data.usuario_id
         )
         self.db.add(aviso)
         
@@ -73,6 +74,8 @@ class AvisoService:
 
         # 2. Consultar avisos activos que matchean el alcance
         alcance_conds = [Aviso.alcance == AlcanceAviso.GLOBAL]
+        # Avisos dirigidos individualmente a este usuario.
+        alcance_conds.append(and_(Aviso.alcance == AlcanceAviso.USUARIO, Aviso.usuario_id == usuario_id))
         if materias_ids:
             alcance_conds.append(and_(Aviso.alcance == AlcanceAviso.MATERIA, Aviso.materia_id.in_(materias_ids)))
         if cohortes_ids:
@@ -88,22 +91,33 @@ class AvisoService:
         )
         avisos = (await self.db.execute(avisos_query)).scalars().all()
 
-        # 3. Filtrar los que ya tienen ack
-        avisos_pendientes = []
-        for aviso in avisos:
-            if aviso.requiere_ack:
-                ack_query = select(AcknowledgmentAviso).where(
-                    AcknowledgmentAviso.aviso_id == aviso.id,
-                    AcknowledgmentAviso.usuario_id == usuario_id,
-                    AcknowledgmentAviso.tenant_id == self.tenant_id
-                )
-                ack_exists = (await self.db.execute(ack_query)).scalar_one_or_none()
-                if not ack_exists:
-                    avisos_pendientes.append(aviso)
-            else:
-                avisos_pendientes.append(aviso)
+        # 3. Resolver el ack de cada aviso (no se excluyen: los leídos quedan visibles
+        #    con su ack_at marcado).
+        aviso_ids = [a.id for a in avisos]
+        acks_por_aviso: dict = {}
+        if aviso_ids:
+            ack_query = select(AcknowledgmentAviso).where(
+                AcknowledgmentAviso.aviso_id.in_(aviso_ids),
+                AcknowledgmentAviso.usuario_id == usuario_id,
+                AcknowledgmentAviso.tenant_id == self.tenant_id,
+            )
+            for ack in (await self.db.execute(ack_query)).scalars().all():
+                acks_por_aviso[ack.aviso_id] = ack.fecha_hora
 
-        return [AvisoResponse.model_validate(a, from_attributes=True) for a in avisos_pendientes]
+        # Más nuevos primero.
+        avisos_ordenados = sorted(avisos, key=lambda a: a.fecha_inicio, reverse=True)
+        return [
+            AvisoAlumnoResponse(
+                id=a.id,
+                aviso_id=a.id,
+                titulo=a.titulo,
+                contenido=a.cuerpo,
+                fecha_publicacion=a.fecha_inicio,
+                requiere_ack=a.requiere_ack,
+                ack_at=acks_por_aviso.get(a.id),
+            )
+            for a in avisos_ordenados
+        ]
 
     async def listar_todos(self) -> List[AvisoResponse]:
         avisos_query = select(Aviso).where(Aviso.tenant_id == self.tenant_id).order_by(Aviso.fecha_inicio.desc())

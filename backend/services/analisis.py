@@ -68,6 +68,7 @@ class AnalisisService:
                 alumnos_atrasados.append(
                     AlumnoAtrasado(
                         entrada_padron_id=e.id,
+                        usuario_id=e.usuario_id,
                         email=e.email,
                         nombre=e.nombre,
                         apellido=e.apellidos,
@@ -91,6 +92,7 @@ class AnalisisService:
                 alumnos_atrasados.append(
                     AlumnoAtrasado(
                         entrada_padron_id=e.id,
+                        usuario_id=e.usuario_id,
                         email=e.email,
                         nombre=e.nombre,
                         apellido=e.apellidos,

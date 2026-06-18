@@ -16,6 +16,7 @@ class AlcanceAviso(str, enum.Enum):
     MATERIA = "MATERIA"
     COHORTE = "COHORTE"
     ROL = "ROL"
+    USUARIO = "USUARIO"  # Aviso dirigido a un alumno individual
 
 class Aviso(Base):
     __tablename__ = "avisos"
@@ -33,6 +34,7 @@ class Aviso(Base):
     materia_id = Column(UUID(as_uuid=True), nullable=True)
     cohorte_id = Column(UUID(as_uuid=True), nullable=True)
     rol_id = Column(UUID(as_uuid=True), nullable=True)
+    usuario_id = Column(UUID(as_uuid=True), ForeignKey("usuario.id"), nullable=True, index=True)  # alcance USUARIO
 
     acknowledgments = relationship("AcknowledgmentAviso", back_populates="aviso", cascade="all, delete-orphan")
 

@@ -27,6 +27,11 @@ export const avisosApi = {
     return data;
   },
 
+  contactarAlumno: async (payload: { usuario_id: string; titulo: string; cuerpo: string }): Promise<AvisoResponse> => {
+    const { data } = await api.post('/api/v1/avisos/contactar-alumno', payload);
+    return data;
+  },
+
   darAcuse: async (payload: AvisoAcknowledgmentCreate): Promise<void> => {
     await api.post('/api/v1/avisos/ack', payload);
   },

@@ -1,4 +1,5 @@
 from uuid import UUID
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, status
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,7 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.dependencies import get_db
 from api.dependencies.auth import require_permission
 from models.user import Usuario
-from schemas.aviso import AvisoCreate, AvisoResponse, AvisoAcknowledgmentCreate, AvisoMetrics
+from models.avisos import AlcanceAviso, SeveridadAviso
+from schemas.aviso import (
+    AvisoCreate, AvisoResponse, AvisoAcknowledgmentCreate, AvisoMetrics, ContactarAlumnoRequest,
+    AvisoAlumnoResponse
+)
 from services.avisos import AvisoService
 
 router = APIRouter()
@@ -20,6 +25,25 @@ async def crear_aviso(
     service = AvisoService(db, current_user.tenant_id)
     return await service.crear_aviso(data, actor_id=current_user.id)
 
+@router.post("/contactar-alumno", response_model=AvisoResponse, status_code=status.HTTP_201_CREATED)
+async def contactar_alumno(
+    data: ContactarAlumnoRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_permission("avisos:contactar_alumno"))
+):
+    """Contacta a un alumno en riesgo creando un aviso dirigido (in-app) a su perfil."""
+    aviso = AvisoCreate(
+        titulo=data.titulo,
+        cuerpo=data.cuerpo,
+        severidad=SeveridadAviso.WARNING,
+        fecha_inicio=datetime.now(timezone.utc),
+        requiere_ack=True,
+        alcance=AlcanceAviso.USUARIO,
+        usuario_id=data.usuario_id,
+    )
+    service = AvisoService(db, current_user.tenant_id)
+    return await service.crear_aviso(aviso, actor_id=current_user.id)
+
 @router.get("/", response_model=List[AvisoResponse])
 async def listar_todos_avisos(
     db: AsyncSession = Depends(get_db),
@@ -28,7 +52,7 @@ async def listar_todos_avisos(
     service = AvisoService(db, current_user.tenant_id)
     return await service.listar_todos()
 
-@router.get("/mis-avisos", response_model=List[AvisoResponse])
+@router.get("/mis-avisos", response_model=List[AvisoAlumnoResponse])
 async def listar_mis_avisos(
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_permission("avisos:leer_propios"))
