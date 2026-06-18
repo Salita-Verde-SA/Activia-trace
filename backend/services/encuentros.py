@@ -1,6 +1,6 @@
 from datetime import timedelta, date, datetime, timezone
 from uuid import UUID
-from typing import List, Optional, Dict
+from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
 from fastapi import HTTPException
@@ -12,6 +12,35 @@ class EncuentroService:
     def __init__(self, db: AsyncSession, tenant_id: UUID):
         self.db = db
         self.tenant_id = tenant_id
+
+    async def listar_instancias_por_materia(self, materia_id: UUID) -> List[InstanciaEncuentro]:
+        stmt = (
+            select(InstanciaEncuentro)
+            .where(
+                InstanciaEncuentro.tenant_id == self.tenant_id,
+                InstanciaEncuentro.materia_id == materia_id,
+            )
+            .order_by(InstanciaEncuentro.fecha, InstanciaEncuentro.hora)
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def listar_mis_instancias(self, usuario_id: UUID) -> List[InstanciaEncuentro]:
+        from models.asignacion import Asignacion
+        stmt = (
+            select(InstanciaEncuentro)
+            .join(SlotEncuentro, InstanciaEncuentro.slot_id == SlotEncuentro.id)
+            .join(Asignacion, SlotEncuentro.asignacion_id == Asignacion.id)
+            .where(
+                InstanciaEncuentro.tenant_id == self.tenant_id,
+                Asignacion.usuario_id == usuario_id,
+                Asignacion.deleted_at.is_(None),
+                InstanciaEncuentro.fecha >= date.today(),
+            )
+            .order_by(InstanciaEncuentro.fecha, InstanciaEncuentro.hora)
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
 
     async def crear_encuentro(self, asignacion_id: UUID, data: SlotEncuentroCreate) -> dict:
         if data.cant_semanas > 0:

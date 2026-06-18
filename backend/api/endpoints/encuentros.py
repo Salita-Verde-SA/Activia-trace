@@ -1,5 +1,6 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List
+from fastapi import APIRouter, Depends, status
 from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +11,23 @@ from schemas.encuentro import SlotEncuentroCreate, InstanciaEncuentroUpdate, Ins
 from services.encuentros import EncuentroService
 
 router = APIRouter()
+
+@router.get("/materias/{materia_id}/instancias", response_model=List[InstanciaEncuentroResponse])
+async def listar_instancias_por_materia(
+    materia_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_permission("encuentros:gestionar"))
+):
+    service = EncuentroService(db, current_user.tenant_id)
+    return await service.listar_instancias_por_materia(materia_id)
+
+@router.get("/mis-instancias", response_model=List[InstanciaEncuentroResponse])
+async def listar_mis_instancias(
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    service = EncuentroService(db, current_user.tenant_id)
+    return await service.listar_mis_instancias(current_user.id)
 
 @router.post("/asignaciones/{asignacion_id}/encuentros", status_code=status.HTTP_201_CREATED)
 async def crear_encuentro(

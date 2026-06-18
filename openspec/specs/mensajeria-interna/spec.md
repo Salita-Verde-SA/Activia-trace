@@ -21,3 +21,16 @@ El sistema SHALL permitir agregar mensajes adicionales a un hilo existente, siem
 - **WHEN** un usuario que no pertenece al hilo intenta enviar un mensaje a ese hilo
 - **THEN** el sistema lo rechaza con un código `403 Forbidden` o `404 Not Found`
 
+
+## ADDED Requirements
+
+### Requirement: Acceso a mensajería desde el Sidebar
+El sistema SHALL incluir una entrada "Mensajes" en el Sidebar visible para los roles PROFESOR, TUTOR, COORDINADOR y ADMIN, apuntando a la ruta `/mensajes`.
+
+#### Scenario: Entrada visible para roles autorizados
+- **WHEN** un usuario con rol PROFESOR, TUTOR, COORDINADOR o ADMIN está autenticado
+- **THEN** el Sidebar muestra el ítem "Mensajes" con ícono `forum` apuntando a `/mensajes`
+
+#### Scenario: Entrada no visible para ALUMNO
+- **WHEN** un usuario con rol ALUMNO está autenticado
+- **THEN** el Sidebar NO muestra el ítem "Mensajes" (la mensajería interna es entre miembros del equipo docente)

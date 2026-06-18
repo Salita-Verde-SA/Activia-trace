@@ -23,6 +23,10 @@ import { FacturasDocentePage } from '@/features/profesor/pages/FacturasDocentePa
 import ColoquiosAdminPage from '@/features/admin/pages/ColoquiosAdminPage';
 import { MisEquiposPage } from '@/features/equipos/pages/MisEquiposPage';
 import { GestionEquiposPage } from '@/features/equipos/pages/GestionEquiposPage';
+import { BandejaMensajesPage } from '@/features/mensajeria/pages/BandejaMensajesPage';
+import { HiloMensajesPage } from '@/features/mensajeria/pages/HiloMensajesPage';
+import { EncuentrosPage } from '@/features/encuentros/pages/EncuentrosPage';
+import { MisEncuentrosPage } from '@/features/encuentros/pages/MisEncuentrosPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -98,6 +102,14 @@ function App() {
               {/* Equipos routes */}
               <Route path="mis-equipos" element={<MisEquiposPage />} />
               <Route path="admin/equipos" element={<RequireEquiposAdmin />} />
+
+              {/* Mensajería interna */}
+              <Route path="mensajes" element={<BandejaMensajesPage />} />
+              <Route path="mensajes/:hiloId" element={<HiloMensajesPage />} />
+
+              {/* Encuentros */}
+              <Route path="encuentros" element={<EncuentrosPage />} />
+              <Route path="mis-encuentros" element={<MisEncuentrosPage />} />
 
               {/* Profesor routes */}
               <Route path="profesor/facturas" element={<FacturasDocentePage />} />

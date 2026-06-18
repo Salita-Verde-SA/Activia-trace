@@ -26,9 +26,9 @@ class AsignacionService:
 
         stmt = (
             select(Asignacion, Materia, Carrera, Cohorte, Rol)
-            .outerjoin(Materia, (Asignacion.materia_id == Materia.id) & (Materia.deleted_at.is_(None)))
-            .outerjoin(Carrera, (Asignacion.carrera_id == Carrera.id) & (Carrera.deleted_at.is_(None)))
-            .outerjoin(Cohorte, (Asignacion.cohorte_id == Cohorte.id) & (Cohorte.deleted_at.is_(None)))
+            .outerjoin(Materia, Asignacion.materia_id == Materia.id)
+            .outerjoin(Carrera, Asignacion.carrera_id == Carrera.id)
+            .outerjoin(Cohorte, Asignacion.cohorte_id == Cohorte.id)
             .outerjoin(Rol, Asignacion.rol_id == Rol.id)
             .where(
                 Asignacion.tenant_id == self.tenant_id,
