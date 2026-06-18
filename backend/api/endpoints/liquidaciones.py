@@ -50,6 +50,55 @@ async def obtener_liquidaciones(
         liquidaciones = (await db.execute(query)).scalars().all()
         return liquidaciones
 
+from fastapi.responses import StreamingResponse
+import io
+import csv
+
+@router.get("/exportar")
+async def exportar_liquidaciones_csv(
+    mes: int = Query(...),
+    anio: int = Query(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_permission("finanzas:liquidar"))
+):
+    query = select(Liquidacion, Usuario).join(Usuario, Liquidacion.usuario_id == Usuario.id).where(
+        Liquidacion.tenant_id == current_user.tenant_id,
+        Liquidacion.periodo_anio == anio,
+        Liquidacion.periodo_mes == mes,
+        Liquidacion.estado == EstadoLiquidacion.CERRADA
+    )
+    
+    resultados = (await db.execute(query)).all()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Docente", "Rol", "Base", "Plus", "Total", "Nexo"])
+    
+    for liq, usr in resultados:
+        roles = set(a.get("rol", "") for a in liq.detalle_calculo.get("asignaciones", []) if a.get("rol"))
+        roles_str = ", ".join(roles) if roles else "N/A"
+        docente_nombre = f"{usr.nombre} {usr.apellidos}"
+        es_nexo = "Si" if liq.es_nexo else "No"
+        
+        writer.writerow([
+            docente_nombre,
+            roles_str,
+            liq.monto_base,
+            liq.monto_plus,
+            liq.monto_total,
+            es_nexo
+        ])
+    
+    output.seek(0)
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=liquidaciones_{anio}_{mes}.csv"
+        }
+    )
+
 @router.get("/pre-calculo", response_model=List[LiquidacionPrecalculo])
 async def obtener_pre_liquidaciones(
     mes: int = Query(...),
@@ -70,3 +119,13 @@ async def cerrar_liquidacion(
 ):
     service = LiquidacionService(db, current_user.tenant_id)
     return await service.cerrar_liquidacion_mensual(usuario_id, mes, anio, admin_id=current_user.id)
+
+@router.post("/cerrar-periodo", response_model=List[LiquidacionResponse])
+async def cerrar_periodo(
+    mes: int = Query(...),
+    anio: int = Query(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_permission("finanzas:liquidar"))
+):
+    service = LiquidacionService(db, current_user.tenant_id)
+    return await service.cerrar_periodo_completo(mes, anio, admin_id=current_user.id)

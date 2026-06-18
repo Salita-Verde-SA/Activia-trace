@@ -26,7 +26,7 @@ async def test_calculo_salario_base_vigente(db_session, tenant_id):
     assert val2 == 200.0
 
 @pytest.mark.asyncio
-async def test_plus_una_sola_vez_por_clave(db_session, tenant_id):
+async def test_plus_acumulativo_por_comision(db_session, tenant_id):
     service = LiquidacionService(db_session, tenant_id)
     
     usr_id = uuid4()
@@ -49,13 +49,13 @@ async def test_plus_una_sola_vez_por_clave(db_session, tenant_id):
     await db_session.commit()
     
     # Base: 100 * 2 asignaciones = 200
-    # Plus: 50 * 1 vez por clave 'PROG' = 50
-    # Total = 250
+    # Plus: 50 * 2 asignaciones (por cada comision) = 100
+    # Total = 300
     liq = await service.calcular_liquidacion_usuario(usr_id, 6, 2026)
     
     assert liq.monto_base == 200.0
-    assert liq.monto_plus == 50.0
-    assert liq.monto_total == 250.0
+    assert liq.monto_plus == 100.0
+    assert liq.monto_total == 300.0
 
 @pytest.mark.asyncio
 async def test_cierre_liquidacion_inmutable(db_session, tenant_id):

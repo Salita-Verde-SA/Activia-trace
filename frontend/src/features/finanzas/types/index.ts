@@ -41,6 +41,9 @@ export interface Factura {
   periodo_mes: number;
   periodo_anio: number;
   monto: number;
-  archivo_url?: string;
+  detalle?: string;
+  comprobante_url?: string;
+  estado: string;
   created_at: string;
+  updated_at: string;
 }

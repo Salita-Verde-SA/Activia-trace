@@ -42,8 +42,10 @@ class LiquidacionService:
         return sp.monto if sp else 0.0
 
     async def calcular_liquidacion_usuario(self, usuario_id: UUID, mes: int, anio: int) -> LiquidacionPrecalculo:
-        # 1. Determinar fecha representativa del período (ej. primer día del mes)
-        periodo_fecha = date(anio, mes, 1)
+        # 1. Determinar fecha representativa del período (último día del mes)
+        import calendar
+        ultimo_dia = calendar.monthrange(anio, mes)[1]
+        periodo_fecha = date(anio, mes, ultimo_dia)
         
         # 2. Buscar asignaciones vigentes en el período
         # Para simplificar MVP, buscaremos asignaciones que intersecten el mes/año
@@ -63,16 +65,15 @@ class LiquidacionService:
         monto_base = 0.0
         monto_plus = 0.0
         
-        # Para controlar el plus "una sola vez por clave y rol"
-        plus_aplicados = set() # Set of (rol, clave_plus)
         es_nexo = False
         
         detalle = {
             "asignaciones": []
         }
 
-        # Cache base amounts
+        # Cache base and plus amounts
         cache_base = {}
+        cache_plus = {}
 
         for asig in asignaciones:
             rol = asig.rol.nombre if asig.rol else None
@@ -87,15 +88,16 @@ class LiquidacionService:
             base_aplicada = cache_base[rol]
             monto_base += base_aplicada
             
-            # Plus
+            # Plus: Acumulativo por cada asignación
             plus_aplicada = 0.0
             materia = asig.materia
             if materia and materia.clave_plus:
                 clave_plus = materia.clave_plus
-                if (rol, clave_plus) not in plus_aplicados:
-                    plus_aplicada = await self._get_salario_plus(rol, clave_plus, periodo_fecha)
-                    monto_plus += plus_aplicada
-                    plus_aplicados.add((rol, clave_plus))
+                if (rol, clave_plus) not in cache_plus:
+                    cache_plus[(rol, clave_plus)] = await self._get_salario_plus(rol, clave_plus, periodo_fecha)
+                
+                plus_aplicada = cache_plus[(rol, clave_plus)]
+                monto_plus += plus_aplicada
             
             detalle["asignaciones"].append({
                 "asignacion_id": str(asig.id),
@@ -129,13 +131,22 @@ class LiquidacionService:
         )
 
     async def generar_pre_liquidaciones(self, mes: int, anio: int) -> List[LiquidacionPrecalculo]:
-        # Para MVP: iterar todos los usuarios con asignaciones
-        # En prod: Hacer un join o agrupar para mayor performance
+        # Obtener usuarios que ya tienen la liquidación cerrada para este período
+        query_cerradas = select(Liquidacion.usuario_id).where(
+            Liquidacion.tenant_id == self.tenant_id,
+            Liquidacion.periodo_mes == mes,
+            Liquidacion.periodo_anio == anio,
+            Liquidacion.estado == EstadoLiquidacion.CERRADA
+        )
+        cerradas_ids = set((await self.db.execute(query_cerradas)).scalars().all())
+
         query_users = select(Usuario.id).where(Usuario.tenant_id == self.tenant_id)
         user_ids = (await self.db.execute(query_users)).scalars().all()
         
         resultados = []
         for uid in user_ids:
+            if uid in cerradas_ids:
+                continue
             pre = await self.calcular_liquidacion_usuario(uid, mes, anio)
             # Solo incluir si tiene montos (es decir, tuvo asignaciones)
             if pre.monto_total > 0:
@@ -186,11 +197,15 @@ class LiquidacionService:
         # Registro de auditoría
         audit = AuditLog(
             tenant_id=self.tenant_id,
-            usuario_id=admin_id,
+            actor_id=admin_id,
             accion="LIQUIDACION_CERRAR",
-            entidad="Liquidacion",
-            entidad_id=liq_db.id, # si es nuevo, aun no tiene ID asignado (postgres generará en flush). Hacemos flush.
-            detalles={"usuario_id": str(usuario_id), "mes": mes, "anio": anio, "monto_total": pre.monto_total}
+            detalle={
+                "entidad": "Liquidacion",
+                "usuario_id": str(usuario_id),
+                "mes": mes,
+                "anio": anio,
+                "monto_total": pre.monto_total
+            }
         )
         self.db.add(audit)
         
@@ -198,3 +213,19 @@ class LiquidacionService:
         await self.db.refresh(liq_db)
         
         return LiquidacionResponse.model_validate(liq_db, from_attributes=True)
+
+    async def cerrar_periodo_completo(self, mes: int, anio: int, admin_id: UUID) -> List[LiquidacionResponse]:
+        # Generar pre-liquidaciones para todos
+        precalculos = await self.generar_pre_liquidaciones(mes, anio)
+        resultados = []
+        
+        for pre in precalculos:
+            # Reutilizamos cerrar_liquidacion_mensual para cada usuario que tiene pre-liquidación > 0
+            try:
+                res = await self.cerrar_liquidacion_mensual(pre.usuario_id, mes, anio, admin_id)
+                resultados.append(res)
+            except HTTPException:
+                # Si ya estaba cerrada, la ignoramos y continuamos
+                continue
+                
+        return resultados

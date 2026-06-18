@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { useEstructura } from '../../hooks/useEstructura';
 import type { Materia } from '../../types';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { EquiposPanel } from '../../../equipos/components/EquiposPanel';
 
 export function MateriasPanel() {
   const { materiasQuery, createMateria, updateMateria, deleteMateria } = useEstructura();
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [managingEquiposFor, setManagingEquiposFor] = useState<Materia | null>(null);
   
   const [formData, setFormData] = useState<Partial<Materia>>({ codigo: '', nombre: '', estado: 'Activa' });
 
@@ -39,8 +41,20 @@ export function MateriasPanel() {
 
   if (materiasQuery.isLoading) return <div className="p-4">Cargando...</div>;
 
+  if (managingEquiposFor) {
+    return (
+      <div className="p-4 animate-fade-in">
+        <EquiposPanel 
+          materiaId={managingEquiposFor.id} 
+          materiaNombre={managingEquiposFor.nombre}
+          onClose={() => setManagingEquiposFor(null)} 
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4 p-4 animate-fade-in">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-serif text-white/90">Catálogo de Materias</h3>
         {!isCreating && !editingId && (
@@ -123,14 +137,15 @@ export function MateriasPanel() {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                  <button onClick={() => handleEdit(materia)} className="text-primary-400 hover:text-primary-300 transition-colors">Editar</button>
-                  <button onClick={() => handleDelete(materia.id)} className="text-red-400 hover:text-red-300 transition-colors">Eliminar</button>
+                  <button onClick={() => setManagingEquiposFor(materia)} className="text-blue-400 hover:text-blue-300 transition-colors border border-blue-500/30 bg-blue-500/10 px-2 py-1 rounded">Equipos</button>
+                  <button onClick={() => handleEdit(materia)} className="text-primary-400 hover:text-primary-300 transition-colors ml-2">Editar</button>
+                  <button onClick={() => handleDelete(materia.id)} className="text-red-400 hover:text-red-300 transition-colors ml-2">Eliminar</button>
                 </td>
               </tr>
             ))}
             {materiasQuery.data?.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-6 py-4 text-center text-white/50">No hay materias registradas.</td>
+                <td colSpan={4} className="px-6 py-4 text-center text-white/50">No hay materias registradas.</td>
               </tr>
             )}
           </tbody>

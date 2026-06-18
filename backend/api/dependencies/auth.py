@@ -131,3 +131,63 @@ def require_permission(required_permission: str):
         return current_user
         
     return permission_checker
+
+def require_any_permission(required_permissions: list[str]):
+    """
+    Inyector de dependencia para validar que el usuario tenga al menos uno de los permisos específicos.
+    Falla con 403 Forbidden si el usuario no cuenta con ninguno en su tenant actual.
+    """
+    async def permission_checker(
+        current_user: CurrentUser = Depends(get_current_user),
+        session: AsyncSession = Depends(get_db)
+    ):
+        from models.asignacion import Asignacion
+        from datetime import datetime, timezone
+        
+        now = datetime.now(timezone.utc)
+        from models.rbac import UsuarioRol
+        
+        query_asignacion = (
+            select(Permiso.id)
+            .join(RolPermiso, RolPermiso.permiso_id == Permiso.id)
+            .join(Rol, Rol.id == RolPermiso.rol_id)
+            .join(Asignacion, Asignacion.rol_id == Rol.id)
+            .where(
+                Asignacion.usuario_id == current_user.id,
+                Asignacion.tenant_id == current_user.tenant_id,
+                Asignacion.deleted_at.is_(None),
+                Asignacion.desde <= now,
+                (Asignacion.hasta.is_(None) | (Asignacion.hasta >= now)),
+                Rol.deleted_at.is_(None),
+                Permiso.nombre.in_(required_permissions)
+            )
+        )
+
+        query_global = (
+            select(Permiso.id)
+            .join(RolPermiso, RolPermiso.permiso_id == Permiso.id)
+            .join(Rol, Rol.id == RolPermiso.rol_id)
+            .join(UsuarioRol, UsuarioRol.rol_id == Rol.id)
+            .where(
+                UsuarioRol.usuario_id == current_user.id,
+                UsuarioRol.tenant_id == current_user.tenant_id,
+                Rol.deleted_at.is_(None),
+                Permiso.nombre.in_(required_permissions)
+            )
+        )
+
+        from sqlalchemy import union
+        query = union(query_asignacion, query_global).limit(1)
+        
+        result = await session.execute(query)
+        has_permission = result.scalar_one_or_none()
+        
+        if not has_permission:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Missing any of required permissions: {required_permissions}"
+            )
+            
+        return current_user
+        
+    return permission_checker

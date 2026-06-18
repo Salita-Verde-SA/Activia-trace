@@ -31,7 +31,7 @@ class AsignacionUpdate(BaseModel):
 
 class AsignacionResponse(AsignacionBase):
     id: uuid.UUID
-    tenant_id: str
+    tenant_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
 

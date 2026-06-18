@@ -3,13 +3,20 @@ import { useLiquidaciones } from '../../hooks/useLiquidaciones';
 
 export function CloseLiquidacionAction({ periodoAnio, periodoMes }: { periodoAnio: number, periodoMes: number }) {
   const [showModal, setShowModal] = useState(false);
-  const { cerrarLiquidacion } = useLiquidaciones();
+  const { cerrarPeriodo } = useLiquidaciones();
 
   const handleClose = () => {
-    // In a real scenario, this might call an API endpoint that closes ALL open liquidaciones for the period
-    // For this prototype, we'll simulate it by showing a notification
-    alert(`Se ha solicitado el cierre del período ${periodoMes}/${periodoAnio}.`);
-    setShowModal(false);
+    cerrarPeriodo.mutate({ mes: periodoMes, anio: periodoAnio }, {
+      onSuccess: () => {
+        alert(`Período ${periodoMes}/${periodoAnio} cerrado exitosamente.`);
+        setShowModal(false);
+      },
+      onError: (error) => {
+        alert("Ocurrió un error al cerrar el período.");
+        console.error(error);
+        setShowModal(false);
+      }
+    });
   };
 
   return (
@@ -39,11 +46,19 @@ export function CloseLiquidacionAction({ periodoAnio, periodoMes }: { periodoAni
             </div>
             
             <div className="flex justify-end space-x-4 mt-8">
-              <button onClick={() => setShowModal(false)} className="px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-alabaster hover:bg-white/10 hover:border-white/20 transition-all font-label-caps text-label-caps uppercase tracking-widest">
+              <button 
+                onClick={() => setShowModal(false)} 
+                disabled={cerrarPeriodo.isPending}
+                className="px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-alabaster hover:bg-white/10 hover:border-white/20 transition-all font-label-caps text-label-caps uppercase tracking-widest disabled:opacity-50"
+              >
                 Cancelar
               </button>
-              <button onClick={handleClose} className="px-6 py-3 bg-pale-rose/20 border border-pale-rose/50 rounded-xl text-pale-rose hover:bg-pale-rose hover:text-charcoal shadow-[0_0_15px_rgba(224,142,121,0.2)] hover:shadow-[0_0_20px_rgba(224,142,121,0.6)] transition-all font-label-caps text-label-caps uppercase tracking-widest">
-                Confirmar
+              <button 
+                onClick={handleClose} 
+                disabled={cerrarPeriodo.isPending}
+                className="px-6 py-3 bg-pale-rose/20 border border-pale-rose/50 rounded-xl text-pale-rose hover:bg-pale-rose hover:text-charcoal shadow-[0_0_15px_rgba(224,142,121,0.2)] hover:shadow-[0_0_20px_rgba(224,142,121,0.6)] transition-all font-label-caps text-label-caps uppercase tracking-widest disabled:opacity-50"
+              >
+                {cerrarPeriodo.isPending ? 'Cerrando...' : 'Confirmar'}
               </button>
             </div>
           </div>

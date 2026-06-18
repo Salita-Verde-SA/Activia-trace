@@ -3,7 +3,7 @@ import { useAuth } from '@/features/auth/context/AuthContext';
 
 export const Sidebar = ({ isOpen, closeSidebar }: { isOpen: boolean, closeSidebar: () => void }) => {
   const { user } = useAuth();
-  
+
   // Basic filtering based on roles
   const menuItems = [
     { name: 'Mi Estado', path: '/alumno/estado', icon: 'school', roles: ['ALUMNO'] },
@@ -14,15 +14,18 @@ export const Sidebar = ({ isOpen, closeSidebar }: { isOpen: boolean, closeSideba
     { name: 'Avisos', path: '/admin/avisos', icon: 'campaign', roles: ['COORDINADOR', 'ADMIN'] },
     { name: 'Tareas', path: '/admin/tareas', icon: 'task', roles: ['COORDINADOR', 'ADMIN'] },
     { name: 'Gestión de Tareas', path: '/profesor/tareas', icon: 'task', roles: ['PROFESOR'] },
+    { name: 'Mis Facturas', path: '/profesor/facturas', icon: 'receipt', roles: ['PROFESOR'] },
     { name: 'Coloquios', path: '/admin/coloquios', icon: 'event_seat', roles: ['ADMIN', 'COORDINADOR'] },
     { name: 'Estructura Académica', path: '/admin/estructura', icon: 'account_tree', roles: ['ADMIN'] },
+    { name: 'Materias y Equipos', path: '/admin/materias', icon: 'menu_book', roles: ['ADMIN', 'COORDINADOR'] },
     { name: 'Usuarios', path: '/admin/usuarios', icon: 'group', roles: ['ADMIN'] },
     { name: 'Auditoría', path: '/auditoria', icon: 'history_edu', roles: ['ADMIN', 'COORDINADOR'] },
     { name: 'Grilla Salarial', path: '/finanzas/salarios', icon: 'payments', roles: ['FINANZAS'] },
     { name: 'Liquidaciones', path: '/finanzas/liquidaciones', icon: 'receipt_long', roles: ['FINANZAS'] },
+    { name: 'Facturas', path: '/finanzas/facturas', icon: 'description', roles: ['FINANZAS'] },
   ];
 
-  const visibleItems = menuItems.filter(item => 
+  const visibleItems = menuItems.filter(item =>
     !user?.roles?.length || item.roles.some(r => user.roles.includes(r))
   );
 
@@ -30,17 +33,16 @@ export const Sidebar = ({ isOpen, closeSidebar }: { isOpen: boolean, closeSideba
     <>
       {/* Mobile overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-20 bg-black/50 backdrop-blur-sm lg:hidden"
           onClick={closeSidebar}
         />
       )}
-      
+
       {/* Sidebar */}
-      <nav 
-        className={`fixed inset-y-0 left-0 z-30 w-64 backdrop-blur-xl bg-white/5 flex flex-col py-stack-md transition-all duration-300 ease-in-out border-r border-white/5 shadow-[0_0_30px_rgba(0,0,0,0.3)] lg:rounded-r-3xl lg:my-4 lg:ml-4 lg:h-[calc(100vh-2rem)] ${
-          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        }`}
+      <nav
+        className={`fixed inset-y-0 left-0 z-30 w-64 backdrop-blur-xl bg-white/5 flex flex-col py-stack-md transition-all duration-300 ease-in-out border-r border-white/5 shadow-[0_0_30px_rgba(0,0,0,0.3)] lg:rounded-r-3xl lg:my-4 lg:ml-4 lg:h-[calc(100vh-2rem)] ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          }`}
       >
         <div className="px-6 mb-stack-lg flex items-center space-x-4">
           <div className="w-12 h-12 flex items-center justify-center bg-white/10 rounded-xl border border-white/10 shadow-inner">
@@ -51,7 +53,7 @@ export const Sidebar = ({ isOpen, closeSidebar }: { isOpen: boolean, closeSideba
             <p className="font-label-caps text-[10px] text-tertiary-fixed-dim uppercase tracking-[0.3em] mt-1">Academic Portal</p>
           </div>
         </div>
-        
+
 
 
         <div className="flex-1 overflow-y-auto mt-4 mb-6 px-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -62,10 +64,9 @@ export const Sidebar = ({ isOpen, closeSidebar }: { isOpen: boolean, closeSideba
                   to={item.path}
                   onClick={() => window.innerWidth < 1024 && closeSidebar()}
                   className={({ isActive }) =>
-                    `flex items-center space-x-4 py-3 px-4 rounded-2xl transition-all duration-200 ease-in-out font-label-caps text-label-caps uppercase tracking-widest backdrop-blur-xl border ${
-                      isActive 
-                        ? 'text-primary bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)] border-white/5 drop-shadow-[0_0_5px_rgba(242,202,80,0.5)]' 
-                        : 'text-on-tertiary-fixed-variant border-transparent hover:border-white/5 hover:bg-white/5 hover:text-on-surface'
+                    `flex items-center space-x-4 py-3 px-4 rounded-2xl transition-all duration-200 ease-in-out font-label-caps text-label-caps uppercase tracking-widest backdrop-blur-xl border ${isActive
+                      ? 'text-primary bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)] border-white/5 drop-shadow-[0_0_5px_rgba(242,202,80,0.5)]'
+                      : 'text-on-tertiary-fixed-variant border-transparent hover:border-white/5 hover:bg-white/5 hover:text-on-surface'
                     }`
                   }
                 >
@@ -76,7 +77,7 @@ export const Sidebar = ({ isOpen, closeSidebar }: { isOpen: boolean, closeSideba
             ))}
           </ul>
         </div>
-        
+
         <div className="mt-auto px-3">
           <ul className="space-y-2">
             <li>

@@ -9,7 +9,7 @@ export function useLiquidaciones(params?: { periodo_anio?: number; periodo_mes?:
     queryFn: () => liquidacionesApi.getAll(params),
   });
 
-  const getLiquidacion = (id: string) => useQuery({
+  const useLiquidacion = (id: string) => useQuery({
     queryKey: ['finanzas', 'liquidaciones', id],
     queryFn: () => liquidacionesApi.getById(id),
     enabled: !!id,
@@ -20,9 +20,20 @@ export function useLiquidaciones(params?: { periodo_anio?: number; periodo_mes?:
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['finanzas', 'liquidaciones'] }),
   });
 
+  const cerrarPeriodo = useMutation({
+    mutationFn: (params: { mes: number, anio: number }) => liquidacionesApi.cerrarPeriodo(params),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['finanzas', 'liquidaciones'] }),
+  });
+
+  const exportarCSV = useMutation({
+    mutationFn: ({ mes, anio }: { mes: number, anio: number }) => liquidacionesApi.exportar(mes, anio),
+  });
+
   return {
     liquidacionesQuery,
-    getLiquidacion,
+    useLiquidacion,
     cerrarLiquidacion,
+    cerrarPeriodo,
+    exportarCSV,
   };
 }

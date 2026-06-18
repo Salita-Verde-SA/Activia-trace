@@ -8,8 +8,14 @@ export function CohortesPanel() {
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [filtroCarrera, setFiltroCarrera] = useState<string>('');
   
   const [formData, setFormData] = useState<Partial<Cohorte>>({ carrera_id: '', nombre: '', anio: new Date().getFullYear(), estado: 'Activa' });
+
+  const cohortesFiltradas = cohortesQuery.data?.filter(cohorte => {
+    if (filtroCarrera && cohorte.carrera_id !== filtroCarrera) return false;
+    return true;
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,6 +127,21 @@ export function CohortesPanel() {
         </form>
       )}
 
+      <div className="flex items-center space-x-4 mb-4">
+        <select
+          value={filtroCarrera}
+          onChange={(e) => setFiltroCarrera(e.target.value)}
+          className="rounded-md border-white/10 bg-black/20 text-white/90 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm [&>option]:bg-neutral-900 [&>option]:text-white"
+        >
+          <option value="">Todas las carreras</option>
+          {carrerasQuery.data?.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.codigo} - {c.nombre}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-white/10">
           <thead className="bg-white/5 border-y border-white/10">
@@ -133,7 +154,7 @@ export function CohortesPanel() {
             </tr>
           </thead>
           <tbody className="divide-y divide-white/10">
-            {cohortesQuery.data?.map(cohorte => {
+            {cohortesFiltradas?.map(cohorte => {
               const carrera = carrerasQuery.data?.find(c => c.id === cohorte.carrera_id);
               return (
                 <tr key={cohorte.id} className="transition-colors hover:bg-white/5">
@@ -152,7 +173,7 @@ export function CohortesPanel() {
                 </tr>
               );
             })}
-            {cohortesQuery.data?.length === 0 && (
+            {(!cohortesFiltradas || cohortesFiltradas.length === 0) && (
               <tr>
                 <td colSpan={5} className="px-6 py-4 text-center text-white/50">No hay cohortes registradas.</td>
               </tr>

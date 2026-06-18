@@ -10,13 +10,16 @@ import { AvisosAdminPage } from '@/features/avisos/pages/AvisosAdminPage';
 import { TareasBoard } from '@/features/tareas/components/TareasBoard';
 import { SetupCuatrimestreWizard } from '@/features/coordinacion/components/SetupCuatrimestreWizard';
 import { EstructuraAcademicaPage } from '@/features/admin/pages/EstructuraAcademicaPage';
+import { MateriasPage } from '@/features/admin/pages/MateriasPage';
 import { GestionUsuariosPage } from '@/features/admin/pages/GestionUsuariosPage';
 import { AuditoriaPage } from '@/features/auditoria/pages/AuditoriaPage';
 import { GrillaSalarialPage } from '@/features/finanzas/pages/GrillaSalarialPage';
 import { LiquidacionesDashboardPage } from '@/features/finanzas/pages/LiquidacionesDashboardPage';
+import { FacturasAdminPage } from '@/features/finanzas/pages/FacturasAdminPage';
 import { MiEstadoPage } from '@/features/alumno/pages/MiEstadoPage';
 import { MisAvisosPage } from '@/features/alumno/pages/MisAvisosPage';
 import { MisColoquiosPage } from '@/features/alumno/pages/MisColoquiosPage';
+import { FacturasDocentePage } from '@/features/profesor/pages/FacturasDocentePage';
 import ColoquiosAdminPage from '@/features/admin/pages/ColoquiosAdminPage';
 
 const queryClient = new QueryClient({
@@ -76,13 +79,18 @@ function App() {
               
               {/* Admin Panel routes */}
               <Route path="admin/estructura" element={<EstructuraAcademicaPage />} />
+              <Route path="admin/materias" element={<MateriasPage />} />
               <Route path="admin/usuarios" element={<GestionUsuariosPage />} />
               <Route path="admin/coloquios" element={<ColoquiosAdminPage />} />
               <Route path="auditoria" element={<AuditoriaPage />} />
               
+              {/* Profesor routes */}
+              <Route path="profesor/facturas" element={<FacturasDocentePage />} />
+              
               {/* Finanzas routes */}
               <Route path="finanzas/salarios" element={<GrillaSalarialPage />} />
               <Route path="finanzas/liquidaciones" element={<LiquidacionesDashboardPage />} />
+              <Route path="finanzas/facturas" element={<FacturasAdminPage />} />
             </Route>
             
             <Route path="*" element={<RoleBasedRedirect />} />

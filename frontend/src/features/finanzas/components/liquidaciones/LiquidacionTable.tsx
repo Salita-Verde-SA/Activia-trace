@@ -1,4 +1,5 @@
 import type { Liquidacion } from '../../types';
+import { useUsuarios } from '../../../admin/hooks/useUsuarios';
 
 export function LiquidacionTable({ 
   liquidaciones, 
@@ -7,14 +8,21 @@ export function LiquidacionTable({
   liquidaciones: Liquidacion[], 
   isLoading: boolean 
 }) {
-  if (isLoading) return <div className="p-4 text-center text-white/50">Cargando liquidaciones...</div>;
+  const { usuariosQuery } = useUsuarios();
+
+  if (isLoading || usuariosQuery.isLoading) return <div className="p-4 text-center text-white/50">Cargando liquidaciones...</div>;
+
+  const getUsuarioNombre = (id: string) => {
+    const user = usuariosQuery.data?.find(u => u.id === id);
+    return user ? `${user.apellido}, ${user.nombre}` : id;
+  };
 
   return (
     <div className="overflow-x-auto border-t border-white/10 bg-black/10 backdrop-blur-sm">
       <table className="min-w-full divide-y divide-white/10">
         <thead className="bg-white/5">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase tracking-wider">Usuario ID</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase tracking-wider">Docente</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-white/50 uppercase tracking-wider">Período</th>
             <th className="px-6 py-3 text-right text-xs font-medium text-white/50 uppercase tracking-wider">Base</th>
             <th className="px-6 py-3 text-right text-xs font-medium text-white/50 uppercase tracking-wider">Plus</th>
@@ -26,7 +34,7 @@ export function LiquidacionTable({
           {liquidaciones.map(liq => (
             <tr key={liq.id} className={`transition-colors ${liq.excluido_por_factura ? "bg-red-900/20 opacity-75" : "hover:bg-white/5"}`}>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white/90">
-                {liq.usuario_id}
+                {getUsuarioNombre(liq.usuario_id)}
                 {liq.es_nexo && <span className="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">NEXO</span>}
                 {liq.excluido_por_factura && <span className="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded bg-red-500/20 text-red-400 border border-red-500/30">Factura</span>}
               </td>

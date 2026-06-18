@@ -10,12 +10,22 @@ from services.asignacion import AsignacionService
 
 router = APIRouter(prefix="/equipos", tags=["Equipos Docentes"])
 
+@router.get("/materia/{materia_id}", response_model=list[EquipoDocenteView])
+async def equipos_por_materia(
+    materia_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+    _=Depends(require_permission("equipos:gestionar"))
+):
+    service = AsignacionService(db, str(current_user.tenant_id))
+    return await service.get_equipos_by_materia(materia_id)
+
 @router.post("/asignacion-masiva", response_model=list[AsignacionResponse], status_code=status.HTTP_201_CREATED)
 async def asignacion_masiva(
     data: AsignacionMasivaCreate,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
-    _=Depends(require_permission("equipos:asignar"))
+    _=Depends(require_permission("equipos:gestionar"))
 ):
     service = AsignacionService(db, str(current_user.tenant_id))
     return await service.asignar_bloque(data, current_user.id)
@@ -25,7 +35,7 @@ async def clonar_equipo(
     data: ClonadoEquipoRequest,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
-    _=Depends(require_permission("equipos:asignar"))
+    _=Depends(require_permission("equipos:gestionar"))
 ):
     service = AsignacionService(db, str(current_user.tenant_id))
     return await service.clonar_equipo(data, current_user.id)
@@ -35,7 +45,7 @@ async def modificar_vigencia(
     data: AsignacionVigenciaUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
-    _=Depends(require_permission("equipos:asignar"))
+    _=Depends(require_permission("equipos:gestionar"))
 ):
     service = AsignacionService(db, str(current_user.tenant_id))
     return await service.modificar_vigencia_equipo(data, current_user.id)
@@ -43,10 +53,9 @@ async def modificar_vigencia(
 @router.get("/mis-equipos", response_model=list[AsignacionResponse])
 async def mis_equipos(
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(get_current_user),
-    # Requiere permisos básicos de lectura
-    _=Depends(require_permission("equipos:leer_propios"))
+    current_user: CurrentUser = Depends(get_current_user)
 ):
+    # Sin require_permission estricto para mis equipos, solo auth JWT que ya se validó
     service = AsignacionService(db, str(current_user.tenant_id))
     return await service.get_asignaciones_by_usuario(current_user.id)
 
@@ -56,7 +65,7 @@ async def exportar_equipo(
     materia_id: uuid.UUID | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
-    _=Depends(require_permission("equipos:leer"))
+    _=Depends(require_permission("equipos:gestionar"))
 ):
     service = AsignacionService(db, str(current_user.tenant_id))
     # Para la exportación, podemos retornar la lista cruda o crear una lógica de export.

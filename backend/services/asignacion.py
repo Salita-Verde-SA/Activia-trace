@@ -29,6 +29,40 @@ class AsignacionService:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
+    async def get_equipos_by_materia(self, materia_id: uuid.UUID) -> list[dict]:
+        from models.user import Usuario
+        from models.rbac import Rol
+        
+        stmt = (
+            select(Asignacion, Usuario, Rol)
+            .join(Usuario, Asignacion.usuario_id == Usuario.id)
+            .join(Rol, Asignacion.rol_id == Rol.id)
+            .where(
+                Asignacion.tenant_id == self.tenant_id,
+                Asignacion.materia_id == materia_id,
+                Asignacion.deleted_at.is_(None)
+            )
+        )
+        result = await self.db.execute(stmt)
+        rows = result.all()
+        
+        equipos = []
+        for asig, usuario, rol in rows:
+            equipos.append({
+                "asignacion_id": asig.id,
+                "usuario_id": usuario.id,
+                "usuario_nombre": usuario.nombre,
+                "usuario_apellido": usuario.apellido,
+                "rol_id": rol.id,
+                "rol_nombre": rol.nombre,
+                "materia_id": asig.materia_id,
+                "carrera_id": asig.carrera_id,
+                "cohorte_id": asig.cohorte_id,
+                "desde": asig.desde,
+                "hasta": asig.hasta
+            })
+        return equipos
+
     async def create_asignacion(self, data: AsignacionCreate) -> Asignacion:
         asignacion = Asignacion(
             tenant_id=self.tenant_id,

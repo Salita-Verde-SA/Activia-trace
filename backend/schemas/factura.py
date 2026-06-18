@@ -2,6 +2,7 @@ from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
+from models.liquidaciones import EstadoFactura
 
 class FacturaBase(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -19,5 +20,6 @@ class FacturaResponse(FacturaBase):
     model_config = ConfigDict(extra='forbid')
     id: UUID
     tenant_id: UUID
+    estado: EstadoFactura
     created_at: datetime
     updated_at: datetime

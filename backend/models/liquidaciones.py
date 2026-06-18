@@ -18,6 +18,10 @@ class EstadoLiquidacion(str, enum.Enum):
     ABIERTA = "Abierta"
     CERRADA = "Cerrada"
 
+class EstadoFactura(str, enum.Enum):
+    PENDIENTE = "Pendiente"
+    ABONADA = "Abonada"
+
 class SalarioBase(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "salarios_base"
 
@@ -50,6 +54,7 @@ class Factura(Base, TimestampMixin, SoftDeleteMixin):
     monto = Column(Float, nullable=False)
     detalle = Column(String, nullable=True)
     comprobante_url = Column(String, nullable=True)
+    estado = Column(SQLEnum(EstadoFactura, name="estado_factura_enum", create_type=False), nullable=False, default=EstadoFactura.PENDIENTE)
 
 class Liquidacion(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "liquidaciones"

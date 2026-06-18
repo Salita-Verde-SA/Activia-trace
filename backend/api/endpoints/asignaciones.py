@@ -13,7 +13,7 @@ async def create_asignacion(
     data: AsignacionCreate,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
-    _=Depends(require_permission("asignaciones:crear"))
+    _=Depends(require_permission("equipos:gestionar"))
 ):
     service = AsignacionService(db, str(current_user.tenant_id))
     return await service.create_asignacion(data)
@@ -23,7 +23,7 @@ async def list_asignaciones_by_usuario(
     usuario_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
-    _=Depends(require_permission("asignaciones:leer"))
+    _=Depends(require_permission("equipos:gestionar"))
 ):
     service = AsignacionService(db, str(current_user.tenant_id))
     return await service.get_asignaciones_by_usuario(usuario_id)
@@ -33,7 +33,7 @@ async def get_asignacion(
     asignacion_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
-    _=Depends(require_permission("asignaciones:leer"))
+    _=Depends(require_permission("equipos:gestionar"))
 ):
     service = AsignacionService(db, str(current_user.tenant_id))
     return await service.get_asignacion(asignacion_id)
@@ -44,7 +44,7 @@ async def update_asignacion(
     data: AsignacionUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
-    _=Depends(require_permission("asignaciones:editar"))
+    _=Depends(require_permission("equipos:gestionar"))
 ):
     service = AsignacionService(db, str(current_user.tenant_id))
     return await service.update_asignacion(asignacion_id, data)
@@ -54,7 +54,7 @@ async def delete_asignacion(
     asignacion_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
-    _=Depends(require_permission("asignaciones:eliminar"))
+    _=Depends(require_permission("equipos:gestionar"))
 ):
     service = AsignacionService(db, str(current_user.tenant_id))
     await service.delete_asignacion(asignacion_id)

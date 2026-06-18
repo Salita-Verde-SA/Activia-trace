@@ -12,7 +12,7 @@ export function LiquidacionesDashboardPage() {
   const [activeTab, setActiveTab] = useState<'actual' | 'history'>('actual');
   const [segment, setSegment] = useState<'general' | 'nexo' | 'factura'>('general');
 
-  const { liquidacionesQuery } = useLiquidaciones({ 
+  const { liquidacionesQuery, exportarCSV } = useLiquidaciones({ 
     periodo_anio: currentYear, 
     periodo_mes: currentMonth,
     estado: 'ABIERTA'
@@ -39,7 +39,16 @@ export function LiquidacionesDashboardPage() {
           <p className="mt-1 text-sm text-white/70">Gestión de liquidaciones del período actual y consulta histórica.</p>
         </div>
         {activeTab === 'actual' && (
-          <CloseLiquidacionAction periodoAnio={currentYear} periodoMes={currentMonth} />
+          <div className="flex space-x-3">
+            <button
+              onClick={() => exportarCSV.mutate({ mes: currentMonth, anio: currentYear })}
+              disabled={exportarCSV.isPending}
+              className="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {exportarCSV.isPending ? 'Exportando...' : 'Exportar CSV'}
+            </button>
+            <CloseLiquidacionAction periodoAnio={currentYear} periodoMes={currentMonth} />
+          </div>
         )}
       </div>
 

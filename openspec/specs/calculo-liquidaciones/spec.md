@@ -1,12 +1,8 @@
-# calculo-liquidaciones Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change c-18-liquidaciones-y-honorarios. Update Purpose after archive.
-## Requirements
-### Requirement: Cálculo de liquidaciones mensuales
-El sistema SHALL permitir calcular la liquidación mensual de todos los usuarios docentes. El cálculo SHALL sumar el Salario Base (por el rol asignado en el período) y el Salario Plus (por la clave de la materia dictada, acumulado una sola vez por clave y rol).
+### Requirement: Cálculo acumulativo del Plus salarial
+El sistema SHALL calcular el monto total de Plus sumando el importe correspondiente de **cada comisión individual** asignada al docente, permitiendo la acumulación múltiple de pluses que compartan la misma clave.
 
-#### Scenario: Cálculo con múltiples comisiones de igual clave
-- **WHEN** un profesor tiene 3 comisiones vigentes de la materia `Programación I` (cuya clave es `PROG`) y solicita la pre-liquidación.
-- **THEN** el sistema retorna la suma de `SalarioBase(PROFESOR) * 3` más `SalarioPlus(PROG, PROFESOR) * 1`.
-
+#### Scenario: Múltiples comisiones de la misma familia
+- **WHEN** un docente tiene 3 comisiones activas de una materia que otorga Plus
+- **THEN** el motor de cálculo suma 3 veces el monto del Plus a la remuneración Base

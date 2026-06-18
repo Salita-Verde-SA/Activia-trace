@@ -1,7 +1,7 @@
 import uuid
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from api.dependencies.auth import require_permission, get_current_user, CurrentUser
+from api.dependencies.auth import require_permission, require_any_permission, get_current_user, CurrentUser
 from core.dependencies import get_db
 from schemas.usuario import UsuarioResponse, UsuarioCreate, UsuarioUpdate, UsuarioCreateRequest
 from services.usuario import UsuarioService
@@ -30,7 +30,7 @@ async def list_usuarios(
     rol: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
-    _=Depends(require_permission("usuarios:gestionar"))
+    _=Depends(require_any_permission(["usuarios:gestionar", "equipos:gestionar", "finanzas:liquidar", "finanzas:leer"]))
 ):
     service = UsuarioService(db, str(current_user.tenant_id))
     return await service.get_usuarios(skip=skip, limit=limit, search=search, rol=rol)

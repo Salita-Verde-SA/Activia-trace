@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { facturasApi } from '../services/facturasApi';
-import type { Factura } from '../types';
 
 export function useFacturas(params?: { periodo_anio?: number; periodo_mes?: number }) {
   const queryClient = useQueryClient();
@@ -10,13 +9,24 @@ export function useFacturas(params?: { periodo_anio?: number; periodo_mes?: numb
     queryFn: () => facturasApi.getAll(params),
   });
 
-  const createFactura = useMutation({
-    mutationFn: (data: Partial<Factura>) => facturasApi.create(data),
+  const uploadFactura = useMutation({
+    mutationFn: (data: FormData) => facturasApi.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['finanzas', 'facturas'] }),
+  });
+
+  const abonarFactura = useMutation({
+    mutationFn: (id: string) => facturasApi.abonar(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['finanzas', 'facturas'] }),
+  });
+
+  const descargarFactura = useMutation({
+    mutationFn: ({ id, mes, anio }: { id: string, mes: number, anio: number }) => facturasApi.descargar(id, mes, anio),
   });
 
   return {
     facturasQuery,
-    createFactura,
+    uploadFactura,
+    abonarFactura,
+    descargarFactura,
   };
 }
