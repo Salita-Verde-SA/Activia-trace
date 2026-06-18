@@ -1,16 +1,16 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useEstructura } from '../../hooks/useEstructura';
 import type { Materia } from '../../types';
 import { ConfirmModal } from '../ui/ConfirmModal';
-import { EquiposPanel } from '../../../equipos/components/EquiposPanel';
 
 export function MateriasPanel() {
+  const navigate = useNavigate();
   const { materiasQuery, createMateria, updateMateria, deleteMateria } = useEstructura();
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [managingEquiposFor, setManagingEquiposFor] = useState<Materia | null>(null);
-  
+
   const [formData, setFormData] = useState<Partial<Materia>>({ codigo: '', nombre: '', estado: 'Activa' });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -41,24 +41,12 @@ export function MateriasPanel() {
 
   if (materiasQuery.isLoading) return <div className="p-4">Cargando...</div>;
 
-  if (managingEquiposFor) {
-    return (
-      <div className="p-4 animate-fade-in">
-        <EquiposPanel 
-          materiaId={managingEquiposFor.id} 
-          materiaNombre={managingEquiposFor.nombre}
-          onClose={() => setManagingEquiposFor(null)} 
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4 p-4 animate-fade-in">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-serif text-white/90">Catálogo de Materias</h3>
         {!isCreating && !editingId && (
-          <button 
+          <button
             onClick={() => setIsCreating(true)}
             className="px-4 py-2 bg-primary-600/80 border border-primary-500/50 shadow-[0_0_15px_rgba(var(--color-primary-500),0.2)] text-white rounded-md hover:bg-primary-600 transition-colors"
           >
@@ -72,9 +60,9 @@ export function MateriasPanel() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-white/70">Código</label>
-              <input 
-                type="text" 
-                required 
+              <input
+                type="text"
+                required
                 value={formData.codigo || ''}
                 onChange={e => setFormData({...formData, codigo: e.target.value})}
                 className="mt-1 block w-full rounded-md border-white/10 bg-white/5 text-white/90 shadow-sm focus:border-primary-500 focus:ring-primary-500"
@@ -82,17 +70,17 @@ export function MateriasPanel() {
             </div>
             <div>
               <label className="block text-sm font-medium text-white/70">Nombre</label>
-              <input 
-                type="text" 
-                required 
+              <input
+                type="text"
+                required
                 value={formData.nombre || ''}
                 onChange={e => setFormData({...formData, nombre: e.target.value})}
                 className="mt-1 block w-full rounded-md border-white/10 bg-white/5 text-white/90 shadow-sm focus:border-primary-500 focus:ring-primary-500"
               />
             </div>
             <div className="flex items-center">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 id="activa_materia"
                 checked={formData.estado === 'Activa'}
                 onChange={e => setFormData({...formData, estado: e.target.checked ? 'Activa' : 'Inactiva'})}
@@ -105,8 +93,8 @@ export function MateriasPanel() {
             <button type="submit" className="px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded-md hover:bg-green-500/30 transition-colors">
               Guardar
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => { setIsCreating(false); setEditingId(null); }}
               className="px-4 py-2 bg-white/5 text-white/70 border border-white/10 rounded-md hover:bg-white/10 transition-colors"
             >
@@ -137,7 +125,12 @@ export function MateriasPanel() {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                  <button onClick={() => setManagingEquiposFor(materia)} className="text-blue-400 hover:text-blue-300 transition-colors border border-blue-500/30 bg-blue-500/10 px-2 py-1 rounded">Equipos</button>
+                  <button
+                    onClick={() => navigate(`/admin/equipos?materia=${materia.id}`)}
+                    className="text-blue-400 hover:text-blue-300 transition-colors border border-blue-500/30 bg-blue-500/10 px-2 py-1 rounded"
+                  >
+                    Ver equipo
+                  </button>
                   <button onClick={() => handleEdit(materia)} className="text-primary-400 hover:text-primary-300 transition-colors ml-2">Editar</button>
                   <button onClick={() => handleDelete(materia.id)} className="text-red-400 hover:text-red-300 transition-colors ml-2">Eliminar</button>
                 </td>

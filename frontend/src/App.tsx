@@ -21,6 +21,8 @@ import { MisAvisosPage } from '@/features/alumno/pages/MisAvisosPage';
 import { MisColoquiosPage } from '@/features/alumno/pages/MisColoquiosPage';
 import { FacturasDocentePage } from '@/features/profesor/pages/FacturasDocentePage';
 import ColoquiosAdminPage from '@/features/admin/pages/ColoquiosAdminPage';
+import { MisEquiposPage } from '@/features/equipos/pages/MisEquiposPage';
+import { GestionEquiposPage } from '@/features/equipos/pages/GestionEquiposPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,6 +32,15 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+const RequireEquiposAdmin = () => {
+  const { user } = useAuth();
+  if (!user?.roles) return <Navigate to="/login" replace />;
+  if (user.roles.includes('COORDINADOR') || user.roles.includes('ADMIN')) {
+    return <GestionEquiposPage />;
+  }
+  return <Navigate to="/mis-equipos" replace />;
+};
 
 const RoleBasedRedirect = () => {
   const { user } = useAuth();
@@ -84,6 +95,10 @@ function App() {
               <Route path="admin/coloquios" element={<ColoquiosAdminPage />} />
               <Route path="auditoria" element={<AuditoriaPage />} />
               
+              {/* Equipos routes */}
+              <Route path="mis-equipos" element={<MisEquiposPage />} />
+              <Route path="admin/equipos" element={<RequireEquiposAdmin />} />
+
               {/* Profesor routes */}
               <Route path="profesor/facturas" element={<FacturasDocentePage />} />
               

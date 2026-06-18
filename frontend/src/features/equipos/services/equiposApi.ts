@@ -5,6 +5,7 @@ import type {
   EquipoDocenteView,
   ClonadoEquipoRequest,
   AsignacionVigenciaUpdate,
+  AsignacionDetalleView,
 } from '../types';
 
 export const equiposApi = {
@@ -29,7 +30,16 @@ export const equiposApi = {
   },
 
   eliminarAsignacion: async (id: string): Promise<void> => {
-    // Delete is in the asignaciones router: /api/asignaciones/{id}
     await api.delete(`/api/asignaciones/${id}`);
+  },
+
+  getMisEquipos: async (): Promise<AsignacionResponse[]> => {
+    const { data } = await api.get('/api/equipos/mis-equipos');
+    return data;
+  },
+
+  getMisEquiposDetalle: async (): Promise<AsignacionDetalleView[]> => {
+    const { data } = await api.get('/api/equipos/mis-equipos-detalle');
+    return data;
   },
 };

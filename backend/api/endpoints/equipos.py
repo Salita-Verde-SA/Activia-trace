@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.dependencies import get_db
 from api.dependencies.auth import require_permission, get_current_user, CurrentUser
 from schemas.asignacion import (
-    AsignacionResponse, AsignacionMasivaCreate, ClonadoEquipoRequest, AsignacionVigenciaUpdate, EquipoDocenteView
+    AsignacionResponse, AsignacionMasivaCreate, ClonadoEquipoRequest, AsignacionVigenciaUpdate, EquipoDocenteView,
+    AsignacionDetalleView
 )
 from services.asignacion import AsignacionService
 
@@ -55,9 +56,16 @@ async def mis_equipos(
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user)
 ):
-    # Sin require_permission estricto para mis equipos, solo auth JWT que ya se validó
     service = AsignacionService(db, str(current_user.tenant_id))
     return await service.get_asignaciones_by_usuario(current_user.id)
+
+@router.get("/mis-equipos-detalle", response_model=list[AsignacionDetalleView])
+async def mis_equipos_detalle(
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user)
+):
+    service = AsignacionService(db, str(current_user.tenant_id))
+    return await service.get_mis_equipos_detalle(current_user.id)
 
 @router.get("/exportar", response_model=list[AsignacionResponse])
 async def exportar_equipo(

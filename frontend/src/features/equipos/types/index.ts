@@ -60,3 +60,13 @@ export interface AsignacionVigenciaUpdate {
   nuevo_desde?: string;
   nuevo_hasta?: string;
 }
+
+export interface AsignacionDetalleView {
+  asignacion_id: string;
+  materia_nombre: string | null;
+  carrera_nombre: string | null;
+  cohorte_nombre: string | null;
+  rol_nombre: string | null;
+  desde: string;
+  hasta?: string | null;
+}

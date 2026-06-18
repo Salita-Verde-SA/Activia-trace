@@ -20,6 +20,38 @@ class AsignacionService:
     async def get_asignacion(self, asignacion_id: uuid.UUID) -> Asignacion | None:
         return await self.asignacion_repo.get(asignacion_id)
 
+    async def get_mis_equipos_detalle(self, usuario_id: uuid.UUID) -> list[dict]:
+        from models.estructura import Materia, Carrera, Cohorte
+        from models.rbac import Rol
+
+        stmt = (
+            select(Asignacion, Materia, Carrera, Cohorte, Rol)
+            .outerjoin(Materia, (Asignacion.materia_id == Materia.id) & (Materia.deleted_at.is_(None)))
+            .outerjoin(Carrera, (Asignacion.carrera_id == Carrera.id) & (Carrera.deleted_at.is_(None)))
+            .outerjoin(Cohorte, (Asignacion.cohorte_id == Cohorte.id) & (Cohorte.deleted_at.is_(None)))
+            .outerjoin(Rol, Asignacion.rol_id == Rol.id)
+            .where(
+                Asignacion.tenant_id == self.tenant_id,
+                Asignacion.usuario_id == usuario_id,
+                Asignacion.deleted_at.is_(None),
+            )
+        )
+        result = await self.db.execute(stmt)
+        rows = result.all()
+
+        return [
+            {
+                "asignacion_id": asig.id,
+                "materia_nombre": materia.nombre if materia else None,
+                "carrera_nombre": carrera.nombre if carrera else None,
+                "cohorte_nombre": cohorte.nombre if cohorte else None,
+                "rol_nombre": rol.nombre if rol else None,
+                "desde": asig.desde,
+                "hasta": asig.hasta,
+            }
+            for asig, materia, carrera, cohorte, rol in rows
+        ]
+
     async def get_asignaciones_by_usuario(self, usuario_id: uuid.UUID) -> list[Asignacion]:
         stmt = select(Asignacion).where(
             Asignacion.tenant_id == self.tenant_id,

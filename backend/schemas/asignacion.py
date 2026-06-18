@@ -79,3 +79,13 @@ class AsignacionVigenciaUpdate(BaseModel):
     asignacion_ids: list[uuid.UUID]
     nuevo_desde: datetime | None = None
     nuevo_hasta: datetime | None = None
+
+class AsignacionDetalleView(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    asignacion_id: uuid.UUID
+    materia_nombre: str | None = None
+    carrera_nombre: str | None = None
+    cohorte_nombre: str | None = None
+    rol_nombre: str | None = None
+    desde: datetime
+    hasta: datetime | None = None
