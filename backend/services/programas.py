@@ -21,17 +21,17 @@ class ProgramaMateriaService:
         self.cohorte_repo = CohorteRepository(session, tenant_id)
 
     async def _validate_relations(self, materia_id: uuid.UUID, carrera_id: uuid.UUID | None, cohorte_id: uuid.UUID | None):
-        materia = await self.materia_repo.get_by_id(materia_id)
+        materia = await self.materia_repo.get(materia_id)
         if not materia:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Materia no encontrada")
         
         if carrera_id:
-            carrera = await self.carrera_repo.get_by_id(carrera_id)
+            carrera = await self.carrera_repo.get(carrera_id)
             if not carrera:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Carrera no encontrada")
         
         if cohorte_id:
-            cohorte = await self.cohorte_repo.get_by_id(cohorte_id)
+            cohorte = await self.cohorte_repo.get(cohorte_id)
             if not cohorte:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cohorte no encontrada")
 
@@ -39,7 +39,7 @@ class ProgramaMateriaService:
         return await self.repo.get_by_materia(materia_id)
 
     async def get_by_id(self, id: uuid.UUID) -> ProgramaMateria:
-        programa = await self.repo.get_by_id(id)
+        programa = await self.repo.get(id)
         if not programa:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Programa no encontrado")
         return programa
@@ -90,12 +90,12 @@ class FechaAcademicaService:
         self.cohorte_repo = CohorteRepository(session, tenant_id)
 
     async def _validate_relations(self, materia_id: uuid.UUID, cohorte_id: uuid.UUID | None):
-        materia = await self.materia_repo.get_by_id(materia_id)
+        materia = await self.materia_repo.get(materia_id)
         if not materia:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Materia no encontrada")
         
         if cohorte_id:
-            cohorte = await self.cohorte_repo.get_by_id(cohorte_id)
+            cohorte = await self.cohorte_repo.get(cohorte_id)
             if not cohorte:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cohorte no encontrada")
 
@@ -103,7 +103,7 @@ class FechaAcademicaService:
         return await self.repo.get_by_materia(materia_id)
 
     async def get_by_id(self, id: uuid.UUID) -> FechaAcademica:
-        fecha = await self.repo.get_by_id(id)
+        fecha = await self.repo.get(id)
         if not fecha:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fecha académica no encontrada")
         return fecha

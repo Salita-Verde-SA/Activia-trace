@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getProgramasByMateria, createPrograma, updatePrograma, deletePrograma } from '../services/programasApi';
+import { getProgramasByMateria, createPrograma, updatePrograma, deletePrograma, uploadPrograma } from '../services/programasApi';
 import type { ProgramaMateriaCreate, ProgramaMateriaUpdate } from '../types';
 
 export const useProgramas = (materiaId: string) => {
@@ -32,10 +32,18 @@ export const useProgramas = (materiaId: string) => {
     },
   });
 
+  const uploadMutation = useMutation({
+    mutationFn: (data: FormData) => uploadPrograma(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['programas', materiaId] });
+    },
+  });
+
   return {
     ...query,
     createPrograma: createMutation.mutateAsync,
     updatePrograma: updateMutation.mutateAsync,
     deletePrograma: deleteMutation.mutateAsync,
+    uploadPrograma: uploadMutation.mutateAsync,
   };
 };

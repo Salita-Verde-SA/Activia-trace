@@ -29,6 +29,14 @@ async def listar_mis_instancias(
     service = EncuentroService(db, current_user.tenant_id)
     return await service.listar_mis_instancias(current_user.id)
 
+@router.get("/mis-encuentros-alumno", response_model=List[InstanciaEncuentroResponse])
+async def listar_encuentros_alumno(
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    service = EncuentroService(db, current_user.tenant_id)
+    return await service.listar_instancias_alumno(current_user.id)
+
 @router.post("/asignaciones/{asignacion_id}/encuentros", status_code=status.HTTP_201_CREATED)
 async def crear_encuentro(
     asignacion_id: UUID,

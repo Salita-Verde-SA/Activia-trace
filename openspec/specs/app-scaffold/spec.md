@@ -37,3 +37,14 @@ Cada archivo del backend SHALL no superar las 500 líneas de código (LOC), como
 - **WHEN** se mide la cantidad de líneas de cualquier archivo `.py` creado en este change
 - **THEN** ninguno supera las 500 líneas
 
+### Requirement: Entrada "Programas y Fechas" en Sidebar
+El sistema SHALL incluir una entrada "Programas y Fechas" en el Sidebar visible para roles COORDINADOR y ADMIN, apuntando a la ruta `/admin/programas`.
+
+#### Scenario: Entrada visible para COORDINADOR y ADMIN
+- **WHEN** un usuario con rol COORDINADOR o ADMIN está autenticado
+- **THEN** el Sidebar muestra el ítem "Programas y Fechas" con ícono `menu_book` apuntando a `/admin/programas`
+
+#### Scenario: Entrada no visible para otros roles
+- **WHEN** un usuario con rol PROFESOR, TUTOR o ALUMNO está autenticado
+- **THEN** el Sidebar NO muestra el ítem "Programas y Fechas"
+

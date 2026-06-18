@@ -42,6 +42,26 @@ class EncuentroService:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
+    async def listar_instancias_alumno(self, usuario_id: UUID) -> List[InstanciaEncuentro]:
+        from models.padron import EntradaPadron, VersionPadron
+        stmt = (
+            select(InstanciaEncuentro)
+            .join(VersionPadron, InstanciaEncuentro.materia_id == VersionPadron.materia_id)
+            .join(EntradaPadron, EntradaPadron.version_id == VersionPadron.id)
+            .where(
+                InstanciaEncuentro.tenant_id == self.tenant_id,
+                EntradaPadron.usuario_id == usuario_id,
+                EntradaPadron.deleted_at.is_(None),
+                VersionPadron.deleted_at.is_(None),
+                VersionPadron.activa == True,
+                InstanciaEncuentro.fecha >= date.today(),
+            )
+            .order_by(InstanciaEncuentro.fecha, InstanciaEncuentro.hora)
+            .distinct()
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
     async def crear_encuentro(self, asignacion_id: UUID, data: SlotEncuentroCreate) -> dict:
         if data.cant_semanas > 0:
             if not data.fecha_inicio or not data.dia_semana:

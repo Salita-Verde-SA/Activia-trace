@@ -24,3 +24,12 @@ export const updatePrograma = async ({ id, data }: { id: string; data: ProgramaM
 export const deletePrograma = async (id: string): Promise<void> => {
   await api.delete(`/api/programas/${id}`);
 };
+
+export const uploadPrograma = async (data: FormData): Promise<ProgramaMateria> => {
+  const response = await api.post('/api/programas/upload', data, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};

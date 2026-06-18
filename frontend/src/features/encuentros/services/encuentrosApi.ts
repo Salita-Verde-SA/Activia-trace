@@ -17,6 +17,11 @@ export const encuentrosApi = {
     return data;
   },
 
+  getEncuentrosAlumno: async (): Promise<InstanciaEncuentro[]> => {
+    const { data } = await api.get('/api/v1/encuentros/mis-encuentros-alumno');
+    return data;
+  },
+
   crearEncuentro: async (
     asignacionId: string,
     payload: SlotEncuentroCreate
