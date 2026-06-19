@@ -17,7 +17,7 @@ class Usuario(Base, TenantMixin, TimestampMixin, SoftDeleteMixin):
     email = Column(EncryptedString, nullable=False)
     email_hash = Column(String, nullable=False, index=True)
     password_hash = Column(String, nullable=False)
-    
+
     # PII Cifrada
     nombre = Column(String, nullable=False)
     apellido = Column(String, nullable=False)
@@ -28,15 +28,22 @@ class Usuario(Base, TenantMixin, TimestampMixin, SoftDeleteMixin):
     asignaciones = relationship('Asignacion', cascade='all, delete-orphan', foreign_keys='Asignacion.usuario_id')
     hilos_participa = relationship('HiloMensajeInterno', secondary='hilo_usuario', back_populates='participantes')
     roles_rel = relationship('Rol', secondary='usuario_rol', lazy='selectin')
-    
+
     @property
     def roles(self):
         return [r.nombre for r in self.roles_rel] if self.roles_rel else []
-    
-    
+
+
     # Datos de negocio
     legajo = Column(String, nullable=True)
     activo = Column(Boolean, nullable=False, server_default=text("true"))
+
+    # Datos de perfil extendido
+    banco: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    regional: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    genero: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    es_monotributista: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    identificador_profesional: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # 2FA
     totp_enabled = Column(Boolean, nullable=False, server_default=text("false"))

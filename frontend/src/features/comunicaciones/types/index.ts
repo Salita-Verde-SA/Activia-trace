@@ -4,6 +4,7 @@ export interface LoteResumen {
   lote_id: string;
   estado: EstadoComunicacion;
   total: number;
+  aprobado: boolean;
 }
 
 export interface ComunicacionCreate {

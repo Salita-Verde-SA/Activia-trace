@@ -48,7 +48,7 @@ export const AuditDetailFormatter: React.FC<AuditDetailFormatterProps> = ({ acci
   }
 
   // Comunicaciones
-  if (accion === 'PUBLICAR_AVISO') {
+  if (['PUBLICAR_AVISO', 'COMUNICACION_ENVIAR', 'COMUNICACION_CANCELAR'].includes(accion)) {
     return <ComunicacionesFormatter accion={accion} detalle={detalle} />;
   }
 

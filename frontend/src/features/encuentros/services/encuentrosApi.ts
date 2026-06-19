@@ -43,4 +43,12 @@ export const encuentrosApi = {
     );
     return data;
   },
+
+  getEncuentrosHtml: async (materiaId: string): Promise<string> => {
+    const { data } = await api.get<string>(
+      `/api/v1/encuentros/materias/${materiaId}/encuentros/html`,
+      { responseType: 'text' }
+    );
+    return data;
+  },
 };

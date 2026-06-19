@@ -83,6 +83,7 @@ function ConfirmModal({
   confirmClass,
   onConfirm,
   onClose,
+  isPending = false,
 }: {
   title: string;
   message: string;
@@ -90,6 +91,7 @@ function ConfirmModal({
   confirmClass: string;
   onConfirm: () => void;
   onClose: () => void;
+  isPending?: boolean;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -99,15 +101,18 @@ function ConfirmModal({
         <div className="flex gap-3 justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm rounded-lg bg-white/10 hover:bg-white/20 text-white/80 transition-colors"
+            disabled={isPending}
+            className="px-4 py-2 text-sm rounded-lg bg-white/10 hover:bg-white/20 text-white/80 transition-colors disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
             onClick={onConfirm}
-            className={`px-4 py-2 text-sm rounded-lg text-white font-medium transition-colors ${confirmClass}`}
+            disabled={isPending}
+            className={`inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg text-white font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${confirmClass}`}
           >
-            {confirmLabel}
+            {isPending && <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />}
+            {isPending ? 'Procesando...' : confirmLabel}
           </button>
         </div>
       </div>
@@ -120,6 +125,7 @@ export function ComunicacionesAdminPage() {
   const [previewLoteItem, setPreviewLoteItem] = useState<LoteResumen | null>(null);
   const [confirmAprobar, setConfirmAprobar] = useState<LoteResumen | null>(null);
   const [confirmCancelar, setConfirmCancelar] = useState<LoteResumen | null>(null);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const { data: lotes = [], isLoading } = useListarLotes(soloPendientes);
   const aprobar = useAprobarLote();
@@ -131,6 +137,12 @@ export function ComunicacionesAdminPage() {
         <h1 className="text-3xl font-serif text-white/90">Comunicaciones</h1>
         <p className="mt-1 text-sm text-white/70">Revisá y aprobá los lotes de mensajes enviados por docentes.</p>
       </div>
+
+      {errorMsg && (
+        <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+          {errorMsg}
+        </p>
+      )}
 
       {/* Filtro */}
       <div className="flex gap-2">
@@ -184,9 +196,16 @@ export function ComunicacionesAdminPage() {
                   </td>
                   <td className="px-4 py-3 text-white/80">{lote.total}</td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_BADGE[lote.estado]}`}>
-                      {lote.estado}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_BADGE[lote.estado]}`}>
+                        {lote.estado}
+                      </span>
+                      {lote.estado === 'Pendiente' && lote.aprobado && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                          Aprobado
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
@@ -232,9 +251,16 @@ export function ComunicacionesAdminPage() {
           message={`¿Aprobás el envío de ${confirmAprobar.total} mensajes? El worker los procesará inmediatamente.`}
           confirmLabel="Aprobar"
           confirmClass="bg-green-600 hover:bg-green-700"
+          isPending={aprobar.isPending}
           onConfirm={() => {
-            aprobar.mutate(confirmAprobar.lote_id);
-            setConfirmAprobar(null);
+            setErrorMsg('');
+            aprobar.mutate(confirmAprobar.lote_id, {
+              onSuccess: () => setConfirmAprobar(null),
+              onError: () => {
+                setConfirmAprobar(null);
+                setErrorMsg('No se pudo aprobar el lote. Es posible que ya haya sido aprobado o cancelado.');
+              },
+            });
           }}
           onClose={() => setConfirmAprobar(null)}
         />
@@ -246,9 +272,16 @@ export function ComunicacionesAdminPage() {
           message={`¿Cancelás el lote de ${confirmCancelar.total} mensajes? Esta acción no se puede deshacer.`}
           confirmLabel="Cancelar lote"
           confirmClass="bg-red-600 hover:bg-red-700"
+          isPending={cancelar.isPending}
           onConfirm={() => {
-            cancelar.mutate(confirmCancelar.lote_id);
-            setConfirmCancelar(null);
+            setErrorMsg('');
+            cancelar.mutate(confirmCancelar.lote_id, {
+              onSuccess: () => setConfirmCancelar(null),
+              onError: () => {
+                setConfirmCancelar(null);
+                setErrorMsg('No se pudo cancelar el lote. Es posible que ya haya sido aprobado o cancelado.');
+              },
+            });
           }}
           onClose={() => setConfirmCancelar(null)}
         />

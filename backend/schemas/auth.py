@@ -45,3 +45,7 @@ class ImpersonateRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     target_user_id: uuid.UUID
 
+class LogoutRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    refresh_token: str
+

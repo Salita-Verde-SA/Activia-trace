@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { authApi } from '../services/authApi';
 
 export interface User {
   id: string;
@@ -22,31 +23,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Basic init from localStorage
     const token = localStorage.getItem('access_token');
     if (token) {
       try {
-        // Parse JWT payload without verification
         const base64Url = token.split('.')[1];
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
         const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
           return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
         }).join(''));
-        
+
         const payload = JSON.parse(jsonPayload);
         setUser({
           id: payload.sub,
           tenant_id: payload.tenant_id,
           roles: payload.roles || []
         });
-      } catch (e) {
+      } catch {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
       }
     }
     setIsLoading(false);
 
-    // Listen to unauthorized events from interceptor
     const handleUnauthorized = () => {
       setUser(null);
     };
@@ -61,16 +59,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (refreshToken) {
+      authApi.logout(refreshToken).catch(() => {});
+    }
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated: !!user, 
-      login, 
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated: !!user,
+      login,
       logout,
       isLoading
     }}>

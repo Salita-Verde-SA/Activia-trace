@@ -214,6 +214,10 @@ class AuthService:
         
         await self.db.commit()
 
+    async def logout(self, refresh_token: str) -> None:
+        await self.session_repo.revoke_token(refresh_token)
+        await self.db.commit()
+
     async def impersonate(self, impersonator_id: uuid.UUID, target_user_id: uuid.UUID) -> TokenResponse:
         from models.user import Usuario
         from sqlalchemy import select

@@ -5,6 +5,7 @@ export function useListarLotes(soloPendientes = true) {
   return useQuery({
     queryKey: ['comunicaciones', 'lotes', soloPendientes],
     queryFn: () => listarLotes(soloPendientes),
+    refetchInterval: 10_000,
   });
 }
 

@@ -72,7 +72,16 @@ async def reset_password(
     await auth_service.reset_password(request.token, request.new_password)
     return {"status": "success", "message": "Password updated successfully"}
 
-from schemas.auth import ImpersonateRequest
+from schemas.auth import ImpersonateRequest, LogoutRequest
+
+@router.post("/logout", status_code=204)
+async def logout(
+    request: LogoutRequest,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Revoca el refresh token activo, invalidando la sesión en el servidor."""
+    await auth_service.logout(request.refresh_token)
+
 from api.dependencies.auth import require_permission
 
 @router.post("/impersonate", response_model=TokenResponse)

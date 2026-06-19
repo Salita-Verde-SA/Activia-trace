@@ -32,7 +32,6 @@ class ComunicacionService:
         stmt = select(Comunicacion).where(
             Comunicacion.tenant_id == tenant_id,
             Comunicacion.lote_id == lote_id,
-            Comunicacion.estado == EstadoComunicacion.PENDIENTE
         )
         result = await db.execute(stmt)
         return list(result.scalars().all())
@@ -44,19 +43,23 @@ class ComunicacionService:
                 Comunicacion.lote_id,
                 Comunicacion.estado,
                 func.count(Comunicacion.id).label("total"),
+                func.bool_or(Comunicacion.aprobado).label("aprobado"),
             )
             .where(Comunicacion.tenant_id == tenant_id)
             .group_by(Comunicacion.lote_id, Comunicacion.estado)
             .order_by(Comunicacion.lote_id)
         )
         if solo_pendientes:
-            stmt = stmt.where(Comunicacion.estado == EstadoComunicacion.PENDIENTE)
+            stmt = stmt.where(
+                Comunicacion.estado == EstadoComunicacion.PENDIENTE,
+                Comunicacion.aprobado.is_(False),
+            )
         result = await db.execute(stmt)
         rows = result.all()
-        return [LoteResumen(lote_id=r.lote_id, estado=r.estado, total=r.total) for r in rows]
+        return [LoteResumen(lote_id=r.lote_id, estado=r.estado, total=r.total, aprobado=r.aprobado) for r in rows]
 
     @staticmethod
-    async def aprobar_lote(db: AsyncSession, tenant_id: UUID, lote_id: UUID, actor_id: UUID) -> int:
+    async def aprobar_lote(db: AsyncSession, tenant_id: UUID, lote_id: UUID, _actor_id: UUID) -> int:
         stmt = update(Comunicacion).where(
             Comunicacion.tenant_id == tenant_id,
             Comunicacion.lote_id == lote_id,

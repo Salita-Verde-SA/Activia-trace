@@ -61,9 +61,6 @@ async def previsualizar_lote(
     Previsualiza los mensajes pendientes de un lote (desencriptando el destinatario).
     """
     comunicaciones = await ComunicacionService.obtener_pendientes_por_lote(db, actor.tenant_id, lote_id)
-    if not comunicaciones:
-        raise HTTPException(status_code=404, detail="Lote no encontrado o sin mensajes pendientes")
-        
     return [
         ComunicacionResponse(
             id=c.id,

@@ -33,6 +33,7 @@ import { PerfilPage } from '@/features/perfil/pages/PerfilPage';
 import { GuardiasPage } from '@/features/guardias/pages/GuardiasPage';
 import { GuardiasAdminPage } from '@/features/guardias/pages/GuardiasAdminPage';
 import { ComunicacionesAdminPage } from '@/features/comunicaciones/pages/ComunicacionesAdminPage';
+import { ComunicacionesPage } from '@/features/comunicaciones/pages/ComunicacionesPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -107,6 +108,7 @@ function App() {
               <Route path="guardias" element={<GuardiasPage />} />
               <Route path="admin/guardias" element={<GuardiasAdminPage />} />
               <Route path="admin/comunicaciones" element={<ComunicacionesAdminPage />} />
+              <Route path="comunicaciones" element={<ComunicacionesPage />} />
               <Route path="admin/usuarios" element={<GestionUsuariosPage />} />
               <Route path="admin/coloquios" element={<ColoquiosAdminPage />} />
               <Route path="auditoria" element={<AuditoriaPage />} />

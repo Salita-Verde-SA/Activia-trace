@@ -1,4 +1,9 @@
-## ADDED Requirements
+# aprobacion-comunicaciones Specification
+
+## Purpose
+Requerir aprobación supervisada de lotes de comunicaciones masivas antes de su envío efectivo por el worker, incluyendo previsualización de contenido y auditoría del acto de aprobación.
+
+## Requirements
 
 ### Requirement: Previsualización de mensajes
 El sistema SHALL permitir previsualizar el contenido y destinatarios de un lote de mensajes antes de su aprobación y envío definitivo.
@@ -8,10 +13,10 @@ El sistema SHALL permitir previsualizar el contenido y destinatarios de un lote 
 - **THEN** el sistema retorna la lista desencriptando el destinatario en memoria para la respuesta API.
 
 ### Requirement: Aprobación de envío
-El sistema MUST requerir que un supervisor con el permiso `comunicacion:aprobar` apruebe un lote o mensaje individual antes de que el worker lo procese. Al aprobar, el sistema cambiará el estado necesario para que el worker lo tome, o lo marcará como validado.
+El sistema MUST requerir que un supervisor con el permiso `comunicacion:aprobar` apruebe un lote o mensaje individual antes de que el worker lo procese. Al aprobar, el sistema cambiará el estado necesario para que el worker lo tome, o lo marcará como validado. El coordinador accede a la cola de aprobación desde la ruta `/admin/comunicaciones`.
 
 #### Scenario: Aprobación exitosa
-- **WHEN** un supervisor con los permisos adecuados aprueba un `lote_id`.
+- **WHEN** un supervisor con los permisos adecuados aprueba un `lote_id` desde la UI de `/admin/comunicaciones`.
 - **THEN** las comunicaciones quedan habilitadas para ser tomadas por el worker, y se genera un evento de auditoría `COMUNICACION_ENVIAR`.
 
 #### Scenario: Rechazo por permisos

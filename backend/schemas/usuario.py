@@ -42,6 +42,11 @@ class UsuarioResponse(UsuarioBase):
     created_at: datetime
     updated_at: datetime
     roles: list[str] = []
+    banco: str | None = None
+    regional: str | None = None
+    genero: str | None = None
+    es_monotributista: bool | None = None
+    identificador_profesional: str | None = None
 
 class UsuarioPerfilUpdate(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -54,4 +59,6 @@ class UsuarioPerfilUpdate(BaseModel):
     alias_cbu: str | None = Field(None, max_length=255)
     banco: str | None = Field(None, max_length=100)
     regional: str | None = Field(None, max_length=100)
-    modalidad_cobro: str | None = Field(None, max_length=50)
+    genero: str | None = Field(None, max_length=50)
+    es_monotributista: bool | None = None
+    identificador_profesional: str | None = Field(None, max_length=100)

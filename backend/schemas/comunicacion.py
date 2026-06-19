@@ -31,3 +31,4 @@ class LoteResumen(BaseModel):
     lote_id: UUID
     estado: EstadoComunicacion
     total: int
+    aprobado: bool = False

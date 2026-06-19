@@ -4,11 +4,15 @@
 TBD - created by archiving change c-20-perfil-y-mensajeria-interna. Update Purpose after archive.
 ## Requirements
 ### Requirement: Edición de campos permitidos del perfil
-El sistema SHALL permitir al usuario autenticado modificar su nombre, apellidos, alias CBU, banco, regional y modalidad_cobro, enviando los nuevos datos al endpoint `PUT /api/perfil/me`.
+El sistema SHALL permitir al usuario autenticado modificar su nombre, apellido, CBU, alias CBU, banco, regional, género, condición frente al impuesto (`es_monotributista`) e identificador profesional, enviando los nuevos datos al endpoint `PUT /api/perfil/me`. Todos los campos nuevos son opcionales.
 
-#### Scenario: Actualización exitosa
-- **WHEN** el usuario envía un payload válido con su nuevo banco
-- **THEN** el sistema actualiza el registro del usuario y retorna los datos actualizados
+#### Scenario: Actualización exitosa con campos básicos
+- **WHEN** el usuario envía nombre y apellido actualizados
+- **THEN** el sistema actualiza el registro y retorna los datos completos incluyendo los nuevos campos
+
+#### Scenario: Actualización de datos bancarios extendidos
+- **WHEN** el usuario actualiza banco y regional
+- **THEN** el sistema persiste los valores nuevos en las columnas correspondientes del modelo Usuario
 
 ### Requirement: Bloqueo de campos sensibles
 El sistema SHALL ignorar o rechazar cualquier intento de modificación sobre los campos `dni` y `cuil` a través del endpoint de edición de perfil propio.

@@ -19,3 +19,14 @@ The system SHALL detect if a revoked refresh token is used again, indicating a p
 - **THEN** the system SHALL immediately revoke ALL active refresh tokens for that user
 - **THEN** the system returns 401 Unauthorized, forcing the user to log in again
 
+### Requirement: Rotación de refresh token con validación de blacklist
+El sistema MUST validar que el refresh token presentado no esté en la blacklist antes de emitir un nuevo par de tokens. Si el token está revocado, se retorna 401.
+
+#### Scenario: Refresh con token válido
+- **WHEN** el cliente presenta un refresh token no expirado y no revocado
+- **THEN** el sistema emite un nuevo access token y refresh token, e invalida el anterior
+
+#### Scenario: Refresh con token revocado
+- **WHEN** el cliente presenta un refresh token que fue invalidado por logout
+- **THEN** el sistema retorna 401 Unauthorized sin emitir nuevos tokens
+

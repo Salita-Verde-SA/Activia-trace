@@ -5,6 +5,7 @@ import { encuentrosApi } from '../services/encuentrosApi';
 import { InstanciaCard } from '../components/InstanciaCard';
 import { SlotGroup } from '../components/SlotGroup';
 import { NuevoEncuentroModal } from '../components/NuevoEncuentroModal';
+import { HtmlLmsModal } from '../components/HtmlLmsModal';
 import type { InstanciaEncuentro } from '../types';
 
 interface Materia { id: string; nombre: string; }
@@ -28,6 +29,7 @@ function groupBySlot(instancias: InstanciaEncuentro[]): Array<InstanciaEncuentro
 export function EncuentrosPage() {
   const [materiaId, setMateriaId] = useState<string>('');
   const [nuevoOpen, setNuevoOpen] = useState(false);
+  const [htmlModalOpen, setHtmlModalOpen] = useState(false);
 
   const { data: materias = [] } = useQuery<Materia[]>({
     queryKey: ['admin-materias'],
@@ -56,15 +58,26 @@ export function EncuentrosPage() {
           <h1 className="text-3xl font-serif text-white/90">Encuentros</h1>
           <p className="text-sm text-white/50 mt-0.5">Gestión de clases y reuniones</p>
         </div>
-        {materiaId && asignaciones.length > 0 && (
-          <button
-            onClick={() => setNuevoOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600/80 border border-primary-500/50 text-white rounded-xl hover:bg-primary-600 transition-colors text-sm"
-          >
-            <span className="material-symbols-outlined text-base">add</span>
-            Nuevo encuentro
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {materiaId && (
+            <button
+              onClick={() => setHtmlModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors text-sm"
+            >
+              <span className="material-symbols-outlined text-base">code</span>
+              Exportar para LMS
+            </button>
+          )}
+          {materiaId && asignaciones.length > 0 && (
+            <button
+              onClick={() => setNuevoOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600/80 border border-primary-500/50 text-white rounded-xl hover:bg-primary-600 transition-colors text-sm"
+            >
+              <span className="material-symbols-outlined text-base">add</span>
+              Nuevo encuentro
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="mb-6">
@@ -134,6 +147,14 @@ export function EncuentrosPage() {
           materiaId={materiaId}
           asignaciones={asignaciones}
           queryKey={instanciasKey}
+        />
+      )}
+
+      {materiaId && (
+        <HtmlLmsModal
+          materiaId={materiaId}
+          isOpen={htmlModalOpen}
+          onClose={() => setHtmlModalOpen(false)}
         />
       )}
     </div>

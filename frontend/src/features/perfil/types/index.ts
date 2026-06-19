@@ -13,6 +13,11 @@ export interface PerfilData {
   roles: string[];
   created_at: string;
   updated_at: string;
+  banco: string | null;
+  regional: string | null;
+  genero: string | null;
+  es_monotributista: boolean | null;
+  identificador_profesional: string | null;
 }
 
 export interface PerfilUpdate {
@@ -22,4 +27,9 @@ export interface PerfilUpdate {
   cuil?: string | null;
   cbu?: string | null;
   alias_cbu?: string | null;
+  banco?: string | null;
+  regional?: string | null;
+  genero?: string | null;
+  es_monotributista?: boolean | null;
+  identificador_profesional?: string | null;
 }
