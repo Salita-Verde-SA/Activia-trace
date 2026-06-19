@@ -94,21 +94,19 @@ class UsuarioService:
         if update_data:
             log = AuditLog(
                 tenant_id=self.tenant_id,
-                usuario_id=usuario_id,
+                actor_id=usuario_id,
                 accion="PERFIL_MODIFICADO",
-                entidad="Usuario",
-                entidad_id=usuario_id,
-                detalles={"campos_modificados": list(update_data.keys())}
+                detalle={"campos_modificados": list(update_data.keys())}
             )
             self.db.add(log)
             
-        updated = await self.usuario_repo.update(usuario_id, update_data)
+        updated = await self.usuario_repo.update(usuario_id, **update_data)
         return updated
 
     async def deactivate_usuario(self, usuario_id: uuid.UUID) -> Usuario:
         usuario = await self.usuario_repo.get(usuario_id)
         if not usuario:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
-        
-        updated = await self.usuario_repo.update(usuario_id, {"activo": False})
+
+        updated = await self.usuario_repo.update(usuario_id, activo=False)
         return updated

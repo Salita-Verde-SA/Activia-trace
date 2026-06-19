@@ -29,6 +29,9 @@ import { EncuentrosPage } from '@/features/encuentros/pages/EncuentrosPage';
 import { MisEncuentrosPage } from '@/features/encuentros/pages/MisEncuentrosPage';
 import { MisClasesPage } from '@/features/alumno/pages/MisClasesPage';
 import { ProgramasPage } from '@/features/programas/pages/ProgramasPage';
+import { PerfilPage } from '@/features/perfil/pages/PerfilPage';
+import { GuardiasPage } from '@/features/guardias/pages/GuardiasPage';
+import { GuardiasAdminPage } from '@/features/guardias/pages/GuardiasAdminPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -99,6 +102,9 @@ function App() {
               <Route path="admin/estructura" element={<EstructuraAcademicaPage />} />
               <Route path="admin/materias" element={<MateriasPage />} />
               <Route path="admin/programas" element={<ProgramasPage />} />
+              <Route path="perfil" element={<PerfilPage />} />
+              <Route path="guardias" element={<GuardiasPage />} />
+              <Route path="admin/guardias" element={<GuardiasAdminPage />} />
               <Route path="admin/usuarios" element={<GestionUsuariosPage />} />
               <Route path="admin/coloquios" element={<ColoquiosAdminPage />} />
               <Route path="auditoria" element={<AuditoriaPage />} />

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.dependencies import get_db
@@ -8,6 +8,15 @@ from schemas.usuario import UsuarioResponse, UsuarioPerfilUpdate
 from services.usuario import UsuarioService
 
 router = APIRouter()
+
+@router.get("/me", response_model=UsuarioResponse)
+async def obtener_mi_perfil(
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    service = UsuarioService(db, str(current_user.tenant_id))
+    usuario = await service.get_usuario(current_user.id)
+    return usuario
 
 @router.put("/me", response_model=UsuarioResponse)
 async def actualizar_mi_perfil(
