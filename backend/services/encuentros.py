@@ -222,6 +222,21 @@ class GuardiaService:
         await self.db.refresh(guardia)
         return guardia
 
+    async def mis_guardias(self, usuario_id: UUID) -> List[Guardia]:
+        from models.asignacion import Asignacion
+        stmt = (
+            select(Guardia)
+            .join(Asignacion, Guardia.asignacion_id == Asignacion.id)
+            .where(
+                Guardia.tenant_id == self.tenant_id,
+                Asignacion.usuario_id == usuario_id,
+                Asignacion.deleted_at.is_(None),
+            )
+            .order_by(Guardia.creada_at.desc())
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
     async def exportar_guardias(self, fecha_desde: date, fecha_hasta: date) -> List[Guardia]:
         stmt = select(Guardia).where(
             Guardia.tenant_id == self.tenant_id,

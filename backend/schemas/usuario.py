@@ -45,9 +45,11 @@ class UsuarioResponse(UsuarioBase):
 
 class UsuarioPerfilUpdate(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    
+
     nombre: str | None = Field(None, max_length=255)
     apellido: str | None = Field(None, max_length=255)
+    dni: str | None = Field(None, max_length=50)
+    cuil: str | None = Field(None, max_length=50)
     cbu: str | None = Field(None, max_length=50)
     alias_cbu: str | None = Field(None, max_length=255)
     banco: str | None = Field(None, max_length=100)

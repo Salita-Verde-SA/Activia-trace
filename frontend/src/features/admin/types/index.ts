@@ -33,8 +33,12 @@ export interface Usuario {
   nombre: string;
   apellido: string;
   legajo?: string;
+  dni?: string;
+  cuil?: string;
+  cbu?: string;
+  alias_cbu?: string;
   created_at: string;
-  roles?: string[]; // from Asignaciones
+  roles?: string[];
 }
 
 export interface AuditLog {

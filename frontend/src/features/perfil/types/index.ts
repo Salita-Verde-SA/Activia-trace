@@ -18,6 +18,8 @@ export interface PerfilData {
 export interface PerfilUpdate {
   nombre?: string;
   apellido?: string;
+  dni?: string | null;
+  cuil?: string | null;
   cbu?: string | null;
   alias_cbu?: string | null;
 }

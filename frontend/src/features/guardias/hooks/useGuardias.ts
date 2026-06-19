@@ -1,11 +1,22 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { guardiasApi } from '../services/guardiasApi';
 import type { GuardiaCreate } from '../types';
 
 export function useRegistrarGuardia() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ asignacionId, data }: { asignacionId: string; data: GuardiaCreate }) =>
       guardiasApi.registrar(asignacionId, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['guardias', 'mis-guardias'] });
+    },
+  });
+}
+
+export function useMisGuardias() {
+  return useQuery({
+    queryKey: ['guardias', 'mis-guardias'],
+    queryFn: () => guardiasApi.misGuardias(),
   });
 }
 

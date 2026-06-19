@@ -16,4 +16,7 @@ export const guardiasApi = {
         params: { fecha_desde: fechaDesde, fecha_hasta: fechaHasta },
       })
       .then(res => res.data),
+
+  misGuardias: () =>
+    api.get<GuardiaResponse[]>('/api/v1/guardias/mis-guardias').then(res => res.data),
 };

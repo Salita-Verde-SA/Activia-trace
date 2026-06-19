@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useRegistrarGuardia } from '../hooks/useGuardias';
-import { DIA_SEMANA_OPTIONS, type DiaSemana, type GuardiaResponse } from '../types';
+import { useRegistrarGuardia, useMisGuardias } from '../hooks/useGuardias';
+import { DIA_SEMANA_OPTIONS, type DiaSemana } from '../types';
 import api from '@/shared/services/api';
 import type { AsignacionResponse, AsignacionDetalleView } from '@/features/equipos/types';
 
@@ -48,6 +48,7 @@ function useMisAsignaciones() {
 export function GuardiasPage() {
   const { isLoading, asignaciones } = useMisAsignaciones();
   const registrar = useRegistrarGuardia();
+  const misGuardias = useMisGuardias();
 
   const [asignacionId, setAsignacionId] = useState('');
   const [dia, setDia] = useState<DiaSemana>('Lunes');
@@ -55,7 +56,6 @@ export function GuardiasPage() {
   const [comentarios, setComentarios] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const [historial, setHistorial] = useState<GuardiaResponse[]>([]);
 
   const selectedAsignacion = asignaciones.find(a => a.id === asignacionId);
 
@@ -81,9 +81,8 @@ export function GuardiasPage() {
         },
       },
       {
-        onSuccess: guardia => {
+        onSuccess: () => {
           setSuccessMsg('Guardia registrada correctamente.');
-          setHistorial(prev => [guardia, ...prev]);
           setHorario('');
           setComentarios('');
         },
@@ -205,13 +204,19 @@ export function GuardiasPage() {
         </form>
       </div>
 
-      {historial.length > 0 && (
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-white/10 bg-black/20">
-            <h2 className="text-sm font-medium text-white/90 uppercase tracking-wider">
-              Guardias registradas esta sesión
-            </h2>
+      <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-white/10 bg-black/20">
+          <h2 className="text-sm font-medium text-white/90 uppercase tracking-wider">
+            Mis guardias
+          </h2>
+        </div>
+        {misGuardias.isLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white/50" />
           </div>
+        ) : !misGuardias.data || misGuardias.data.length === 0 ? (
+          <p className="text-white/40 text-sm text-center py-8">Aún no registraste ninguna guardia.</p>
+        ) : (
           <table className="w-full text-sm text-white/80">
             <thead className="text-[10px] uppercase tracking-wider text-white/40 border-b border-white/10">
               <tr>
@@ -222,7 +227,7 @@ export function GuardiasPage() {
               </tr>
             </thead>
             <tbody>
-              {historial.map(g => (
+              {misGuardias.data.map(g => (
                 <tr key={g.id} className="border-b border-white/5 hover:bg-white/5">
                   <td className="px-4 py-2">{g.dia}</td>
                   <td className="px-4 py-2">{g.horario}</td>
@@ -234,8 +239,8 @@ export function GuardiasPage() {
               ))}
             </tbody>
           </table>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

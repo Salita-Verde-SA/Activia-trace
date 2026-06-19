@@ -25,3 +25,9 @@ class ComunicacionResponse(BaseModel):
 class LoteResponse(BaseModel):
     lote_id: UUID
     comunicaciones: List[ComunicacionResponse]
+
+class LoteResumen(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    lote_id: UUID
+    estado: EstadoComunicacion
+    total: int

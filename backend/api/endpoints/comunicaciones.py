@@ -6,11 +6,38 @@ from uuid import UUID
 from core.dependencies import get_db
 from api.dependencies.auth import require_permission
 from models.user import Usuario
-from schemas.comunicacion import LoteCreate, LoteResponse, ComunicacionResponse
+from schemas.comunicacion import LoteCreate, LoteResponse, ComunicacionResponse, LoteResumen
 from services.comunicaciones import ComunicacionService
 from services.auditoria import AuditoriaService
 
 router = APIRouter(tags=["comunicaciones"])
+
+@router.get("/lotes", response_model=List[LoteResumen])
+async def listar_lotes(
+    solo_pendientes: bool = True,
+    db: AsyncSession = Depends(get_db),
+    actor: Usuario = Depends(require_permission("comunicacion:aprobar"))
+) -> Any:
+    return await ComunicacionService.listar_lotes(db, actor.tenant_id, solo_pendientes)
+
+@router.post("/lotes/{lote_id}/cancelar")
+async def cancelar_lote(
+    lote_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    actor: Usuario = Depends(require_permission("comunicacion:aprobar"))
+) -> Any:
+    rowcount = await ComunicacionService.cancelar_lote(db, actor.tenant_id, lote_id)
+    if rowcount == 0:
+        raise HTTPException(status_code=404, detail="Lote no encontrado o no está pendiente")
+    await AuditoriaService.log_action(
+        db=db,
+        tenant_id=actor.tenant_id,
+        actor_id=actor.id,
+        accion="COMUNICACION_CANCELAR",
+        detalle={"lote_id": str(lote_id), "count": rowcount},
+        filas_afectadas=rowcount,
+    )
+    return {"status": "ok", "canceladas": rowcount}
 
 @router.post("/lotes", response_model=UUID, status_code=status.HTTP_201_CREATED)
 async def encolar_lote(
@@ -68,9 +95,8 @@ async def aprobar_lote(
         db=db,
         tenant_id=actor.tenant_id,
         actor_id=actor.id,
-        action="COMUNICACION_ENVIAR", 
-        target_resource="LoteComunicacion",
-        target_id=lote_id,
-        details={"lote_id": str(lote_id), "count": rowcount}
+        accion="COMUNICACION_ENVIAR",
+        detalle={"lote_id": str(lote_id), "count": rowcount},
+        filas_afectadas=rowcount,
     )
     return {"status": "ok", "aprobadas": rowcount}

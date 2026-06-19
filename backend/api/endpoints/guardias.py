@@ -22,6 +22,14 @@ async def registrar_guardia(
     service = GuardiaService(db, current_user.tenant_id)
     return await service.registrar_guardia(asignacion_id, data)
 
+@router.get("/mis-guardias", response_model=List[GuardiaResponse])
+async def mis_guardias(
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    service = GuardiaService(db, current_user.tenant_id)
+    return await service.mis_guardias(current_user.id)
+
 @router.get("/guardias", response_model=List[GuardiaResponse])
 async def exportar_guardias(
     fecha_desde: date = Query(...),

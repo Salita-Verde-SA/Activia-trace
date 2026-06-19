@@ -1,5 +1,11 @@
 export type EstadoComunicacion = 'Pendiente' | 'Enviando' | 'Enviado' | 'Error' | 'Cancelado';
 
+export interface LoteResumen {
+  lote_id: string;
+  estado: EstadoComunicacion;
+  total: number;
+}
+
 export interface ComunicacionCreate {
   destinatario: string;
   asunto: string;

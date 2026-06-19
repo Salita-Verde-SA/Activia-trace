@@ -19,6 +19,7 @@ export const Sidebar = ({ isOpen, closeSidebar }: { isOpen: boolean, closeSideba
     { name: 'Mis Equipos', path: '/mis-equipos', icon: 'groups', roles: ['PROFESOR', 'TUTOR'] },
     { name: 'Equipos Docentes', path: '/admin/equipos', icon: 'manage_accounts', roles: ['COORDINADOR', 'ADMIN'] },
     { name: 'Monitor Global', path: '/admin/monitor', icon: 'bar_chart', roles: ['COORDINADOR', 'ADMIN'] },
+    { name: 'Comunicaciones', path: '/admin/comunicaciones', icon: 'mail', roles: ['COORDINADOR', 'ADMIN'] },
     { name: 'Avisos', path: '/admin/avisos', icon: 'campaign', roles: ['COORDINADOR', 'ADMIN'] },
     { name: 'Tareas', path: '/admin/tareas', icon: 'task', roles: ['COORDINADOR', 'ADMIN'] },
     { name: 'Gestión de Tareas', path: '/profesor/tareas', icon: 'task', roles: ['PROFESOR'] },
